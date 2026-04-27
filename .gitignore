@@ -1,0 +1,18 @@
+# Archiso build artifacts
+out/
+tmp-work/
+
+# QEMU / VM artifacts
+*.qcow2
+OVMF_VARS.fd
+OVMF_CODE.fd
+efiboot-fixed.img
+
+# Arch Linux Pacman downloads (if any)
+packages/
+
+# Misc
+*.iso
+.DS_Store
+iso-repack/
+custom-repo/

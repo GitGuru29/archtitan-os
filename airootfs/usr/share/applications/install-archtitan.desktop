@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Install ArchTitan OS
+Comment=Install the developer-friendly OS to your machine
+Exec=sudo calamares
+Icon=drive-harddisk
+Terminal=false
+Categories=System;

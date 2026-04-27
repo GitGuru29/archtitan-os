@@ -1,0 +1,12 @@
+[SddmGreeterTheme]
+Name=ArchTitan
+Description=ArchTitan OS Premium Login Theme
+Author=ArchTitan Team
+Version=1.0
+Website=
+Screenshot=
+MainScript=Main.qml
+ConfigFile=theme.conf
+TranslationsDirectory=translations
+Theme-Id=archtitan
+Theme-API=2.0

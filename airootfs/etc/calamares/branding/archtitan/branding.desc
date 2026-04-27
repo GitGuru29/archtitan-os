@@ -1,0 +1,32 @@
+---
+componentName:  archtitan
+welcomeStyleCalamares: false
+welcomeExpandingLogo: true
+
+strings:
+    productName:         "ArchTitan OS"
+    shortProductName:    "ArchTitan"
+    version:             "1.0"
+    shortVersion:        "1.0"
+    versionedName:       "ArchTitan 1.0"
+    shortVersionedName:  "ArchTitan 1.0"
+    bootloaderEntryName: "ArchTitan"
+    productUrl:          "https://archtitan.dev"
+    supportUrl:          "https://archtitan.dev/support"
+    knownIssuesUrl:      "https://archtitan.dev/issues"
+    releaseNotesUrl:     "https://archtitan.dev/releases"
+
+images:
+    productLogo:         "logo.png"
+    productIcon:         "logo.png"
+    productWelcome:      "logo.png"
+
+slideshow:               "show.qml"
+slideshowAPI:            2
+stylesheet:              "stylesheet.qss"
+
+style:
+    sidebarBackground:    "#1A1B26"
+    sidebarText:          "#A9B1D6"
+    sidebarTextSelect:    "#7AA2F7"
+    sidebarTextHighlight: "#C0CAF5"

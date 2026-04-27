@@ -1,0 +1,13 @@
+[Unit]
+Description=Setup ArchTitan live user home directory
+After=local-fs.target
+Before=display-manager.service
+ConditionPathExists=!/home/archtitan/.config
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c 'mkdir -p /home/archtitan && cp -rT /etc/skel /home/archtitan && chown -R 1000:1000 /home/archtitan'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

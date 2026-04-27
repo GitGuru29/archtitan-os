@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=ArchTitan
+Description=ArchTitan OS Boot Splash
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/archtitan
+ScriptFile=/usr/share/plymouth/themes/archtitan/archtitan.script

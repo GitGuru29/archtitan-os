@@ -1,0 +1,15 @@
+#!/bin/bash
+
+OS_NAME="ArchTitan"
+
+echo "⚙️ Bootstrapping the ${OS_NAME} development environment..."
+
+echo "📦 Installing AUR helper (yay)..."
+git clone https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
+cd /tmp/yay-bin || exit
+makepkg -si --noconfirm
+
+echo "📱 Installing Android Studio..."
+yay -S android-studio --noconfirm
+
+echo "✅ ${OS_NAME} development environment is ready to go!"

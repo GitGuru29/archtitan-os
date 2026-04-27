@@ -1,0 +1,17 @@
+root:x:0:root
+sys:x:3:bin,archtitan
+network:x:90:archtitan
+power:x:98:archtitan
+adm:x:999:archtitan
+wheel:x:998:archtitan
+uucp:x:986:archtitan
+rfkill:x:983:archtitan
+video:x:985:archtitan
+audio:x:981:archtitan
+optical:x:990:archtitan
+floppy:x:987:archtitan
+storage:x:988:archtitan
+scanner:x:96:archtitan
+games:x:50:archtitan
+pkgfile:x:105:
+archtitan:x:1000:

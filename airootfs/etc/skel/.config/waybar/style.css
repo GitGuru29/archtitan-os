@@ -1,0 +1,157 @@
+/* ArchTitan Waybar — Tokyo Night Theme */
+
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap");
+
+* {
+    font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+    font-size: 13px;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+}
+
+window#waybar {
+    background: rgba(26, 27, 38, 0.82);
+    border-radius: 14px;
+    border: 1px solid rgba(65, 72, 104, 0.4);
+    color: #C0CAF5;
+}
+
+/* Module groups */
+.modules-left,
+.modules-center,
+.modules-right {
+    padding: 0 6px;
+}
+
+/* Workspace buttons */
+#workspaces button {
+    padding: 2px 8px;
+    margin: 3px 2px;
+    color: #565F89;
+    background: transparent;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+#workspaces button:hover {
+    background: rgba(122, 162, 247, 0.15);
+    color: #7AA2F7;
+}
+
+#workspaces button.active {
+    background: rgba(122, 162, 247, 0.25);
+    color: #7AA2F7;
+    font-weight: 600;
+    box-shadow: inset 0 -3px #7AA2F7;
+}
+
+#workspaces button.urgent {
+    background: rgba(247, 118, 142, 0.25);
+    color: #F7768E;
+}
+
+/* Window title */
+#window {
+    color: #565F89;
+    padding: 0 12px;
+    font-size: 12px;
+}
+
+/* Clock */
+#clock {
+    color: #C0CAF5;
+    font-weight: 600;
+    padding: 0 12px;
+}
+
+/* System modules — pill style */
+#cpu,
+#memory,
+#battery,
+#network,
+#pulseaudio,
+#tray {
+    padding: 2px 12px;
+    margin: 4px 2px;
+    background: rgba(36, 40, 59, 0.7);
+    border-radius: 10px;
+    color: #A9B1D6;
+    transition: all 0.2s ease;
+}
+
+#cpu:hover,
+#memory:hover,
+#battery:hover,
+#network:hover,
+#pulseaudio:hover {
+    background: rgba(122, 162, 247, 0.25);
+    color: #C0CAF5;
+    box-shadow: inset 0 -3px #7AA2F7;
+}
+
+/* CPU */
+#cpu {
+    color: #9ECE6A;
+}
+
+/* Memory */
+#memory {
+    color: #E0AF68;
+}
+
+/* Battery states */
+#battery {
+    color: #9ECE6A;
+}
+
+#battery.warning {
+    color: #E0AF68;
+}
+
+#battery.critical {
+    color: #F7768E;
+    animation: blink 1s infinite;
+}
+
+#battery.charging {
+    color: #73DACA;
+}
+
+/* Network */
+#network {
+    color: #7DCFFF;
+}
+
+#network.disconnected {
+    color: #565F89;
+}
+
+/* PulseAudio */
+#pulseaudio {
+    color: #BB9AF7;
+}
+
+#pulseaudio.muted {
+    color: #565F89;
+}
+
+/* Tray */
+#tray {
+    background: transparent;
+}
+
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+}
+
+/* Blink animation for critical battery */
+@keyframes blink {
+    to {
+        color: #1A1B26;
+    }
+}
