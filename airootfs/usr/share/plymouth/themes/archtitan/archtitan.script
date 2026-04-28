@@ -1,75 +1,84 @@
-// ArchTitan Plymouth Boot Splash — Apple-style
-// Pure black bg, centered logo with fade-in, thin progress bar, no spinner
+// ArchTitan Plymouth Boot Splash — Apple-Style Minimalist
+// Centered logo with a thin progress bar on pure black
 
-// ── Background: pure black like Apple ──────────────────────────────────────
-Window.SetBackgroundTopColor(0.0, 0.0, 0.0);
-Window.SetBackgroundBottomColor(0.0, 0.0, 0.0);
+// Pure black background (like macOS boot)
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
 
-// ── Logo: centered, starts invisible, fades in ─────────────────────────────
+// ── Centered Logo ──
 logo.image = Image("logo.png");
-logo_size = 160;
-logo.scaled = logo.image.Scale(logo_size, logo_size);
-logo.sprite = Sprite(logo.scaled);
-logo.sprite.SetX(Window.GetWidth()  / 2 - logo_size / 2);
-logo.sprite.SetY(Window.GetHeight() / 2 - logo_size / 2 - 60);
+logo_scale = 128;
+logo.sprite = Sprite(logo.image.Scale(logo_scale, logo_scale));
+logo.sprite.SetX(Window.GetWidth() / 2 - logo_scale / 2);
+logo.sprite.SetY(Window.GetHeight() / 2 - logo_scale / 2 - 30);
 logo.sprite.SetZ(10);
-logo.sprite.SetOpacity(0.0);
-logo.opacity = 0.0;
 
-// ── Progress bar: thin Apple-style strip beneath logo ──────────────────────
-bar_width  = 200;
-bar_height = 4;
-bar_x      = Window.GetWidth()  / 2 - bar_width / 2;
-bar_y      = Window.GetHeight() / 2 + logo_size / 2 + 20;
+// ── Progress Bar (Apple-style thin pill bar) ──
+progress_box.image = Image("progress_box.png");
+progress_box.sprite = Sprite(progress_box.image);
+progress_box.x = Window.GetWidth() / 2 - progress_box.image.GetWidth() / 2;
+progress_box.y = Window.GetHeight() / 2 + logo_scale / 2 + 20;
+progress_box.sprite.SetPosition(progress_box.x, progress_box.y);
+progress_box.sprite.SetZ(12);
 
-// Track background (dark grey)
-track.image  = Image.CreateFilledRectangle(bar_width, bar_height, 0.15, 0.15, 0.15, 1.0);
-track.sprite = Sprite(track.image);
-track.sprite.SetPosition(bar_x, bar_y, 11);
+progress_bar.original_image = Image("progress_bar.png");
+progress_bar.sprite = Sprite();
+progress_bar.sprite.SetZ(13);
 
-// Fill (white like Apple)
-fill.sprite = Sprite();
-fill.sprite.SetZ(12);
-fill.sprite.SetPosition(bar_x, bar_y, 12);
-fill.width = 0;
-
-// ── Smooth fade-in via refresh (30fps-ish) ─────────────────────────────────
-fun refresh_callback() {
-    if (logo.opacity < 1.0) {
-        logo.opacity = logo.opacity + 0.025;
-        if (logo.opacity > 1.0) logo.opacity = 1.0;
-        logo.sprite.SetOpacity(logo.opacity);
-    }
-}
-Plymouth.SetRefreshFunction(refresh_callback);
-
-// ── Progress callback: scales the white fill bar ───────────────────────────
 fun progress_callback(duration, progress) {
-    new_width = Math.Int(bar_width * progress);
-    if (new_width < 1) new_width = 1;
-    fill.image = Image.CreateFilledRectangle(new_width, bar_height, 0.85, 0.85, 0.85, 1.0);
-    fill.sprite.SetImage(fill.image);
+    if (progress_bar.original_image.GetWidth() > 0) {
+        new_width = progress_bar.original_image.GetWidth() * progress;
+        if (new_width > 1) {
+            progress_bar.sprite.SetImage(progress_bar.original_image.Scale(new_width, progress_bar.original_image.GetHeight()));
+            // Center the fill inside the background box (4px padding)
+            progress_bar.sprite.SetPosition(progress_box.x + 4, progress_box.y + 1);
+        }
+    }
 }
 Plymouth.SetBootProgressFunction(progress_callback);
 
-// ── Password prompt (LUKS) ─────────────────────────────────────────────────
-prompt.sprite = Sprite();
-prompt.sprite.SetZ(15);
+// ── Refresh (no spinner, just keep it clean) ──
+fun refresh_callback() {
+    // Intentionally empty — Apple style has no spinner
+}
+Plymouth.SetRefreshFunction(refresh_callback);
 
-fun display_password_callback(text, bullets) {
-    dot_str = "";
-    for (i = 0; i < bullets; i++) dot_str = dot_str + "● ";
-    display = Image.Text(dot_str, 1.0, 1.0, 1.0);
-    prompt.sprite.SetImage(display);
-    prompt.sprite.SetX(Window.GetWidth()  / 2 - display.GetWidth()  / 2);
-    prompt.sprite.SetY(Window.GetHeight() / 2 + logo_size / 2 + 50);
+// ── Message display ──
+message_sprite = Sprite();
+message_sprite.SetZ(15);
+
+fun message_callback(text) {
+    my_image = Image.Text(text, 0.75, 0.75, 0.75);  // Light gray text
+    message_sprite.SetImage(my_image);
+    message_sprite.SetX(Window.GetWidth() / 2 - my_image.GetWidth() / 2);
+    message_sprite.SetY(progress_box.y + 30);
+}
+Plymouth.SetMessageFunction(message_callback);
+
+// ── Password prompt (for LUKS encrypted disks) ──
+fun display_password_callback(prompt, bullets) {
+    bullet_image = Image.Text("●", 1, 1, 1);  // White bullets
+    total_width = bullets * 20;
+    start_x = Window.GetWidth() / 2 - total_width / 2;
+
+    for (i = 0; i < bullets; i++) {
+        bullet[i].sprite = Sprite(bullet_image);
+        bullet[i].sprite.SetPosition(start_x + i * 20, Window.GetHeight() / 2 + logo_scale / 2 + 60);
+        bullet[i].sprite.SetZ(15);
+    }
+
+    prompt_image = Image.Text(prompt, 0.75, 0.75, 0.75);
+    message_sprite.SetImage(prompt_image);
+    message_sprite.SetX(Window.GetWidth() / 2 - prompt_image.GetWidth() / 2);
+    message_sprite.SetY(Window.GetHeight() / 2 + logo_scale / 2 + 45);
 }
 Plymouth.SetDisplayPasswordFunction(display_password_callback);
 
-// ── Quit: fade everything out cleanly ─────────────────────────────────────
+// ── Clean quit ──
 fun quit_callback() {
     logo.sprite.SetOpacity(0);
-    track.sprite.SetOpacity(0);
-    fill.sprite.SetOpacity(0);
+    progress_box.sprite.SetOpacity(0);
+    progress_bar.sprite.SetOpacity(0);
+    message_sprite.SetOpacity(0);
 }
 Plymouth.SetQuitFunction(quit_callback);
