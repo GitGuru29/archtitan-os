@@ -1,0 +1,37 @@
+name: Build ArchTitan ISO
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+      options: --privileged
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize Pacman Keyring
+        run: |
+          pacman-key --init
+          pacman-key --populate archlinux
+
+      - name: Install archiso
+        run: pacman -Syu --noconfirm archiso git
+
+      - name: Build ArchTitan ISO
+        run: |
+          echo "Starting the ISO build process..."
+          rm -rf out tmp-work
+          mkarchiso -v -w tmp-work -o out .
+
+      - name: Upload ISO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ArchTitan-1.0-ISO
+          path: out/*.iso
+          retention-days: 7
