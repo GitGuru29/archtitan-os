@@ -5,19 +5,34 @@
 Window.SetBackgroundTopColor(0, 0, 0);
 Window.SetBackgroundBottomColor(0, 0, 0);
 
-// ── Centered Logo ──
+// ── Centered Logo / Background ──
 logo.image = Image("logo.png");
-logo_scale = 128;
-logo.sprite = Sprite(logo.image.Scale(logo_scale, logo_scale));
-logo.sprite.SetX(Window.GetWidth() / 2 - logo_scale / 2);
-logo.sprite.SetY(Window.GetHeight() / 2 - logo_scale / 2 - 30);
+
+// Calculate proportional scale to fill/fit screen
+screen_ratio = Window.GetWidth() / Window.GetHeight();
+logo_ratio = logo.image.GetWidth() / logo.image.GetHeight();
+
+if (screen_ratio > logo_ratio) {
+    // Scale to height to ensure it fits
+    scale_factor = Window.GetHeight() / logo.image.GetHeight();
+} else {
+    // Scale to width
+    scale_factor = Window.GetWidth() / logo.image.GetWidth();
+}
+
+new_width = logo.image.GetWidth() * scale_factor;
+new_height = logo.image.GetHeight() * scale_factor;
+
+logo.sprite = Sprite(logo.image.Scale(new_width, new_height));
+logo.sprite.SetX(Window.GetWidth() / 2 - new_width / 2);
+logo.sprite.SetY(Window.GetHeight() / 2 - new_height / 2);
 logo.sprite.SetZ(10);
 
 // ── Progress Bar (Apple-style thin pill bar) ──
 progress_box.image = Image("progress_box.png");
 progress_box.sprite = Sprite(progress_box.image);
 progress_box.x = Window.GetWidth() / 2 - progress_box.image.GetWidth() / 2;
-progress_box.y = Window.GetHeight() / 2 + logo_scale / 2 + 20;
+progress_box.y = Window.GetHeight() * 0.8;
 progress_box.sprite.SetPosition(progress_box.x, progress_box.y);
 progress_box.sprite.SetZ(12);
 
@@ -63,14 +78,14 @@ fun display_password_callback(prompt, bullets) {
 
     for (i = 0; i < bullets; i++) {
         bullet[i].sprite = Sprite(bullet_image);
-        bullet[i].sprite.SetPosition(start_x + i * 20, Window.GetHeight() / 2 + logo_scale / 2 + 60);
+        bullet[i].sprite.SetPosition(start_x + i * 20, Window.GetHeight() * 0.85);
         bullet[i].sprite.SetZ(15);
     }
 
     prompt_image = Image.Text(prompt, 0.75, 0.75, 0.75);
     message_sprite.SetImage(prompt_image);
     message_sprite.SetX(Window.GetWidth() / 2 - prompt_image.GetWidth() / 2);
-    message_sprite.SetY(Window.GetHeight() / 2 + logo_scale / 2 + 45);
+    message_sprite.SetY(Window.GetHeight() * 0.85 - 25);
 }
 Plymouth.SetDisplayPasswordFunction(display_password_callback);
 
