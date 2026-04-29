@@ -4,14 +4,8 @@ arch-install-scripts
 archinstall
 b43-fwcutter
 base
-bcachefs-tools
-bind
-bolt
-brltty
 broadcom-wl
 btrfs-progs
-clonezilla
-cloud-init
 cryptsetup
 darkhttpd
 ddrescue
@@ -24,7 +18,6 @@ dosfstools
 e2fsprogs
 edk2-shell
 efibootmgr
-espeakup
 ethtool
 exfatprogs
 f2fs-tools
@@ -39,7 +32,6 @@ grub
 hdparm
 hyperv
 intel-ucode
-irssi
 iw
 iwd
 jfsutils
@@ -53,10 +45,8 @@ linux
 linux-atm
 linux-firmware
 linux-firmware-marvell
-livecd-sounds
 lsscsi
 lvm2
-lynx
 man-db
 man-pages
 mc
@@ -67,7 +57,6 @@ mkinitcpio
 mkinitcpio-archiso
 mkinitcpio-nfs-utils
 mmc-utils
-modemmanager
 mtools
 nano
 nbd
@@ -88,7 +77,6 @@ parted
 partimage
 pcsclite
 ppp
-pptpclient
 pv
 qemu-guest-agent
 refind
@@ -120,7 +108,6 @@ vpnc
 wireless-regdb
 wireless_tools
 wpa_supplicant
-wvdial
 xdg-utils
 xfsprogs
 xl2tpd
@@ -173,7 +160,6 @@ slurp
 wl-clipboard
 xdg-desktop-portal-hyprland
 polkit-gnome
-xorg-server
 xorg-xwayland
 qt5-wayland
 qt6-wayland
