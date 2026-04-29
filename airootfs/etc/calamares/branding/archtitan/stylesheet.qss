@@ -53,7 +53,13 @@ QPushButton {
 }
 
 QPushButton#aboutButton {
-    qproperty-visible: false;
+    max-height: 0px;
+    max-width: 0px;
+    border: none;
+    background: transparent;
+    color: transparent;
+    margin: 0px;
+    padding: 0px;
 }
 
 QPushButton:hover {

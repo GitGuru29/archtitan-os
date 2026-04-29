@@ -1,7 +1,7 @@
 ---
 componentName:  archtitan
 welcomeStyleCalamares: false
-welcomeExpandingLogo: true
+welcomeExpandingLogo: false
 
 strings:
     productName:         "ArchTitan OS"
