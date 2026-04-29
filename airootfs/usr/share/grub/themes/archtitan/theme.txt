@@ -28,6 +28,7 @@ terminal-font: "Unifont Regular 16"
     item_height = 30
     item_padding = 8
     item_spacing = 4
+    item_align = "center"
     selected_item_pixmap_style = "select_*.png"
     icon_width = 0
     icon_height = 0
