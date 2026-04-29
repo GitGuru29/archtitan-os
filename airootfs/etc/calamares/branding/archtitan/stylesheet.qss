@@ -17,29 +17,29 @@ QDialog {
 }
 
 #sidebarApp QListView {
-    background-color: transparent;
+    background-color: #16161E;
     border: none;
-    color: #565F89;
-    font-size: 10pt;
+    color: #A9B1D6;
+    font-size: 11pt;
     padding: 4px;
 }
 
 #sidebarApp QListView::item {
-    padding: 8px 12px;
+    padding: 10px 12px;
     border-radius: 6px;
-    color: #565F89;
+    color: #A9B1D6;
 }
 
 #sidebarApp QListView::item:selected {
-    background-color: rgba(122, 162, 247, 0.15);
-    color: #C0CAF5;
-    border-left: 3px solid #7AA2F7;
+    background-color: #24283B;
+    color: #7AA2F7;
+    border-left: 4px solid #7AA2F7;
     font-weight: bold;
 }
 
 #sidebarApp QListView::item:hover {
-    background-color: rgba(122, 162, 247, 0.08);
-    color: #A9B1D6;
+    background-color: #1A1B26;
+    color: #C0CAF5;
 }
 
 /* Buttons */
@@ -50,6 +50,10 @@ QPushButton {
     padding: 6px 16px;
     color: #C0CAF5;
     outline: none;
+}
+
+QPushButton#aboutButton {
+    qproperty-visible: false;
 }
 
 QPushButton:hover {

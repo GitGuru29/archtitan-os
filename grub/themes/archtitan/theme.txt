@@ -18,9 +18,9 @@ terminal-font: "Unifont Regular 16"
 
 # Boot Menu
 + boot_menu {
-    left = 25%
+    left = 30%
     top = 30%
-    width = 50%
+    width = 40%
     height = 40%
     item_color = "#565F89"
     selected_item_color = "#C0CAF5"
