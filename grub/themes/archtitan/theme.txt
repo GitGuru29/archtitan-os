@@ -1,6 +1,7 @@
 # ArchTitan OS GRUB Theme
 title-text: ""
 desktop-image: "splash.png"
+desktop-image-scale-method: "crop"
 desktop-color: "#1A1B26"
 terminal-font: "Unifont Regular 16"
 
