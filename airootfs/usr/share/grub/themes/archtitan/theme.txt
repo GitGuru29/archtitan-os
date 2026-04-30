@@ -19,15 +19,15 @@ terminal-font: "Unifont Regular 16"
 
 # Boot Menu
 + boot_menu {
-    left = 0%
-    top = 0%
-    width = 100%
-    height = 100%
+    left = 25%
+    top = 20%
+    width = 50%
+    height = 55%
     item_color = "#A9B1D6"
-    selected_item_color = "#1A1B26"
-    item_height = 30
-    item_padding = 8
-    item_spacing = 4
+    selected_item_color = "#7AA2F7"
+    item_height = 36
+    item_padding = 10
+    item_spacing = 6
     item_align = "center"
     selected_item_pixmap_style = "select_*.png"
     icon_width = 0
