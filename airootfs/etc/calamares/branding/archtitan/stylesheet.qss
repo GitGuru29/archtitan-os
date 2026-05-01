@@ -21,10 +21,8 @@ QLabel {
 
 /* ── Sidebar ── */
 #sidebarApp {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-        stop:0 #080910,
-        stop:1 #0D0E14);
-    border-right: 1px solid rgba(0, 212, 255, 0.18);
+    background-color: #0D0E14;
+    border-right: none;
 }
 
 #sidebarApp QLabel {
