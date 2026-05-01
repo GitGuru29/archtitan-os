@@ -1,6 +1,6 @@
 ---
 componentName:  archtitan
-welcomeStyleCalamares: false
+welcomeStyleCalamares: true
 welcomeExpandingLogo: false
 
 strings:
