@@ -18,6 +18,7 @@
         "hyprland/workspaces#dots"
     ],
     "modules-right": [
+        "custom/install",
         "clock",
         "tray",
         "backlight",
@@ -29,6 +30,12 @@
     "custom/logo": {
         "format": "◆",
         "tooltip": false
+    },
+
+    "custom/install": {
+        "format": "⬇ Install",
+        "tooltip": "Install ArchTitan to disk",
+        "on-click": "sudo -E calamares"
     },
 
     "hyprland/workspaces": {

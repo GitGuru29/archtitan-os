@@ -37,6 +37,23 @@ window#waybar.hidden {
     margin: 4px 0;
 }
 
+/* ── Install button (live ISO only) ── */
+#custom-install {
+    color: #0D0E14;
+    background: #00D4FF;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 2px 14px;
+    margin: 5px 6px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+}
+
+#custom-install:hover {
+    background: #33DDFF;
+    box-shadow: 0 0 8px rgba(0, 212, 255, 0.6);
+}
+
 /* ── Workspaces (numbered, left side) ── */
 #workspaces {
     margin: 0 4px;
