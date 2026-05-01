@@ -21,8 +21,13 @@ QLabel {
 
 /* ── Sidebar ── */
 #sidebarApp {
-    background-color: #0D0E14;
-    border-right: none;
+    min-width: 0px;
+    max-width: 0px;
+    width: 0px;
+    border: none;
+    background: transparent;
+    padding: 0px;
+    margin: 0px;
 }
 
 #sidebarApp QLabel {
