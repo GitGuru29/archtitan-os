@@ -1,70 +1,137 @@
 {
     "layer": "top",
     "position": "top",
-    "height": 36,
+    "height": 32,
     "margin-top": 6,
-    "margin-left": 10,
-    "margin-right": 10,
+    "margin-left": 8,
+    "margin-right": 8,
     "spacing": 0,
+    "exclusive": true,
 
     "modules-left": [
+        "custom/logo",
         "hyprland/workspaces",
         "hyprland/window"
     ],
     "modules-center": [
-        "clock"
+        "mpris",
+        "hyprland/workspaces#dots"
     ],
     "modules-right": [
+        "clock",
         "tray",
+        "backlight",
         "pulseaudio",
         "network",
-        "cpu",
-        "memory",
         "battery"
     ],
 
+    "custom/logo": {
+        "format": "◆",
+        "tooltip": false
+    },
+
     "hyprland/workspaces": {
-        "format": "{icon}",
-        "format-icons": {
-            "1": "一",
-            "2": "二",
-            "3": "三",
-            "4": "四",
-            "5": "五",
-            "6": "六",
-            "7": "七",
-            "8": "八",
-            "9": "九",
-            "active": "●",
-            "default": "○"
-        },
+        "format": "{id}",
+        "on-click": "activate",
+        "sort-by-number": true,
         "persistent-workspaces": {
             "*": 5
+        },
+        "format-icons": {
+            "active": "{id}",
+            "default": "{id}"
         }
     },
 
+    "hyprland/workspaces#dots": {
+        "format": "{icon}",
+        "format-icons": {
+            "active": "●",
+            "default": "·",
+            "empty": "·"
+        },
+        "on-click": "activate",
+        "sort-by-number": true,
+        "persistent-workspaces": {
+            "*": 9
+        },
+        "tooltip": false
+    },
+
     "hyprland/window": {
-        "format": "  {}",
-        "max-length": 50,
-        "separate-outputs": true
+        "format": "{}",
+        "max-length": 60,
+        "separate-outputs": true,
+        "rewrite": {
+            "(.*) — Mozilla Firefox": "🌐 $1",
+            "(.*) - fish": "> $1",
+            "(.*) - kitty": "> $1"
+        }
+    },
+
+    "mpris": {
+        "format": "{player_icon}  {title} — {artist}",
+        "format-paused": "{status_icon}  {title}",
+        "format-stopped": "No media",
+        "player-icons": {
+            "default": "▶",
+            "spotify": ""
+        },
+        "status-icons": {
+            "paused": "⏸"
+        },
+        "ignored-players": ["firefox"],
+        "max-length": 40,
+        "tooltip": false
     },
 
     "clock": {
-        "format": "  {:%H:%M}",
-        "format-alt": "  {:%A, %B %d %Y}",
-        "tooltip-format": "<tt><big>{calendar}</big></tt>"
+        "format": "  {:%H:%M  •  %a, %d/%m}",
+        "tooltip-format": "<tt><big>{calendar}</big></tt>",
+        "calendar": {
+            "mode": "month",
+            "weeks-pos": "right",
+            "on-scroll": 1,
+            "format": {
+                "months": "<span color='#C0CAF5'><b>{}</b></span>",
+                "days": "<span color='#A9B1D6'>{}</span>",
+                "weeks": "<span color='#565F89'><b>W{}</b></span>",
+                "weekdays": "<span color='#7AA2F7'><b>{}</b></span>",
+                "today": "<span color='#00D4FF'><b><u>{}</u></b></span>"
+            }
+        }
     },
 
-    "cpu": {
-        "format": "  {usage}%",
-        "interval": 2,
-        "tooltip": true
+    "backlight": {
+        "format": "{icon} {percent}%",
+        "format-icons": ["", "", "", "", "", "", "", "", ""],
+        "tooltip": false
     },
 
-    "memory": {
-        "format": "  {}%",
-        "interval": 5,
-        "tooltip-format": "{used:0.1f}G / {total:0.1f}G"
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-muted": "󰖁",
+        "format-icons": {
+            "headphone": "",
+            "hands-free": "",
+            "headset": "",
+            "phone": "",
+            "portable": "",
+            "car": "",
+            "default": ["", "", ""]
+        },
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "on-right-click": "pavucontrol",
+        "tooltip": false
+    },
+
+    "network": {
+        "format-wifi": " {signalStrength}%",
+        "format-ethernet": "󰈀",
+        "format-disconnected": "󰤭",
+        "tooltip-format-wifi": "{essid} — {signalStrength}%\n{ipaddr}",
+        "tooltip-format-ethernet": "{ifname}: {ipaddr}"
     },
 
     "battery": {
@@ -72,31 +139,16 @@
             "warning": 30,
             "critical": 15
         },
-        "format": "{icon}  {capacity}%",
-        "format-charging": "  {capacity}%",
+        "format": "{icon} {capacity}%",
+        "format-charging": " {capacity}%",
+        "format-full": " Full",
         "format-icons": ["", "", "", "", ""],
-        "tooltip-format": "{timeTo}"
-    },
-
-    "network": {
-        "format-wifi": "  {signalStrength}%",
-        "format-ethernet": "  Connected",
-        "format-disconnected": "  Disconnected",
-        "tooltip-format-wifi": "{essid} ({signalStrength}%)",
-        "tooltip-format-ethernet": "{ifname}: {ipaddr}/{cidr}"
-    },
-
-    "pulseaudio": {
-        "format": "{icon}  {volume}%",
-        "format-muted": "  Muted",
-        "format-icons": {
-            "default": ["", "", ""]
-        },
-        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+        "tooltip-format": "{timeTo} — {capacity}%"
     },
 
     "tray": {
-        "icon-size": 16,
-        "spacing": 8
+        "icon-size": 14,
+        "spacing": 6,
+        "show-passive-items": true
     }
 }
