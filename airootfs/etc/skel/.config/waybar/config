@@ -71,6 +71,8 @@
         "max-length": 60,
         "separate-outputs": true,
         "rewrite": {
+            "(.*)calamares(.*)": "⬇ ArchTitan Setup",
+            "(.*)Calamares(.*)": "⬇ ArchTitan Setup",
             "(.*) — Mozilla Firefox": "🌐 $1",
             "(.*) - fish": "> $1",
             "(.*) - kitty": "> $1"
