@@ -38,7 +38,7 @@ QLabel {
 #sidebarApp QListView {
     background: transparent;
     border: none;
-    color: #565F89;
+    color: #8A9DAB;
     font-size: 10pt;
     padding: 6px 0px;
     outline: none;
@@ -48,7 +48,7 @@ QLabel {
     padding: 11px 18px;
     border-left: 3px solid transparent;
     margin: 1px 0;
-    color: #565F89;
+    color: #8A9DAB;
     border-radius: 0px;
 }
 
@@ -62,21 +62,20 @@ QLabel {
 }
 
 #sidebarApp QListView::item:hover {
-    background: rgba(122, 162, 247, 0.07);
-    color: #A9B1D6;
-    border-left: 3px solid rgba(122, 162, 247, 0.3);
+    background: rgba(0, 212, 255, 0.06);
+    color: #C0CAF5;
+    border-left: 3px solid rgba(0, 212, 255, 0.3);
 }
 
 /* ── Navigation Buttons ── */
 QPushButton {
-    background: rgba(22, 22, 30, 0.7);
-    border: 1px solid rgba(0, 212, 255, 0.25);
-    border-radius: 7px;
-    padding: 8px 22px;
-    color: #A9B1D6;
+    background-color: #1A1B26;
+    color: #FFFFFF;
+    border: 1px solid #00D4FF;
+    border-radius: 4px;
+    padding: 6px 14px;
     font-weight: bold;
     font-size: 10pt;
-    letter-spacing: 1px;
 }
 
 QPushButton#aboutButton {
@@ -90,21 +89,21 @@ QPushButton#aboutButton {
 }
 
 QPushButton:hover {
-    background: rgba(0, 212, 255, 0.12);
+    background-color: #00D4FF;
+    color: #000000;
     border: 1px solid #00D4FF;
-    color: #00D4FF;
 }
 
 QPushButton:pressed {
-    background: rgba(0, 212, 255, 0.25);
+    background-color: rgba(0, 212, 255, 0.8);
+    color: #000000;
     border: 1px solid #00D4FF;
-    color: #00D4FF;
 }
 
 QPushButton:disabled {
-    background: rgba(13, 14, 20, 0.5);
-    border: 1px solid rgba(65, 72, 104, 0.2);
-    color: #2D3149;
+    background-color: #080910;
+    color: #444444;
+    border: 1px solid #333333;
 }
 
 /* Next / Primary action button */
