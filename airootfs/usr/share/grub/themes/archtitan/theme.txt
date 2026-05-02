@@ -5,26 +5,16 @@ desktop-image-scale-method: "crop"
 desktop-color: "#1A1B26"
 terminal-font: "Unifont Regular 16"
 
-# Title Label
-+ label {
-    left = 35%
-    top = 6%
-    width = 30%
-    height = 32
-    text = "ArchTitan OS"
-    color = "#7AA2F7"
-    font = "Unifont Regular 16"
-    align = "center"
-}
+# Title Label removed since logo provides the name
 
 # Boot Menu
 + boot_menu {
-    left = 25%
-    top = 20%
-    width = 50%
-    height = 55%
-    item_color = "#A9B1D6"
-    selected_item_color = "#7AA2F7"
+    left = 35%
+    top = 30%
+    width = 30%
+    height = 45%
+    item_color = "#E0E0E0"
+    selected_item_color = "#00E5FF"
     item_height = 36
     item_padding = 10
     item_spacing = 6
@@ -38,27 +28,25 @@ terminal-font: "Unifont Regular 16"
 # Countdown Progress Bar
 + progress_bar {
     id = "__timeout__"
-    left = 30%
-    top = 75%
-    width = 40%
+    left = 35%
+    top = 80%
+    width = 30%
     height = 14
-    highlight_style = "highlight_*.png"
-    highlight_overlay = true
-    bg_color = "#24283B"
-    fg_color = "#7AA2F7"
-    border_color = "#414868"
-    text_color = "#C0CAF5"
+    bg_color = "#000000"
+    fg_color = "#00E5FF"
+    border_color = "#005C8A"
+    text_color = "#E0E0E0"
     text = "@TIMEOUT_NOTIFICATION_LONG@"
 }
 
 # Bottom hint label
 + label {
-    left = 25%
-    top = 82%
-    width = 50%
+    left = 35%
+    top = 86%
+    width = 30%
     height = 24
     text = "Press 'e' to edit boot options"
-    color = "#565F89"
+    color = "#00E5FF"
     font = "Unifont Regular 12"
     align = "center"
 }
