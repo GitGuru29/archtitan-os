@@ -20,12 +20,26 @@
 namespace fs = std::filesystem;
 
 // ==========================================
+// GLOBAL AUDIO WHITELIST
+// These processes are NEVER frozen or killed,
+// regardless of which profile is active.
+// Developers listen to music while coding — respect that.
+// ==========================================
+static const std::unordered_set<std::string> AUDIO_WHITELIST = {
+    "spotify", "spotifyd", "mpd", "mpdris2", "mpv",
+    "vlc", "rhythmbox", "strawberry", "deadbeef",
+    "cmus", "ncmpcpp", "cantata", "audacious",
+    "elisa", "lollypop", "clementine", "quodlibet",
+    "playerctld", "pipewire", "pipewire-pulse",
+    "wireplumber", "pulseaudio", "pavucontrol"
+};
+
+// ==========================================
 // /proc/meminfo Reader
 // ==========================================
 struct MemInfo {
     long total_kb     = 0;
     long available_kb = 0;
-
     float available_pct() const {
         if (total_kb == 0) return 100.0f;
         return (float)available_kb / (float)total_kb * 100.0f;
@@ -48,10 +62,10 @@ static MemInfo read_meminfo() {
 // Process Graph
 // ==========================================
 struct ProcessNode {
-    pid_t pid   = 0;
-    pid_t ppid  = 0;
+    pid_t pid    = 0;
+    pid_t ppid   = 0;
     std::string name;
-    char  state = '?';
+    char  state  = '?';
     long  rss_kb = 0;
     std::vector<pid_t> children;
 };
@@ -83,9 +97,9 @@ public:
             ProcessNode node;
             node.pid = pid;
 
-            std::ifstream stat_file(entry.path().string() + "/stat");
+            std::ifstream sf(entry.path().string() + "/stat");
             std::string line;
-            if (std::getline(stat_file, line)) {
+            if (std::getline(sf, line)) {
                 size_t lp = line.find('('), rp = line.rfind(')');
                 if (lp != std::string::npos && rp != std::string::npos) {
                     node.name = line.substr(lp + 1, rp - lp - 1);
@@ -104,10 +118,12 @@ public:
 
 // ==========================================
 // Pressure-Aware Pruner
-// ==========================================
-//  >50% RAM free  → no action (system is fine)
-//  25–50% free    → SIGSTOP  (freeze, save state, kernel can reclaim pages slowly)
-//  <25% free      → SIGTERM  (hard free, heaviest consumers first)
+//
+//  >50% RAM free  → skip prune (system fine)
+//  25–50% free    → SIGSTOP  (freeze, kernel reclaims pages)
+//  <25%  free     → SIGTERM → SIGKILL (hard free, heaviest first)
+//
+//  AUDIO_WHITELIST is checked at every level — music never stops.
 // ==========================================
 class ProcessPruner {
 public:
@@ -117,17 +133,24 @@ public:
     {
         auto it = graph.find(pid);
         if (it == graph.end()) return;
+
+        // Never touch audio processes
+        if (AUDIO_WHITELIST.count(it->second.name)) {
+            std::cout << "[Pruner] Skipping audio process: " << it->second.name
+                      << " (PID:" << pid << ") 🎵\n";
+            return;
+        }
+
         for (pid_t c : it->second.children) signal_tree(c, graph, sig);
 
-        const char* label = (sig == SIGSTOP) ? "Freezing" :
-                            (sig == SIGCONT) ? "Thawing"  : "Terminating";
+        const char* label = (sig == SIGSTOP) ? "Freezing"    :
+                            (sig == SIGCONT) ? "Thawing"     : "Terminating";
         std::cout << "[Pruner] " << label << " PID:" << pid
                   << " (" << it->second.name << ") "
-                  << it->second.rss_kb / 1024 << "MB\n";
+                  << it->second.rss_kb / 1024 << " MB\n";
         kill(pid, sig);
 
         if (sig == SIGTERM) {
-            // Short grace, then SIGKILL — critical on 8 GB, can't wait
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             if (kill(pid, 0) == 0) kill(pid, SIGKILL);
         }
@@ -146,14 +169,15 @@ public:
                       float avail_pct)
     {
         if (avail_pct > 50.0f) {
-            std::cout << "[Pruner] RAM OK (" << (int)avail_pct << "% free) — skipping prune\n";
+            std::cout << "[Pruner] RAM OK (" << (int)avail_pct << "% free) — no prune needed\n";
             return;
         }
 
-        // Collect matching candidates, sort heaviest RSS first
+        // Collect candidates (excluding audio), sort heaviest RSS first
         std::vector<const ProcessNode*> hits;
         for (const auto& [pid, node] : graph)
-            if (targets.count(node.name)) hits.push_back(&node);
+            if (targets.count(node.name) && !AUDIO_WHITELIST.count(node.name))
+                hits.push_back(&node);
 
         std::sort(hits.begin(), hits.end(),
                   [](const ProcessNode* a, const ProcessNode* b){ return a->rss_kb > b->rss_kb; });
@@ -204,34 +228,47 @@ public:
 };
 
 // ==========================================
-// State file — readable by waybar/scripts
+// State file — readable by waybar / scripts
 // ==========================================
 static void write_state(const std::string& profile, float avail_pct, const std::string& action) {
     std::ofstream f("/tmp/titan_hwm_state");
     if (!f) return;
-    f << "profile=" << profile << "\n"
+    f << "profile="           << profile       << "\n"
       << "mem_available_pct=" << (int)avail_pct << "\n"
-      << "last_action=" << action << "\n"
-      << "timestamp=" << std::chrono::duration_cast<std::chrono::seconds>(
+      << "last_action="       << action         << "\n"
+      << "timestamp="         << std::chrono::duration_cast<std::chrono::seconds>(
              std::chrono::system_clock::now().time_since_epoch()).count() << "\n";
 }
 
 // ==========================================
-// Developer Profiles
+// Developer & Casual Profiles
 // ==========================================
-enum class DevProfile { WEB_DEV, ANDROID_DEV, SYSTEM_DEV, NEUTRAL };
+enum class DevProfile { CASUAL, WEB_DEV, ANDROID_DEV, SYSTEM_DEV, NEUTRAL };
 
 class TitanHardwareManager {
 private:
-    DevProfile  current_profile = DevProfile::NEUTRAL;
+    DevProfile current_profile = DevProfile::NEUTRAL;
 
-    // Debounce: buffer rapid window switches (800 ms)
-    std::atomic<bool>  have_pending{false};
-    std::mutex         pending_mtx;
-    std::string        pending_class;
-    std::thread        debounce_thd;
+    // Debounce: absorb rapid window switches (800 ms)
+    std::atomic<bool> have_pending{false};
+    std::mutex        pending_mtx;
+    std::string       pending_class;
+    std::thread       debounce_thd;
 
-    // Tool sets per profile (used for thaw-on-return)
+    // --- Tool sets per profile ---
+
+    // Casual / daily-use apps — not needed during deep dev work
+    const std::unordered_set<std::string> casual_tools = {
+        "telegram-desktop", "discord", "slack", "element",
+        "thunderbird", "evolution", "geary",
+        "nautilus", "dolphin", "thunar",
+        "gnome-software", "pamac", "packagekitd",
+        "tracker-miner-f", "tracker-miner-a", "baloo_file",
+        "krunner", "zeitgeist-datah", "gsd-media-keys",
+        "mission-center", "gnome-usage"
+    };
+
+    // Dev toolchains per profile (thawed when entering that profile)
     const std::unordered_set<std::string> web_tools     = {"node","webpack","vite","esbuild","bun","figma-linux"};
     const std::unordered_set<std::string> android_tools = {"studio","java","gradle","emulator","adb"};
     const std::unordered_set<std::string> system_tools  = {"rust-analyzer","clangd","cargo","make","cmake","gdb"};
@@ -239,15 +276,37 @@ private:
     DevProfile classify(const std::string& raw) {
         std::string wc = raw;
         std::transform(wc.begin(), wc.end(), wc.begin(), ::tolower);
-        if (wc == "code" || wc == "figma" || wc == "firefox-developer-edition")      return DevProfile::WEB_DEV;
-        if (wc.find("studio") != std::string::npos || wc == "emulator")               return DevProfile::ANDROID_DEV;
-        if (wc == "alacritty" || wc == "kitty" || wc == "clion" || wc == "neovim")   return DevProfile::SYSTEM_DEV;
+
+        // Dev profiles
+        if (wc == "code" || wc == "figma" || wc == "firefox-developer-edition")    return DevProfile::WEB_DEV;
+        if (wc.find("studio") != std::string::npos || wc == "emulator")             return DevProfile::ANDROID_DEV;
+        if (wc == "alacritty" || wc == "kitty" || wc == "clion" || wc == "neovim") return DevProfile::SYSTEM_DEV;
+
+        // Casual profile — communication / daily apps
+        if (wc == "telegram-desktop" || wc == "discord" || wc == "slack"  ||
+            wc == "thunderbird"      || wc == "element"  || wc == "geary"  ||
+            wc == "nautilus"         || wc == "dolphin"  || wc == "thunar" ||
+            wc == "firefox"          || wc == "chromium" || wc == "brave-browser")
+            return DevProfile::CASUAL;
+
         return DevProfile::NEUTRAL;
+    }
+
+    const char* profile_label(DevProfile p) {
+        switch (p) {
+            case DevProfile::CASUAL:      return "Casual / Daily";
+            case DevProfile::WEB_DEV:     return "Web Development";
+            case DevProfile::ANDROID_DEV: return "Android Development";
+            case DevProfile::SYSTEM_DEV:  return "System Programming";
+            default:                      return "Neutral";
+        }
     }
 
     void do_transition(const std::string& wc) {
         DevProfile np = classify(wc);
         if (np == DevProfile::NEUTRAL || np == current_profile) return;
+
+        DevProfile old = current_profile;
         current_profile = np;
 
         MemInfo mem = read_meminfo();
@@ -255,49 +314,77 @@ private:
 
         MemoryGraph g; g.build();
 
-        std::unordered_set<std::string> to_prune, to_thaw;
-        std::string theme, profile_name;
+        std::cout << "\n============================================\n"
+                  << "[HWM] " << profile_label(old) << "  →  " << profile_label(np) << "\n"
+                  << "[HWM] RAM: " << mem.available_kb / 1024 << " MB free / "
+                  << mem.total_kb / 1024 << " MB  (" << (int)pct << "%)\n";
 
-        switch (np) {
-            case DevProfile::WEB_DEV:
-                profile_name = "Web Development";
-                to_prune = {"studio","java","gradle","emulator","rust-analyzer","clangd","cargo"};
-                to_thaw  = web_tools;
-                theme    = "keyword general:col.active_border rgba(00d8ffff) rgba(f7df1eff) 45deg";
-                break;
-            case DevProfile::ANDROID_DEV:
-                profile_name = "Android Development";
-                to_prune = {"node","webpack","vite","bun","rust-analyzer","clangd","docker","dockerd"};
-                to_thaw  = android_tools;
-                theme    = "keyword general:col.active_border rgba(3ddc84ff) rgba(073042ff) 45deg";
-                break;
-            case DevProfile::SYSTEM_DEV:
-                profile_name = "System Programming";
-                to_prune = {"studio","java","gradle","emulator","node","webpack","electron","dockerd"};
-                to_thaw  = system_tools;
-                theme    = "keyword general:col.active_border rgba(1793d1ff) rgba(333333ff) 45deg";
-                break;
-            default: return;
+        // ---- CASUAL → DEV transition --------------------------------
+        // Freeze casual background apps; thaw the target dev toolchain.
+        // Audio whitelist is always respected inside prune().
+        if (np == DevProfile::WEB_DEV || np == DevProfile::ANDROID_DEV || np == DevProfile::SYSTEM_DEV) {
+
+            // 1. Prune casual daily apps (not needed while deep in dev work)
+            std::cout << "[HWM] Suspending casual background apps...\n";
+            ProcessPruner::prune(casual_tools, g.graph, pct);
+
+            // 2. Prune competing dev toolchains
+            std::unordered_set<std::string> dev_prune, dev_thaw;
+            std::string theme;
+
+            if (np == DevProfile::WEB_DEV) {
+                dev_prune = {"studio","java","gradle","emulator","rust-analyzer","clangd","cargo"};
+                dev_thaw  = web_tools;
+                theme     = "keyword general:col.active_border rgba(00d8ffff) rgba(f7df1eff) 45deg";
+            } else if (np == DevProfile::ANDROID_DEV) {
+                dev_prune = {"node","webpack","vite","bun","rust-analyzer","clangd","docker","dockerd"};
+                dev_thaw  = android_tools;
+                theme     = "keyword general:col.active_border rgba(3ddc84ff) rgba(073042ff) 45deg";
+            } else { // SYSTEM_DEV
+                dev_prune = {"studio","java","gradle","emulator","node","webpack","electron","dockerd"};
+                dev_thaw  = system_tools;
+                theme     = "keyword general:col.active_border rgba(1793d1ff) rgba(333333ff) 45deg";
+            }
+
+            // 3. Thaw this profile's tools first (instant responsiveness)
+            std::cout << "[HWM] Thawing " << profile_label(np) << " toolchain...\n";
+            ProcessPruner::thaw(dev_thaw, g.graph);
+
+            // 4. Prune competing dev tools
+            ProcessPruner::prune(dev_prune, g.graph, pct);
+
+            HyprlandIPC::send(theme);
         }
 
-        std::cout << "\n============================================\n"
-                  << "[HWM] → " << profile_name << "\n"
-                  << "[HWM] RAM: " << mem.available_kb / 1024 << " MB free / "
-                  << mem.total_kb / 1024 << " MB total  (" << (int)pct << "%)\n";
+        // ---- DEV → CASUAL transition --------------------------------
+        // Thaw casual apps; freeze all dev toolchains to save RAM.
+        else if (np == DevProfile::CASUAL) {
 
-        // Thaw new profile's tools first (instant responsiveness)
-        ProcessPruner::thaw(to_thaw, g.graph);
+            // 1. Thaw casual apps
+            std::cout << "[HWM] Restoring casual environment...\n";
+            ProcessPruner::thaw(casual_tools, g.graph);
 
-        // Pressure-aware prune of background toolchains
-        ProcessPruner::prune(to_prune, g.graph, pct);
+            // 2. Freeze all dev toolchains (they're irrelevant right now)
+            std::unordered_set<std::string> all_dev_tools;
+            for (const auto& s : web_tools)     all_dev_tools.insert(s);
+            for (const auto& s : android_tools) all_dev_tools.insert(s);
+            for (const auto& s : system_tools)  all_dev_tools.insert(s);
+            all_dev_tools.insert({"studio","java","gradle","emulator","node","webpack",
+                                   "vite","bun","electron","dockerd","docker","rust-analyzer",
+                                   "clangd","cargo","make","cmake","gdb"});
 
-        // Visual feedback via Hyprland IPC
-        HyprlandIPC::send(theme);
+            ProcessPruner::prune(all_dev_tools, g.graph, pct);
 
-        // State file for waybar / external scripts
-        write_state(profile_name, pct, pct < 25.0f ? "terminate" : (pct < 50.0f ? "freeze" : "skip"));
+            // Neutral border for casual mode
+            HyprlandIPC::send("keyword general:col.active_border rgba(cba6f7ff) rgba(89b4faff) 45deg");
+        }
 
-        std::cout << "[HWM] " << profile_name << " ready.\n"
+        // Write state
+        std::string action = (pct < 25.0f) ? "terminate" : (pct < 50.0f ? "freeze" : "skip");
+        write_state(profile_label(np), pct, action);
+
+        std::cout << "[HWM] " << profile_label(np) << " environment ready. "
+                  << "🎵 Music: protected by audio whitelist.\n"
                   << "============================================\n";
     }
 
@@ -343,7 +430,9 @@ public:
                 continue;
             }
 
-            std::cout << "[HWM] Titan Hardware Manager online. Watching developer contexts.\n";
+            std::cout << "[HWM] Titan Hardware Manager online.\n"
+                      << "[HWM] Profiles: CASUAL | WEB_DEV | ANDROID_DEV | SYSTEM_DEV\n"
+                      << "[HWM] Audio whitelist active — music always protected.\n";
 
             char buf[1024];
             std::string leftover;
