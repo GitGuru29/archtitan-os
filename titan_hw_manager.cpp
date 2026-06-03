@@ -282,11 +282,13 @@ private:
         if (wc.find("studio") != std::string::npos || wc == "emulator")             return DevProfile::ANDROID_DEV;
         if (wc == "alacritty" || wc == "kitty" || wc == "clion" || wc == "neovim") return DevProfile::SYSTEM_DEV;
 
-        // Casual profile — communication / daily apps
-        if (wc == "telegram-desktop" || wc == "discord" || wc == "slack"  ||
-            wc == "thunderbird"      || wc == "element"  || wc == "geary"  ||
-            wc == "nautilus"         || wc == "dolphin"  || wc == "thunar" ||
-            wc == "firefox"          || wc == "chromium" || wc == "brave-browser")
+        // Casual profile — ONLY dedicated communication & file manager apps.
+        // Browsers (firefox, chromium, brave) are intentionally excluded:
+        // they are multipurpose — dev work, music streaming, docs, etc.
+        // Focusing a browser mid-coding should NEVER freeze your dev environment.
+        if (wc == "telegram-desktop" || wc == "discord"  || wc == "slack"  ||
+            wc == "thunderbird"       || wc == "element"  || wc == "geary"  ||
+            wc == "nautilus"          || wc == "dolphin"  || wc == "thunar")
             return DevProfile::CASUAL;
 
         return DevProfile::NEUTRAL;
