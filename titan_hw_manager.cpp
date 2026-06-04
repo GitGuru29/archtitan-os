@@ -426,8 +426,10 @@ class TitanHardwareManager {
         std::cout<<"[HWM] CLI socket ready: /tmp/titan_hwm.sock\n";
         while (running.load()) {
             int cl=accept(srv,nullptr,nullptr); if (cl<0) continue;
-            char buf[64]{}; read(cl,buf,sizeof(buf)-1); close(cl);
+            // Read command — do NOT close cl yet; status needs to write back
+            char buf[64]{}; read(cl,buf,sizeof(buf)-1);
             std::string cmd(buf); cmd.erase(cmd.find_last_not_of(" \t\r\n")+1);
+
             if      (cmd=="switch casual"||cmd=="sw casual")   do_transition(DevProfile::CASUAL);
             else if (cmd=="switch web"||cmd=="sw web")         do_transition(DevProfile::WEB_DEV);
             else if (cmd=="switch android"||cmd=="sw android") do_transition(DevProfile::ANDROID_DEV);
@@ -435,16 +437,16 @@ class TitanHardwareManager {
             else if (cmd=="status") {
                 MemInfo m=read_meminfo();
                 int t_c=read_max_temp_mc()/1000;
-                // Build reply string and send back through the accepted client socket
+                write_state(lbl(cur),m.pct(),"idle",0,t_c);
+                // Build and send reply directly to the still-open client fd
                 std::string r="profile="+std::string(lbl(cur))+"\n"
                              +"ram_pct="+std::to_string((int)m.pct())+"\n"
                              +"ram_free_mb="+std::to_string(m.available_kb/1024)+"\n"
                              +"cpu_temp_c="+std::to_string(t_c)+"\n";
-                // cl was already closed above — re-accept isn't needed;
-                // status writes to state file (readable by titan-hwm CLI)
-                write_state(lbl(cur),m.pct(),"idle",0,t_c);
-                // Note: reply via write() requires holding cl open; see titan-hwm script
+                write(cl,r.c_str(),r.size());
             }
+            // Close client fd after all processing (including any reply writes)
+            close(cl);
         }
         close(srv); unlink("/tmp/titan_hwm.sock");
     }
