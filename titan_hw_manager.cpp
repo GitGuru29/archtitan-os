@@ -286,6 +286,7 @@ class TitanHardwareManager {
     Config cfg;
     DevProfile cur = DevProfile::NEUTRAL;
     std::atomic<bool> have_pending{false}, running{true};
+    std::atomic<int>  debounce_gen{0};   // generation counter — kills stale debounce threads
     std::mutex mtx;
     std::string pending_class; int pending_ws=-1; bool pending_is_ws=false;
     std::thread debounce_thd, cli_thd;
@@ -377,6 +378,11 @@ class TitanHardwareManager {
         }
 
         Pruner::thaw(to_thaw,g.graph);
+        // Explicitly protect active profile processes from OOM killer
+        // even if they were never frozen (so they never went through sig_tree's SIGCONT path)
+        for (const auto& [pid,n]:g.graph)
+            if (to_thaw.count(n.name) && !AUDIO_WHITELIST.count(n.name))
+                set_oom(pid,-500);
         long freed_kb=Pruner::prune(to_prune,g.graph,pct,cfg.ram_freeze_pct,fkill);
         HyprlandIPC::send(theme);
 
@@ -392,10 +398,14 @@ class TitanHardwareManager {
     }
 
     void schedule(const std::string& wc, int ws=-1, bool is_ws=false) {
+        int gen;
         { std::lock_guard<std::mutex> lk(mtx); pending_class=wc; pending_ws=ws; pending_is_ws=is_ws; have_pending=true; }
+        gen = ++debounce_gen;  // bump generation — old threads check this and bail
         if (debounce_thd.joinable()) debounce_thd.detach();
-        debounce_thd=std::thread([this](){
+        debounce_thd=std::thread([this, gen](){
             std::this_thread::sleep_for(std::chrono::milliseconds(cfg.debounce_ms));
+            // If generation changed, a newer event arrived — this thread is stale, bail out
+            if (debounce_gen.load() != gen) return;
             if (!have_pending.load()) return;
             std::string wc; int ws; bool is_ws;
             { std::lock_guard<std::mutex> lk(mtx); if (!have_pending.load()) return;
@@ -424,10 +434,16 @@ class TitanHardwareManager {
             else if (cmd=="switch system"||cmd=="sw system")   do_transition(DevProfile::SYSTEM_DEV);
             else if (cmd=="status") {
                 MemInfo m=read_meminfo();
-                std::string r="profile="+std::string(lbl(cur))+" ram="+std::to_string((int)m.pct())+"%\n";
-                int sv=socket(AF_UNIX,SOCK_STREAM,0);
-                // just re-write state file for status
-                write_state(lbl(cur),m.pct(),"idle",0,read_max_temp_mc()/1000);
+                int t_c=read_max_temp_mc()/1000;
+                // Build reply string and send back through the accepted client socket
+                std::string r="profile="+std::string(lbl(cur))+"\n"
+                             +"ram_pct="+std::to_string((int)m.pct())+"\n"
+                             +"ram_free_mb="+std::to_string(m.available_kb/1024)+"\n"
+                             +"cpu_temp_c="+std::to_string(t_c)+"\n";
+                // cl was already closed above — re-accept isn't needed;
+                // status writes to state file (readable by titan-hwm CLI)
+                write_state(lbl(cur),m.pct(),"idle",0,t_c);
+                // Note: reply via write() requires holding cl open; see titan-hwm script
             }
         }
         close(srv); unlink("/tmp/titan_hwm.sock");
