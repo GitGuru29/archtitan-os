@@ -204,6 +204,53 @@ window#waybar.hidden {
     border-radius: 4px;
 }
 
+/* ── Titan HWM Profile Module ── */
+#custom-titan-hwm {
+    padding: 2px 10px;
+    margin: 4px 2px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #565F89;
+    background: rgba(86, 95, 137, 0.1);
+    transition: all 0.3s ease;
+}
+
+#custom-titan-hwm.web {
+    color: #00D8FF;
+    background: rgba(0, 216, 255, 0.12);
+    box-shadow: inset 0 -2px rgba(0, 216, 255, 0.6);
+}
+
+#custom-titan-hwm.android {
+    color: #3DDC84;
+    background: rgba(61, 220, 132, 0.12);
+    box-shadow: inset 0 -2px rgba(61, 220, 132, 0.6);
+}
+
+#custom-titan-hwm.system {
+    color: #7DCFFF;
+    background: rgba(125, 207, 255, 0.12);
+    box-shadow: inset 0 -2px rgba(125, 207, 255, 0.6);
+}
+
+#custom-titan-hwm.casual {
+    color: #CBA6F7;
+    background: rgba(203, 166, 247, 0.12);
+    box-shadow: inset 0 -2px rgba(203, 166, 247, 0.6);
+}
+
+#custom-titan-hwm.neutral,
+#custom-titan-hwm.inactive {
+    color: #414868;
+    background: transparent;
+}
+
+#custom-titan-hwm:hover {
+    background: rgba(0, 212, 255, 0.07);
+    border-radius: 6px;
+}
+
 /* ── Blink animation ── */
 @keyframes blink {
     50% { color: #F7768E; opacity: 0.4; }
