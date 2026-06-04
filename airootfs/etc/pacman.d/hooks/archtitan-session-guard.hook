@@ -1,0 +1,54 @@
+[Trigger]
+Operation = Install
+Type = Package
+
+# --- Competing Display Managers ---
+Target = gdm
+Target = lightdm
+Target = lxdm
+Target = xdm
+Target = ly
+Target = emptty
+Target = lemurs
+Target = greetd
+Target = slim
+
+# --- X11 Server (ArchTitan is Wayland-only) ---
+Target = xorg-server
+
+# --- GNOME Shell & Session ---
+Target = gnome-shell
+Target = gnome-session
+Target = mutter
+
+# --- KDE Plasma ---
+Target = plasma-desktop
+Target = plasma-workspace
+Target = kwin
+
+# --- Other Desktop Environments ---
+Target = xfce4-session
+Target = xfwm4
+Target = lxsession
+Target = lxqt-session
+Target = cinnamon
+Target = mate-session-manager
+Target = budgie-desktop
+Target = deepin-session-ui
+
+# --- Other Window Managers ---
+Target = i3-wm
+Target = i3-gaps
+Target = openbox
+Target = bspwm
+Target = qtile
+Target = dwm
+Target = awesome
+Target = fluxbox
+Target = jwm
+
+[Action]
+Description = ArchTitan OS: Blocked — Only Hyprland + SDDM are supported on this system.
+When = PreTransaction
+Exec = /usr/local/bin/archtitan-session-guard
+AbortOnFail
