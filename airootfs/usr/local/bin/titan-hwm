@@ -1,8 +1,33 @@
 #!/usr/bin/env bash
+# Titan Hardware Manager CLI
+# Usage: titan-hwm [switch web|android|system|casual] [status]
+
 SOCK=/tmp/titan_hwm.sock
-[ -z "$1" ] && echo "Usage: titan-hwm [switch web|android|system|casual] [status]" && exit 1
-if ! command -v socat &>/dev/null; then
-    echo "titan-hwm: socat not found, install it: pacman -S socat" && exit 1
+
+if [ -z "$1" ]; then
+    echo "Usage: titan-hwm <command>"
+    echo "  switch web|android|system|casual  — force a profile transition"
+    echo "  status                             — show current profile & RAM"
+    exit 1
 fi
-echo "$*" | socat - UNIX-CONNECT:$SOCK
-echo "→ Command sent to Titan HWM"
+
+if ! command -v socat &>/dev/null; then
+    echo "titan-hwm: socat not found. Install it: pacman -S socat"
+    exit 1
+fi
+
+if [ ! -S "$SOCK" ]; then
+    echo "titan-hwm: HWM socket not found. Is titan_hw_manager running?"
+    exit 1
+fi
+
+CMD="$*"
+
+if [ "$CMD" = "status" ]; then
+    # Status sends a reply — print it
+    echo "$CMD" | socat - UNIX-CONNECT:"$SOCK"
+else
+    # Switch commands don't reply — just send and confirm
+    echo "$CMD" | socat - UNIX-CONNECT:"$SOCK" 2>/dev/null
+    echo "→ Sent: $CMD"
+fi
