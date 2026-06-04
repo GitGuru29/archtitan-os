@@ -119,7 +119,6 @@ pipewire-alsa
 pipewire-jack
 wireplumber
 pavucontrol
-socat
 swaylock
 ranger
 wget
