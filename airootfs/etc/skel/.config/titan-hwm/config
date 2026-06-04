@@ -1,0 +1,18 @@
+# Titan Hardware Manager Configuration
+# Editable without recompiling — changes apply on next HWM restart
+
+debounce_ms = 800
+ram_freeze_pct = 50
+ram_kill_pct = 25
+thermal_hot_temp = 80
+
+# Workspace → Profile mapping
+casual_workspaces = 1
+web_workspaces = 2
+android_workspaces = 3
+system_workspaces = 4, 5
+
+# Add extra process names to each profile's prune list (comma-separated)
+web_extra_tools =
+android_extra_tools =
+system_extra_tools =
