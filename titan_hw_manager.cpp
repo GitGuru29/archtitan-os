@@ -35,6 +35,11 @@ struct Config {
     float ram_freeze_pct   = 50.0f;
     float ram_kill_pct     = 25.0f;
     int   thermal_hot_mc   = 80000;
+    // OOM scores — -200 protects active tools without being immune; +300 is expendable
+    int   oom_protect      = -200;
+    int   oom_expose       = 300;
+    // Grace period before SIGKILL after SIGTERM (electron/VS Code needs >500ms to save)
+    int   sigterm_grace_ms = 500;
     std::unordered_set<int> casual_ws{1}, web_ws{2}, android_ws{3}, system_ws{4,5};
     std::vector<std::string> web_extra, android_extra, system_extra;
 };
@@ -64,17 +69,20 @@ static Config load_config() {
         std::string k=line.substr(0,eq), v=line.substr(eq+1);
         k.erase(0,k.find_first_not_of(" \t")); k.erase(k.find_last_not_of(" \t")+1);
         v.erase(0,v.find_first_not_of(" \t")); v.erase(v.find_last_not_of(" \t")+1);
-        if (k=="debounce_ms")           c.debounce_ms     = std::stoi(v);
-        else if (k=="ram_freeze_pct")   c.ram_freeze_pct  = std::stof(v);
-        else if (k=="ram_kill_pct")     c.ram_kill_pct    = std::stof(v);
-        else if (k=="thermal_hot_temp") c.thermal_hot_mc  = std::stoi(v)*1000;
-        else if (k=="casual_workspaces")  c.casual_ws     = csv_int(v);
-        else if (k=="web_workspaces")     c.web_ws        = csv_int(v);
-        else if (k=="android_workspaces") c.android_ws    = csv_int(v);
-        else if (k=="system_workspaces")  c.system_ws     = csv_int(v);
-        else if (k=="web_extra_tools")    c.web_extra     = csv(v);
-        else if (k=="android_extra_tools")c.android_extra = csv(v);
-        else if (k=="system_extra_tools") c.system_extra  = csv(v);
+        if (k=="debounce_ms")             c.debounce_ms     = std::stoi(v);
+        else if (k=="ram_freeze_pct")     c.ram_freeze_pct  = std::stof(v);
+        else if (k=="ram_kill_pct")       c.ram_kill_pct    = std::stof(v);
+        else if (k=="thermal_hot_temp")   c.thermal_hot_mc  = std::stoi(v)*1000;
+        else if (k=="oom_protect_score")  c.oom_protect     = std::stoi(v);
+        else if (k=="oom_expose_score")   c.oom_expose      = std::stoi(v);
+        else if (k=="sigterm_grace_ms")   c.sigterm_grace_ms= std::stoi(v);
+        else if (k=="casual_workspaces")  c.casual_ws       = csv_int(v);
+        else if (k=="web_workspaces")     c.web_ws          = csv_int(v);
+        else if (k=="android_workspaces") c.android_ws      = csv_int(v);
+        else if (k=="system_workspaces")  c.system_ws       = csv_int(v);
+        else if (k=="web_extra_tools")    c.web_extra       = csv(v);
+        else if (k=="android_extra_tools")c.android_extra   = csv(v);
+        else if (k=="system_extra_tools") c.system_extra    = csv(v);
     }
     return c;
 }
@@ -90,6 +98,14 @@ static void write_default_config() {
       << "ram_freeze_pct = 50\n"
       << "ram_kill_pct = 25\n"
       << "thermal_hot_temp = 80\n"
+      << "# OOM scores: active tools protected, background exposed\n"
+      << "# Range -1000..+1000. -200 = protected, +300 = expendable\n"
+      << "# Avoid -500 or below — process becomes effectively immune to OOM killer\n"
+      << "oom_protect_score = -200\n"
+      << "oom_expose_score = 300\n"
+      << "# Grace period (ms) between SIGTERM and SIGKILL\n"
+      << "# Electron/VS Code needs 500ms+ to save state\n"
+      << "sigterm_grace_ms = 500\n"
       << "casual_workspaces = 1\n"
       << "web_workspaces = 2\n"
       << "android_workspaces = 3\n"
@@ -172,12 +188,17 @@ struct ProcessNode {
     pid_t pid=0,ppid=0; std::string name; char state='?'; long rss_kb=0;
     std::vector<pid_t> children;
 };
+// RssAnon = private anonymous memory — what kernel actually frees on kill.
+// VmRSS includes shared libs that stay resident even after the process dies.
+// Fall back to VmRSS only if RssAnon is unavailable (kernel < 4.5).
 static long read_rss(pid_t pid) {
     std::ifstream f("/proc/"+std::to_string(pid)+"/status"); std::string l;
-    while (std::getline(f,l)) if (l.rfind("VmRSS:",0)==0){
-        std::istringstream ss(l.substr(6)); long v=0; ss>>v; return v;
+    long rss_anon=0, vm_rss=0;
+    while (std::getline(f,l)) {
+        if (l.rfind("RssAnon:",0)==0){std::istringstream ss(l.substr(8)); ss>>rss_anon;}
+        if (l.rfind("VmRSS:", 0)==0){std::istringstream ss(l.substr(6)); ss>>vm_rss;}
     }
-    return 0;
+    return rss_anon > 0 ? rss_anon : vm_rss;
 }
 class MemoryGraph {
 public:
@@ -208,34 +229,43 @@ public:
 // ==========================================
 class Pruner {
 public:
-    static void sig_tree(pid_t pid, const std::unordered_map<pid_t,ProcessNode>& g, int sig) {
+    static void sig_tree(pid_t pid, const std::unordered_map<pid_t,ProcessNode>& g,
+                         int sig, int oom_cont_score=-200, int grace_ms=500) {
         auto it=g.find(pid); if (it==g.end()) return;
         if (AUDIO_WHITELIST.count(it->second.name)) { std::cout<<"[Pruner] Skip audio: "<<it->second.name<<" 🎵\n"; return; }
-        for (pid_t c:it->second.children) sig_tree(c,g,sig);
+        for (pid_t c:it->second.children) sig_tree(c,g,sig,oom_cont_score,grace_ms);
         const char* lbl=(sig==SIGSTOP)?"Freeze":(sig==SIGCONT)?"Thaw":"Kill";
         std::cout<<"[Pruner] "<<lbl<<" "<<it->second.name<<" ("<<it->second.rss_kb/1024<<"MB)\n";
         if (sig==SIGSTOP) setpriority(PRIO_PROCESS,pid,19);
-        if (sig==SIGCONT) { setpriority(PRIO_PROCESS,pid,0); set_oom(pid,-300); }
+        if (sig==SIGCONT) { setpriority(PRIO_PROCESS,pid,0); set_oom(pid,oom_cont_score); }
         kill(pid,sig);
-        if (sig==SIGTERM) { std::this_thread::sleep_for(std::chrono::milliseconds(100)); if (kill(pid,0)==0) kill(pid,SIGKILL); }
+        if (sig==SIGTERM) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(grace_ms));
+            if (kill(pid,0)==0) kill(pid,SIGKILL);
+        }
     }
-    static void thaw(const std::unordered_set<std::string>& t, const std::unordered_map<pid_t,ProcessNode>& g) {
-        for (const auto& [pid,n]:g) if (t.count(n.name)&&n.state=='T') sig_tree(pid,g,SIGCONT);
+    static void thaw(const std::unordered_set<std::string>& t,
+                     const std::unordered_map<pid_t,ProcessNode>& g, int oom_score=-200) {
+        for (const auto& [pid,n]:g)
+            if (t.count(n.name)&&n.state=='T') sig_tree(pid,g,SIGCONT,oom_score);
     }
     static long prune(const std::unordered_set<std::string>& targets,
                       const std::unordered_map<pid_t,ProcessNode>& g,
-                      float pct, float freeze_t, float kill_t) {
+                      float pct, float freeze_t, float kill_t,
+                      int oom_expose_score=300, int grace_ms=500) {
         if (pct>freeze_t) { std::cout<<"[Pruner] RAM OK ("<<(int)pct<<"%) skip\n"; return 0; }
         std::vector<const ProcessNode*> hits;
         for (const auto& [pid,n]:g) {
-            if (targets.count(n.name)&&!AUDIO_WHITELIST.count(n.name)) hits.push_back(&n);
-            if (targets.count(n.name)&&!AUDIO_WHITELIST.count(n.name)) set_oom(pid,500);
+            if (targets.count(n.name)&&!AUDIO_WHITELIST.count(n.name)) {
+                hits.push_back(&n);
+                set_oom(pid, oom_expose_score);
+            }
         }
         std::sort(hits.begin(),hits.end(),[](auto a,auto b){return a->rss_kb>b->rss_kb;});
         int sig=(pct<kill_t)?SIGTERM:SIGSTOP;
         std::cout<<"[Pruner] "<<(sig==SIGTERM?"TERMINATE":"FREEZE")<<" ("<<(int)pct<<"% free)\n";
         long freed=0;
-        for (auto* n:hits) { freed+=n->rss_kb; sig_tree(n->pid,g,sig); }
+        for (auto* n:hits) { freed+=n->rss_kb; sig_tree(n->pid,g,sig,300,grace_ms); }
         return freed;
     }
 };
@@ -289,7 +319,14 @@ class TitanHardwareManager {
     std::atomic<int>  debounce_gen{0};   // generation counter — kills stale debounce threads
     std::mutex mtx;
     std::string pending_class; int pending_ws=-1; bool pending_is_ws=false;
-    std::thread debounce_thd, cli_thd;
+    std::thread debounce_thd, cli_thd, guard_thd;
+
+    // Rogue DM/compositor processes — kills any that bypass pacman/systemd locks
+    const std::unordered_set<std::string> rogue_dms{
+        "gdm","gdm3","lightdm","lxdm","xdm","slim","ly","greetd","emptty",
+        "gnome-shell","gnome-session","plasmashell","kwin_wayland","kwin_x11",
+        "xfwm4","openbox","Xorg","X"
+    };
 
     std::unordered_set<std::string> web_tools{"node","webpack","vite","esbuild","bun","figma-linux"};
     std::unordered_set<std::string> android_tools{"studio","java","gradle","emulator","adb"};
@@ -372,18 +409,21 @@ class TitanHardwareManager {
         // Also prune casual apps when entering dev
         if (np!=DevProfile::CASUAL) {
             std::cout<<"[HWM] Suspending casual apps...\n";
-            Pruner::prune(casual_tools,g.graph,pct,cfg.ram_freeze_pct,fkill);
+            Pruner::prune(casual_tools,g.graph,pct,cfg.ram_freeze_pct,fkill,
+                          cfg.oom_expose, cfg.sigterm_grace_ms);
         } else {
-            Pruner::thaw(casual_tools,g.graph);
+            Pruner::thaw(casual_tools,g.graph, cfg.oom_protect);
         }
 
-        Pruner::thaw(to_thaw,g.graph);
+        Pruner::thaw(to_thaw,g.graph, cfg.oom_protect);
         // Explicitly protect active profile processes from OOM killer
         // even if they were never frozen (so they never went through sig_tree's SIGCONT path)
+        // Protect active tools from OOM — use configured score (default -200, not -500)
         for (const auto& [pid,n]:g.graph)
             if (to_thaw.count(n.name) && !AUDIO_WHITELIST.count(n.name))
-                set_oom(pid,-500);
-        long freed_kb=Pruner::prune(to_prune,g.graph,pct,cfg.ram_freeze_pct,fkill);
+                set_oom(pid, cfg.oom_protect);
+        long freed_kb=Pruner::prune(to_prune,g.graph,pct,cfg.ram_freeze_pct,fkill,
+                                    cfg.oom_expose, cfg.sigterm_grace_ms);
         HyprlandIPC::send(theme);
 
         long freed_mb=freed_kb/1024;
@@ -452,15 +492,44 @@ class TitanHardwareManager {
     }
 
 public:
+    // Periodic rogue DM guard — kills any blacklisted DM/compositor run directly as binary
+    void run_process_guard() {
+        std::cout<<"[HWM] Process guard active (60s interval)\n";
+        while (running.load()) {
+            std::this_thread::sleep_for(std::chrono::seconds(60));
+            if (!running.load()) break;
+            for (const auto& e : fs::directory_iterator("/proc")) {
+                if (!e.is_directory()) continue;
+                std::string d=e.path().filename().string();
+                if (!std::all_of(d.begin(),d.end(),::isdigit)) continue;
+                std::ifstream sf(e.path().string()+"/stat"); std::string l;
+                if (!std::getline(sf,l)) continue;
+                size_t lp=l.find('('),rp=l.rfind(')');
+                if (lp==std::string::npos||rp==std::string::npos) continue;
+                std::string name=l.substr(lp+1,rp-lp-1);
+                if (rogue_dms.count(name)) {
+                    pid_t pid=std::stoi(d);
+                    std::cout<<"[Guard] Rogue DM detected: "<<name<<" PID:"<<pid<<" — terminating\n";
+                    notify("ArchTitan Session Guard","Blocked rogue display manager: "+name);
+                    kill(pid,SIGTERM);
+                    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                    if (kill(pid,0)==0) kill(pid,SIGKILL);
+                }
+            }
+        }
+    }
+
     ~TitanHardwareManager() {
         running=false;
         if (debounce_thd.joinable()) debounce_thd.join();
         if (cli_thd.joinable()) cli_thd.detach();
+        if (guard_thd.joinable()) guard_thd.detach();
     }
 
     void run() {
         cfg=load_config(); apply_extras();
         cli_thd=std::thread(&TitanHardwareManager::run_cli_server,this);
+        guard_thd=std::thread(&TitanHardwareManager::run_process_guard,this);
 
         std::string sock=HyprlandIPC::find_sock(".socket2.sock");
         if (sock.empty()) { std::this_thread::sleep_for(std::chrono::seconds(5)); return; }
