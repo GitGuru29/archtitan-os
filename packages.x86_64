@@ -100,6 +100,7 @@ github-cli
 btop
 zellij
 ttf-jetbrains-mono-nerd
+noto-fonts
 noto-fonts-emoji
 plymouth
 mako
@@ -114,7 +115,12 @@ python
 python-pip
 pipewire
 pipewire-pulse
+pipewire-alsa
+pipewire-jack
 wireplumber
+pavucontrol
+socat
+swaylock
 ranger
 wget
 curl

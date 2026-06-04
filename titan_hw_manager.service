@@ -1,6 +1,7 @@
 [Unit]
 Description=Titan Hardware Manager (ArchTitan Daemon)
-After=network.target
+After=graphical-session.target
+PartOf=graphical-session.target
 
 [Service]
 Type=simple
@@ -8,10 +9,10 @@ ExecStart=/usr/local/bin/titan_hw_manager
 Restart=always
 RestartSec=3
 
-# The daemon needs to manage memory and kill processes.
-# Running as root is typically required to access all /proc info and kill system-wide processes like Docker.
+# Needs root to read /proc system-wide, write /sys governors,
+# and send signals to processes owned by other users.
 User=root
 Group=root
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical-session.target
