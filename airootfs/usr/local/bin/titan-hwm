@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+SOCK=/tmp/titan_hwm.sock
+[ -z "$1" ] && echo "Usage: titan-hwm [switch web|android|system|casual] [status]" && exit 1
+if ! command -v socat &>/dev/null; then
+    echo "titan-hwm: socat not found, install it: pacman -S socat" && exit 1
+fi
+echo "$*" | socat - UNIX-CONNECT:$SOCK
+echo "→ Command sent to Titan HWM"
