@@ -19,6 +19,7 @@
     ],
     "modules-right": [
         "custom/install",
+        "custom/titan-hwm",
         "clock",
         "tray",
         "backlight",
@@ -36,6 +37,14 @@
         "format": "⬇ Install",
         "tooltip": "Install ArchTitan to disk",
         "on-click": "sudo -E calamares"
+    },
+
+    "custom/titan-hwm": {
+        "exec": "titan-hwm-waybar",
+        "interval": 5,
+        "return-type": "json",
+        "on-click": "titan-hwm status | notify-send 'Titan HWM' "$(cat /tmp/titan_hwm_state 2>/dev/null || echo 'HWM not running')"",
+        "on-right-click": "kitty --title=\"Titan HWM\" bash -c 'titan-hwm status; echo; echo \"Press any key...\"; read'"
     },
 
     "hyprland/workspaces": {
