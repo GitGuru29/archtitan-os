@@ -18,7 +18,6 @@
 #include <atomic>
 #include <mutex>
 #include <cstdlib>
-#include <optional>
 
 namespace fs = std::filesystem;
 
@@ -174,82 +173,6 @@ static void set_oom(pid_t pid, int score) {
 }
 
 // ==========================================
-// PSI — Pressure Stall Information
-// ==========================================
-struct PSI {
-    float some_avg10 = 0.0f; // % time ≥1 task stalled (10s avg)
-    float full_avg10 = 0.0f; // % time ALL tasks stalled (10s avg)
-    bool  valid      = false;
-};
-static PSI read_memory_psi() {
-    PSI p;
-    std::ifstream f("/proc/pressure/memory"); std::string line;
-    while (std::getline(f, line)) {
-        // Format: some avg10=X.XX avg60=X.XX avg300=X.XX total=N
-        auto parse = [&](const std::string& l, float& out) {
-            auto pos = l.find("avg10=");
-            if (pos == std::string::npos) return;
-            try { out = std::stof(l.substr(pos + 6)); } catch (...) {}
-        };
-        if (line.rfind("some", 0) == 0) { parse(line, p.some_avg10); p.valid = true; }
-        if (line.rfind("full", 0) == 0) { parse(line, p.full_avg10); }
-    }
-    return p;
-}
-
-// ==========================================
-// CgroupManager — wraps cgroups v2 operations
-// All paths are under /sys/fs/cgroup/<slice>/
-// ==========================================
-class CgroupManager {
-    static constexpr const char* ROOT = "/sys/fs/cgroup";
-
-    static std::string path(const std::string& slice, const std::string& file) {
-        return std::string(ROOT) + "/" + slice + "/" + file;
-    }
-    static bool write_cg(const std::string& p, const std::string& val) {
-        std::ofstream f(p); if (!f) return false; f << val; return true;
-    }
-public:
-    // Ensure the slice directory exists (systemd creates them, but guard anyway)
-    static bool ensure(const std::string& slice) {
-        std::string dir = std::string(ROOT) + "/" + slice;
-        if (!fs::exists(dir)) {
-            try { fs::create_directories(dir); } catch (...) { return false; }
-        }
-        return true;
-    }
-    // Move a process into a slice's cgroup.procs
-    static bool move_pid(pid_t pid, const std::string& slice) {
-        ensure(slice);
-        return write_cg(path(slice, "cgroup.procs"), std::to_string(pid));
-    }
-    // cpu.weight — 1..10000, default 100. Lower = less CPU time
-    static bool set_cpu_weight(const std::string& slice, int weight) {
-        return write_cg(path(slice, "cpu.weight"), std::to_string(weight));
-    }
-    // memory.high — soft limit; kernel reclaims above this. "max" = unlimited
-    static bool set_memory_high(const std::string& slice, const std::string& val) {
-        return write_cg(path(slice, "memory.high"), val);
-    }
-    // memory.low — kernel protects this much memory from reclaim
-    static bool set_memory_low(const std::string& slice, const std::string& val) {
-        return write_cg(path(slice, "memory.low"), val);
-    }
-    // cgroup.freeze — 1=freeze all procs in slice, 0=unfreeze
-    static bool freeze(const std::string& slice, bool do_freeze) {
-        ensure(slice);
-        return write_cg(path(slice, "cgroup.freeze"), do_freeze ? "1" : "0");
-    }
-    // Read current memory usage of slice in bytes
-    static long memory_current(const std::string& slice) {
-        std::ifstream f(path(slice, "memory.current")); long v = 0;
-        if (f) f >> v;
-        return v;
-    }
-};
-
-// ==========================================
 // Notify
 // ==========================================
 static void notify(const std::string& title, const std::string& body) {
@@ -299,135 +222,51 @@ public:
         }
         for (auto& [pid,n]:graph) if (n.ppid&&graph.count(n.ppid)) graph[n.ppid].children.push_back(pid);
     }
-}; // MemoryGraph
-
-// Free helpers — placed here because they reference ProcessNode (defined above)
-// and CgroupManager (defined above). Cannot live inside CgroupManager itself.
-static void cg_escalate_to_frozen(const std::unordered_set<std::string>& targets,
-                                  const std::unordered_map<pid_t,ProcessNode>& g) {
-    for (const auto& [pid, n] : g)
-        if (targets.count(n.name) && !AUDIO_WHITELIST.count(n.name))
-            CgroupManager::move_pid(pid, "titan-frozen.slice");
-    CgroupManager::freeze("titan-frozen.slice", true);
-    std::cout << "[Cgroup] Escalated to frozen slice + cgroup.freeze=1\n";
-}
-static void cg_thaw_from_frozen(const std::unordered_set<std::string>& targets,
-                                const std::unordered_map<pid_t,ProcessNode>& g) {
-    CgroupManager::freeze("titan-frozen.slice", false);
-    for (const auto& [pid, n] : g)
-        if (targets.count(n.name) && !AUDIO_WHITELIST.count(n.name))
-            CgroupManager::move_pid(pid, "titan-background.slice");
-    std::cout << "[Cgroup] Thawed from frozen slice\n";
-}
-
-
+};
 
 // ==========================================
-// Pruner — cgroup v2 policy engine
-// Degrade-first escalation ladder:
-//   Level 0: move to titan-background.slice (cpu.weight=20)
-//   Level 1: set memory.high on background slice (kernel reclaims)
-//   Level 2: move to titan-frozen.slice + cgroup.freeze=1
-//   Level 3: SIGKILL heaviest — only when PSI some_avg10 > 40%
-// SIGSTOP kept only as emergency fallback for pre-cgroup kernels.
+// Pruner
 // ==========================================
 class Pruner {
 public:
-    // Move targets into background slice and set low cpu.weight
-    static void deprioritize(const std::unordered_set<std::string>& targets,
-                             const std::unordered_map<pid_t,ProcessNode>& g,
-                             int oom_expose_score=300) {
-        CgroupManager::ensure("titan-background.slice");
-        CgroupManager::set_cpu_weight("titan-background.slice", 20);
-        CgroupManager::set_memory_high("titan-background.slice", "max"); // lift limit initially
-        for (const auto& [pid, n] : g) {
-            if (!targets.count(n.name) || AUDIO_WHITELIST.count(n.name)) continue;
-            CgroupManager::move_pid(pid, "titan-background.slice");
-            set_oom(pid, oom_expose_score);
-            std::cout << "[Cgroup] Deprioritized " << n.name << " (" << n.rss_kb/1024 << "MB)\n";
-        }
-    }
-
-    // Tighten memory.high on background slice — kernel starts reclaiming
-    static void throttle_memory(long available_kb) {
-        // Cap background slice at 60% of currently free RAM
-        long cap_bytes = (available_kb * 1024L * 6L) / 10L;
-        if (cap_bytes < 64 * 1024 * 1024) cap_bytes = 64 * 1024 * 1024; // floor 64MB
-        CgroupManager::set_memory_high("titan-background.slice", std::to_string(cap_bytes));
-        std::cout << "[Cgroup] memory.high on background.slice → " << cap_bytes/1024/1024 << "MB\n";
-    }
-
-    // Freeze — move to frozen slice and engage cgroup.freeze=1
-    static void freeze_targets(const std::unordered_set<std::string>& targets,
-                               const std::unordered_map<pid_t,ProcessNode>& g) {
-        cg_escalate_to_frozen(targets, g);
-    }
-
-    // Thaw — unfreeze slice and move back, restore active slice
-    static void thaw(const std::unordered_set<std::string>& targets,
-                     const std::unordered_map<pid_t,ProcessNode>& g,
-                     int oom_score=-200) {
-        cg_thaw_from_frozen(targets, g);
-        CgroupManager::ensure("titan-active.slice");
-        CgroupManager::set_cpu_weight("titan-active.slice", 500);
-        CgroupManager::set_memory_low("titan-active.slice", "1G");
-        for (const auto& [pid, n] : g) {
-            if (!targets.count(n.name) || AUDIO_WHITELIST.count(n.name)) continue;
-            CgroupManager::move_pid(pid, "titan-active.slice");
-            set_oom(pid, oom_score);
-            std::cout << "[Cgroup] Activated " << n.name << "\n";
-        }
-    }
-
-    // Emergency SIGKILL — only called when PSI some_avg10 > 40%
-    static long emergency_kill(const std::unordered_set<std::string>& targets,
-                               const std::unordered_map<pid_t,ProcessNode>& g,
-                               int grace_ms=500) {
-        std::vector<const ProcessNode*> hits;
-        for (const auto& [pid,n] : g)
-            if (targets.count(n.name) && !AUDIO_WHITELIST.count(n.name))
-                hits.push_back(&n);
-        std::sort(hits.begin(), hits.end(), [](auto a, auto b){ return a->rss_kb > b->rss_kb; });
-        long freed = 0;
-        for (auto* n : hits) {
-            std::cout << "[Pruner] EMERGENCY KILL " << n->name << " (" << n->rss_kb/1024 << "MB) — PSI critical\n";
-            kill(n->pid, SIGTERM);
+    static void sig_tree(pid_t pid, const std::unordered_map<pid_t,ProcessNode>& g,
+                         int sig, int oom_cont_score=-200, int grace_ms=500) {
+        auto it=g.find(pid); if (it==g.end()) return;
+        if (AUDIO_WHITELIST.count(it->second.name)) { std::cout<<"[Pruner] Skip audio: "<<it->second.name<<" 🎵\n"; return; }
+        for (pid_t c:it->second.children) sig_tree(c,g,sig,oom_cont_score,grace_ms);
+        const char* lbl=(sig==SIGSTOP)?"Freeze":(sig==SIGCONT)?"Thaw":"Kill";
+        std::cout<<"[Pruner] "<<lbl<<" "<<it->second.name<<" ("<<it->second.rss_kb/1024<<"MB)\n";
+        if (sig==SIGSTOP) setpriority(PRIO_PROCESS,pid,19);
+        if (sig==SIGCONT) { setpriority(PRIO_PROCESS,pid,0); set_oom(pid,oom_cont_score); }
+        kill(pid,sig);
+        if (sig==SIGTERM) {
             std::this_thread::sleep_for(std::chrono::milliseconds(grace_ms));
-            if (kill(n->pid, 0) == 0) kill(n->pid, SIGKILL);
-            freed += n->rss_kb;
+            if (kill(pid,0)==0) kill(pid,SIGKILL);
         }
-        return freed;
     }
-
-    // Main entry point — reads PSI and picks the right escalation level
-    static long manage(const std::unordered_set<std::string>& targets,
-                       const std::unordered_map<pid_t,ProcessNode>& g,
-                       float ram_pct, float freeze_threshold, float kill_threshold,
-                       long available_kb, int oom_expose=300, int grace_ms=500) {
-        PSI psi = read_memory_psi();
-        std::cout << "[PSI] memory some_avg10=" << psi.some_avg10
-                  << "% full_avg10=" << psi.full_avg10 << "%\n";
-
-        // Healthy — just deprioritize (Level 0)
-        if (ram_pct > freeze_threshold && psi.some_avg10 < 5.0f) {
-            deprioritize(targets, g, oom_expose);
-            return 0;
+    static void thaw(const std::unordered_set<std::string>& t,
+                     const std::unordered_map<pid_t,ProcessNode>& g, int oom_score=-200) {
+        for (const auto& [pid,n]:g)
+            if (t.count(n.name)&&n.state=='T') sig_tree(pid,g,SIGCONT,oom_score);
+    }
+    static long prune(const std::unordered_set<std::string>& targets,
+                      const std::unordered_map<pid_t,ProcessNode>& g,
+                      float pct, float freeze_t, float kill_t,
+                      int oom_expose_score=300, int grace_ms=500) {
+        if (pct>freeze_t) { std::cout<<"[Pruner] RAM OK ("<<(int)pct<<"%) skip\n"; return 0; }
+        std::vector<const ProcessNode*> hits;
+        for (const auto& [pid,n]:g) {
+            if (targets.count(n.name)&&!AUDIO_WHITELIST.count(n.name)) {
+                hits.push_back(&n);
+                set_oom(pid, oom_expose_score);
+            }
         }
-        // Moderate pressure — throttle memory.high (Level 1)
-        if (ram_pct > kill_threshold && psi.some_avg10 < 20.0f) {
-            deprioritize(targets, g, oom_expose);
-            throttle_memory(available_kb);
-            return 0;
-        }
-        // High pressure — cgroup freeze (Level 2)
-        if (psi.some_avg10 < 40.0f) {
-            std::cout << "[Pruner] HIGH pressure — cgroup freeze\n";
-            freeze_targets(targets, g);
-            return 0;
-        }
-        // Critical — PSI > 40%, emergency SIGKILL (Level 3)
-        std::cout << "[Pruner] CRITICAL PSI (" << psi.some_avg10 << "%) — emergency kill\n";
-        return emergency_kill(targets, g, grace_ms);
+        std::sort(hits.begin(),hits.end(),[](auto a,auto b){return a->rss_kb>b->rss_kb;});
+        int sig=(pct<kill_t)?SIGTERM:SIGSTOP;
+        std::cout<<"[Pruner] "<<(sig==SIGTERM?"TERMINATE":"FREEZE")<<" ("<<(int)pct<<"% free)\n";
+        long freed=0;
+        for (auto* n:hits) { freed+=n->rss_kb; sig_tree(n->pid,g,sig,300,grace_ms); }
+        return freed;
     }
 };
 
@@ -460,14 +299,12 @@ public:
 // ==========================================
 // State file
 // ==========================================
-static void write_state(const std::string& profile, float pct, const std::string& action,
-                        long freed_mb, int temp_c, float psi_some=0.0f) {
+static void write_state(const std::string& profile,float pct,const std::string& action,long freed_mb,int temp_c) {
     std::ofstream f("/tmp/titan_hwm_state"); if (!f) return;
-    f << "profile=" << profile << "\nmem_available_pct=" << (int)pct << "\nlast_action=" << action
-      << "\nfreed_mb=" << freed_mb << "\ncpu_temp_c=" << temp_c
-      << "\npsi_some_avg10=" << psi_some
-      << "\ntimestamp=" << std::chrono::duration_cast<std::chrono::seconds>(
-         std::chrono::system_clock::now().time_since_epoch()).count() << "\n";
+    f<<"profile="<<profile<<"\nmem_available_pct="<<(int)pct<<"\nlast_action="<<action
+     <<"\nfreed_mb="<<freed_mb<<"\ncpu_temp_c="<<temp_c
+     <<"\ntimestamp="<<std::chrono::duration_cast<std::chrono::seconds>(
+         std::chrono::system_clock::now().time_since_epoch()).count()<<"\n";
 }
 
 // ==========================================
@@ -535,14 +372,12 @@ class TitanHardwareManager {
         int temp_mc=read_max_temp_mc(), temp_c=temp_mc/1000;
         bool hot=(temp_mc>=cfg.thermal_hot_mc);
         float fkill=cfg.ram_kill_pct+(hot?10.0f:0.0f);
-        PSI psi=read_memory_psi();
         MemoryGraph g; g.build();
 
         std::cout<<"\n============================================\n"
                  <<"[HWM] "<<lbl(old)<<" → "<<lbl(np)<<"\n"
                  <<"[HWM] RAM: "<<mem.available_kb/1024<<"MB free/"<<mem.total_kb/1024<<"MB ("<<(int)pct<<"%)"
-                 <<(hot?"  🌡️ HOT":"")
-                 <<"  PSI="<<psi.some_avg10<<"%\n";
+                 <<(hot?"  🌡️ HOT":"")<<"\n";
 
         std::unordered_set<std::string> to_prune, to_thaw;
         std::string theme;
@@ -565,51 +400,41 @@ class TitanHardwareManager {
             for (auto& s:web_tools) all_dev.insert(s);
             for (auto& s:android_tools) all_dev.insert(s);
             for (auto& s:system_tools) all_dev.insert(s);
-            for (auto& s:{"studio","java","gradle","emulator","node","webpack","vite","bun",
-                          "electron","dockerd","docker","rust-analyzer","clangd","cargo",
-                          "make","cmake","gdb"}) all_dev.insert(s);
+            for (auto& s:{"studio","java","gradle","emulator","node","webpack","vite","bun","electron","dockerd","docker","rust-analyzer","clangd","cargo","make","cmake","gdb"}) all_dev.insert(s);
             to_prune=all_dev;
             theme="keyword general:col.active_border rgba(cba6f7ff) rgba(89b4faff) 45deg";
             set_cpu_governor("schedutil"); set_swappiness(60);
         }
 
-        // Thaw + promote active tools into titan-active.slice
-        Pruner::thaw(to_thaw, g.graph, cfg.oom_protect);
+        // Also prune casual apps when entering dev
+        if (np!=DevProfile::CASUAL) {
+            std::cout<<"[HWM] Suspending casual apps...\n";
+            Pruner::prune(casual_tools,g.graph,pct,cfg.ram_freeze_pct,fkill,
+                          cfg.oom_expose, cfg.sigterm_grace_ms);
+        } else {
+            Pruner::thaw(casual_tools,g.graph, cfg.oom_protect);
+        }
+
+        Pruner::thaw(to_thaw,g.graph, cfg.oom_protect);
+        // Explicitly protect active profile processes from OOM killer
+        // even if they were never frozen (so they never went through sig_tree's SIGCONT path)
+        // Protect active tools from OOM — use configured score (default -200, not -500)
         for (const auto& [pid,n]:g.graph)
             if (to_thaw.count(n.name) && !AUDIO_WHITELIST.count(n.name))
                 set_oom(pid, cfg.oom_protect);
-
-        // Manage casual apps separately
-        if (np!=DevProfile::CASUAL) {
-            std::cout<<"[HWM] Managing casual apps via cgroup policy...\n";
-            Pruner::manage(casual_tools, g.graph, pct, cfg.ram_freeze_pct, fkill,
-                           mem.available_kb, cfg.oom_expose, cfg.sigterm_grace_ms);
-        } else {
-            Pruner::thaw(casual_tools, g.graph, cfg.oom_protect);
-        }
-
-        // Manage competing dev tools via PSI-aware cgroup ladder
-        long freed_kb = Pruner::manage(to_prune, g.graph, pct, cfg.ram_freeze_pct, fkill,
-                                       mem.available_kb, cfg.oom_expose, cfg.sigterm_grace_ms);
-
+        long freed_kb=Pruner::prune(to_prune,g.graph,pct,cfg.ram_freeze_pct,fkill,
+                                    cfg.oom_expose, cfg.sigterm_grace_ms);
         HyprlandIPC::send(theme);
 
         long freed_mb=freed_kb/1024;
-        // Determine action label based on PSI escalation level
-        std::string action;
-        if      (psi.some_avg10 >= 40.0f) action = "emergency-kill";
-        else if (psi.some_avg10 >= 20.0f) action = "cgroup-freeze";
-        else if (psi.some_avg10 >= 5.0f)  action = "cgroup-throttle";
-        else                               action = "cgroup-deprioritize";
+        std::string action=(pct<fkill)?"terminate":(pct<cfg.ram_freeze_pct)?"freeze":"skip";
+        write_state(lbl(np),pct,action,freed_mb,temp_c);
 
-        write_state(lbl(np), pct, action, freed_mb, temp_c, psi.some_avg10);
-
-        std::string notif_body="RAM: "+std::to_string((int)pct)+"% avail"
-                               +"  |  PSI="+std::to_string((int)psi.some_avg10)+"%"
-                               +"  |  Action: "+action
+        std::string notif_body="RAM freed: "+std::to_string(freed_mb)+"MB  |  "
+                               +std::to_string((int)pct)+"% available"
                                +(hot?"  🌡️ "+std::to_string(temp_c)+"°C":"");
         notify(std::string(lbl(np))+" Profile Active", notif_body);
-        std::cout<<"[HWM] Done. Freed ~"<<freed_mb<<"MB  PSI="<<psi.some_avg10<<"%\n============================================\n";
+        std::cout<<"[HWM] Done. Freed ~"<<freed_mb<<"MB\n============================================\n";
     }
 
     void schedule(const std::string& wc, int ws=-1, bool is_ws=false) {

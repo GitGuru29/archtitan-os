@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+STATE=/tmp/titan_hwm_state
+[ ! -f "$STATE" ] && echo '{"text":"HWM","tooltip":"Titan HWM not running","class":"inactive"}' && exit 0
+
+profile=$(grep '^profile=' "$STATE" | cut -d= -f2)
+mem=$(grep '^mem_available_pct=' "$STATE" | cut -d= -f2)
+action=$(grep '^last_action=' "$STATE" | cut -d= -f2)
+freed=$(grep '^freed_mb=' "$STATE" | cut -d= -f2)
+temp=$(grep '^cpu_temp_c=' "$STATE" | cut -d= -f2)
+
+case "$profile" in
+  "Web Dev")     icon="🌐" ; css_class="web" ;;
+  "Android Dev") icon="🤖" ; css_class="android" ;;
+  "System Dev")  icon="⚙️"  ; css_class="system" ;;
+  "Casual")      icon="🪑" ; css_class="casual" ;;
+  *)             icon="💤" ; css_class="neutral" ;;
+esac
+
+text="$icon $profile"
+tooltip="RAM: ${mem}% free | Action: $action | Freed: ${freed}MB | CPU: ${temp}°C"
+
+echo "{\"text\":\"$text\",\"tooltip\":\"$tooltip\",\"class\":\"$css_class\"}"

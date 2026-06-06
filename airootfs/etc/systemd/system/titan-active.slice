@@ -1,0 +1,9 @@
+[Unit]
+Description=Titan HWM — Active Profile Slice (Protected Resources)
+Before=slices.target
+
+[Slice]
+# Active dev tools — kernel protects these pages aggressively
+CPUWeight=500
+MemoryLow=1G
+IOWeight=200

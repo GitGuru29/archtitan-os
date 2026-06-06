@@ -1,0 +1,26 @@
+# Titan Hardware Manager Configuration
+
+debounce_ms = 800
+ram_freeze_pct = 50
+ram_kill_pct = 25
+thermal_hot_temp = 80
+
+# OOM scores — range: -1000 to +1000
+# -200 = protected (kernel avoids killing, but not immune)
+# +300 = expendable (kernel prefers killing these in OOM)
+# Avoid -500 or below — process becomes effectively OOM-immune
+oom_protect_score = -200
+oom_expose_score = 300
+
+# Grace period between SIGTERM and SIGKILL (milliseconds)
+# Electron apps (VS Code, Figma) need 500ms+ to save state
+sigterm_grace_ms = 500
+
+casual_workspaces = 1
+web_workspaces = 2
+android_workspaces = 3
+system_workspaces = 4, 5
+
+web_extra_tools =
+android_extra_tools =
+system_extra_tools =
