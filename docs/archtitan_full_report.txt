@@ -1,0 +1,761 @@
+ArchTitan OS — Full Development Report
+Project Type: Final Year Project (FYP) — Custom Linux Distribution
+Base: Arch Linux (archiso)
+Repository: GitGuru29/archtitan-os · Branch: main
+Current HEAD: a7dea2b · Total Commits: 55
+Status: ✅ Base OS Complete — Ready for mkarchiso build
+
+1. Project Overview
+ArchTitan OS is a developer-focused custom Linux distribution built on Arch Linux. It targets 8–16
+GB RAM devices and is designed to be the primary OS for software developers — specifically
+Android, Web, and Systems programmers. The OS centers around three core philosophies:
+1. Low overhead — Idle RAM usage < 1 GB. Background processes are managed
+intelligently, not blindly killed.
+2. Context awareness — The OS understands what the user is doing and adapts resources
+accordingly in real time.
+3. Integrity — The session stack (Hyprland + SDDM) is enforced at 4 security layers. No
+competing DM/DE can take over.
+
+2. Full System Architecture
+graph TD
+subgraph Boot ["Boot Sequence"]
+UEFI["UEFI Firmware"] --> GRUB["GRUB Bootloader\n(ArchTitan Theme)"]
+GRUB --> Plymouth["Plymouth Boot Splash\n(ArchTitan Script Theme)"]
+Plymouth --> Kernel["Linux Kernel + initrd\n(mkinitcpio-archiso)"]
+Kernel --> Systemd["systemd init"]
+end
+subgraph Session ["Session Stack (Enforced)"]
+Systemd --> SDDM["SDDM Display Manager\n(archtitan QML theme)"]
+SDDM --> Hyprland["Hyprland Compositor\n(Wayland)"]
+Hyprland --> Waybar["Waybar Status Bar"]
+Hyprland --> Apps["User Applications"]
+end
+subgraph Daemons ["System Daemons"]
+Systemd --> HWM["Titan Hardware Manager\n(titan_hw_manager)"]
+Systemd --> NM["NetworkManager"]
+Systemd --> PW["PipeWire + WirePlumber\n(Audio)"]
+Systemd --> Docker["Docker (socket-activated)"]
+end
+subgraph Install ["Live ISO Only"]
+Hyprland --> Calamares["Calamares Installer\n(auto-launch, floating)"]
+end
+HWM <-->|"IPC Events\n(socket2.sock)"| Hyprland
+HWM -->|"State File\n(/tmp/titan_hwm_state)"| Waybar
+
+HWM -->|"Profile Themes\nvia keyword"| Hyprland
+style Boot fill:#1a1b26,stroke:#7aa2f7,color:#c0caf5
+style Session fill:#1a1b26,stroke:#9ece6a,color:#c0caf5
+style Daemons fill:#1a1b26,stroke:#e0af68,color:#c0caf5
+style Install fill:#1a1b26,stroke:#f7768e,color:#c0caf5
+
+3. Boot Flow
+sequenceDiagram
+participant FW as UEFI
+participant GR as GRUB
+participant PL as Plymouth
+participant KR as Kernel
+participant SD as systemd
+participant SM as SDDM
+participant HY as Hyprland
+participant HWM as Titan HWM
+FW->>GR: Load bootloader (EFI)
+GR->>GR: Show ArchTitan theme (5s timeout)
+GR->>PL: Hand off to Plymouth splash
+PL->>KR: Decompress & load kernel
+KR->>SD: PID 1 — systemd starts
+SD->>SM: Start SDDM (display-manager.service)
+SM->>HY: Launch Hyprland (autologin: archtitan)
+HY->>HY: Start waybar, hyprpaper, mako, polkit
+SD->>HWM: Start titan_hw_manager.service
+Note over HWM: After=graphical-session.target
+HWM->>HY: Connect to socket2.sock
+HWM->>HWM: Load ~/.config/titan-hwm/config
+HWM->>HWM: Start CLI server + Process Guard thread
+Note over HY: If live ISO: launch Calamares (4s delay)
+
+4. Titan Hardware Manager (HWM)
+The HWM is the defining feature of ArchTitan. It is a C++17 multi-threaded daemon (~575 lines)
+that monitors the Hyprland compositor in real time and surgically manages system resources based
+on what the user is doing.
+
+4.1 Internal Architecture
+graph LR
+subgraph Threads ["Three Daemon Threads"]
+T1["Main Thread\n(Hyprland IPC listener)"]
+T2["CLI Server Thread\n(/tmp/titan_hwm.sock)"]
+T3["Process Guard Thread\n(60s rogue DM scanner)"]
+end
+subgraph Events ["Event Sources"]
+EV1["activewindow>>\n(window focus)"]
+EV2["workspace>>\n(workspace switch)"]
+EV3["titan-hwm switch\n(manual CLI override)"]
+end
+subgraph Engine ["Transition Engine"]
+
+DB["Debounce\n(800ms + generation counter)"]
+CL["Classifier\n(window class / workspace)"]
+TR["Transition Logic\n(do_transition)"]
+end
+subgraph Actions ["System Actions"]
+MG["MemoryGraph Builder\n(/proc scan — RssAnon)"]
+PR["Signal Pruner\n(SIGSTOP/SIGCONT/SIGTERM)"]
+KT["Kernel Tuner\n(governor + swappiness + OOM)"]
+HT["Hyprland Theme\n(border colour via IPC)"]
+NT["Notifier\n(notify-send)"]
+SF["State File\n(/tmp/titan_hwm_state)"]
+end
+EV1 & EV2 --> T1 --> DB --> CL --> TR
+EV3 --> T2 --> TR
+TR --> MG --> PR
+TR --> KT
+TR --> HT
+TR --> NT
+TR --> SF
+T3 -.->|Kill rogue DMs| PR
+
+4.2 Profile System
+Profile
+
+Window Triggers Workspace
+
+CPU Governor
+
+Swappiness
+
+WEB_DEV
+
+code, figma,
+firefoxdeveloperedition
+
+WS 2
+
+performance
+
+10
+
+ANDROID_DEV *studio*,
+emulator
+
+WS 3
+
+performance
+
+10
+
+SYSTEM_DEV
+
+alacritty,
+kitty, clion,
+neovim
+
+WS 4, 5
+
+performance
+
+10
+
+CASUAL
+
+telegram,
+discord,
+nautilus,
+dolphin
+
+WS 1
+
+schedutil
+
+60
+
+NEUTRAL
+
+firefox,
+chromium,
+brave,
+spotify, mpv
+
+any
+
+No change
+
+No change
+
+NEUTRAL is intentional — switching tabs in a browser or playing music never
+disrupts an active dev profile.
+
+4.3 Memory Pressure — Decision Flow
+flowchart TD
+A["Profile Transition Triggered"] --> B["Read /proc/meminfo\n+
+
+/sys/class/thermal"]
+B --> C{Available RAM?}
+C -->|"> 50% free"| D["✅ SKIP — System healthy\nNo action"]
+C -->|"25–50% free"| E["⚠️ FREEZE (SIGSTOP)\nrenice to 19\nOOM expose =
++300"]
+C -->|"< 25% free"| F["🔴 TERMINATE (SIGTERM)\nSort by RssAnon DESC\nHeaviest
+freed first"]
+F --> G["Wait sigterm_grace_ms\n(default 500ms)\nAllows Electron/IDE to
+save"]
+G --> H{Still alive?}
+H -->|Yes| I["SIGKILL — Hard free"]
+H -->|No| J["✅ Freed"]
+B --> K{CPU Temp?}
+K -->|">= 80°C 🌡️"| L["Raise kill threshold\n+10% more aggressive"]
+L --> C
+style D fill:#00b894,color:#fff
+style E fill:#fdcb6e,color:#2d3436
+style F fill:#d63031,color:#fff
+style I fill:#c0392b,color:#fff
+
+4.4 Audio Whitelist (Unbreakable)
+Checked at two independent points — before building candidates and before sending any signal.
+These processes are never touched regardless of RAM pressure:
+spotify spotifyd mpd mpdris2 mpv vlc rhythmbox
+strawberry deadbeef cmus ncmpcpp cantata audacious
+elisa playerctld pipewire pipewire-pulse wireplumber
+
+pulseaudio
+
+4.5 OOM Score Management
+oom_score_adj
+
+Process State
+
+Meaning
+
+Active profile tools
+
+-200
+
+Kernel avoids killing —
+protected
+
+Background/competing tools
+
++300
+
+Kernel prefers killing —
+expendable
+
+Audio whitelist
+
+never touched
+
+Immune by whitelist
+
+Deliberately not -500 — at -500 a process becomes effectively OOM-immune and
+could freeze the entire system in a real OOM event.
+
+4.6 Kernel Tuning Per Profile
+graph LR
+DEV["Dev Profiles\n(WEB / ANDROID / SYSTEM)"] -->|"write performance"|
+GOV["/sys/.../scaling_governor"]
+DEV -->|"write 10"| SWP["/proc/sys/vm/swappiness"]
+CAS["Casual Profile"] -->|"write schedutil"| GOV
+CAS -->|"write 60"| SWP
+
+HWM["HWM Daemon"] -->|"per-process"| OOM["/proc/[pid]/oom_score_adj"]
+
+4.7 Debounce (Anti-Flicker)
+Rapid window switching generates many events. Without debounce, switching from a terminal to a
+browser and back would trigger 2–3 full profile transitions in under a second.
+sequenceDiagram
+participant HY as Hyprland
+participant SC as schedule()
+participant TH as Thread (gen=N)
+participant TR as do_transition()
+HY->>SC: activewindow>> code (gen→1)
+SC->>TH: Spawn thread gen=1, sleep 800ms
+HY->>SC: activewindow>> firefox (gen→2)
+SC->>TH: Spawn thread gen=2, sleep 800ms
+Note over TH: gen=1 thread wakes, checks gen counter
+TH-->>TH: debounce_gen=2 ≠ 1 → EXIT (stale)
+HY->>SC: activewindow>> code (gen→3)
+SC->>TH: Spawn thread gen=3, sleep 800ms
+Note over TH: gen=2 thread wakes → EXIT (stale)
+Note over TH: gen=3 thread wakes → gen=3 ✅ FIRE
+TH->>TR: do_transition(WEB_DEV)
+
+5. Session Enforcement (4-Layer Guard)
+ArchTitan enforces Hyprland + SDDM as the only supported session stack. HWM's IPC requires
+Hyprland — no other compositor is compatible.
+graph TD
+U["User: pacman -S gdm\nor runs DM binary directly"]
+U --> L1
+U -.->|"Bypasses pacman"| L3
+U -.->|"Runs raw binary"| L4
+subgraph L1 ["Layer 1 — Pacman Hook (AbortOnFail)"]
+PH["archtitan-session-guard.hook\nIntercepts install of 30+
+packages\nAborts transaction immediately"]
+end
+subgraph L2 ["Layer 2 — IgnorePkg (pacman.conf)"]
+IP["gdm lightdm lxdm xdm ly emptty greetd slim\nxorg-server gnome-shell
+plasma-desktop kwin\nxfce4-session i3-wm openbox bspwm..."]
+end
+subgraph L3 ["Layer 3 — Systemd Masking"]
+SM["10 services → /dev/null symlinks\ngdm lightdm lxdm xdm ly emptty
+slim\ngreetd gnome-session plasma-sddm-helper"]
+end
+subgraph L4 ["Layer 4 — HWM Process Guard"]
+PG["Thread scans /proc every 60s\nDetects: gdm gdm3 lightdm lxdm Xorg
+X\ngnome-shell plasmashell kwin_wayland\nxfwm4 openbox...\nSIGTERM → 500ms →
+SIGKILL + notify-send"]
+end
+L1 --> BLOCK["❌ BLOCKED"]
+
+L2 --> BLOCK
+L3 --> BLOCK
+L4 --> BLOCK
+
+6. CLI Tool — titan-hwm
+A native C++ binary (no shell, no socat, no external dependencies) that communicates directly
+with the daemon via UNIX domain socket.
+sequenceDiagram
+participant U as User
+participant CLI as titan-hwm (C++ binary)
+participant SK as /tmp/titan_hwm.sock
+participant HWM as titan_hw_manager daemon
+U->>CLI: titan-hwm switch android
+CLI->>CLI: Validate command
+CLI->>CLI: stat() socket — exists?
+CLI->>SK: socket(AF_UNIX) + connect()
+CLI->>HWM: write("switch android")
+HWM->>HWM: do_transition(ANDROID_DEV)
+CLI->>U: → Sent: switch android
+U->>CLI: titan-hwm status
+CLI->>SK: connect()
+CLI->>HWM: write("status")
+HWM->>CLI: write(reply: profile, ram_pct, ram_free_mb, cpu_temp_c)
+CLI->>U: profile=Android Dev\nram_pct=41\nram_free_mb=3412\ncpu_temp_c=62
+
+7. Waybar Integration
+The HWM Waybar module (titan-hwm-waybar) polls the state file every 5 seconds and
+returns a JSON blob that Waybar renders as a profile pill with per-profile colour coding.
+graph LR
+HWM["Titan HWM Daemon"] -->|"writes every transition"|
+SF["/tmp/titan_hwm_state"]
+SF -->|"read every 5s"| WB["titan-hwm-waybar script"]
+WB -->|"JSON: text + class + tooltip"| WAY["Waybar\ncustom/titan-hwm"]
+WAY -->|".web class"| C1["🌐 Web Dev\n#00D8FF Cyan"]
+WAY -->|".android class"| C2["🤖 Android Dev\n#3DDC84 Green"]
+WAY -->|".system class"| C3["⚙️ System Dev\n#7DCFFF Blue"]
+WAY -->|".casual class"| C4["🪑 Casual\n#CBA6F7 Purple"]
+WAY -->|".neutral class"| C5["💤 Neutral\n#414868 Dimmed"]
+
+Click actions:
+• Left-click → titan-hwm status (prints to stdout / notification)
+• Right-click → Opens Kitty terminal with live status output
+
+8. OS Configuration Summary
+Hyprland (~/.config/hypr/hyprland.conf)
+Setting
+
+Value
+
+Terminal
+
+kitty
+
+Launcher
+
+wofi --show drun
+
+Browser
+
+chromium
+
+File Manager
+
+kitty -e ranger
+
+Lock
+
+swaylock (Super+L)
+
+Screenshot
+
+grim + slurp → wl-copy (Print)
+
+Rounding
+
+12px
+
+Animations
+
+Overshot bezier, slide, fade
+
+Gaps
+
+in: 5px, out: 10px
+
+Active border
+
+Animated gradient (Tokyo Night palette)
+
+Calamares
+
+Float + center, 900×620, opacity 1.0
+
+Live ISO
+
+Auto-launch Calamares after 4s delay
+
+SDDM
+Setting
+
+Value
+
+Theme
+
+archtitan (custom QML)
+
+Wayland HiDPI
+
+Enabled
+
+Autologin User
+
+archtitan
+
+Autologin Session
+
+hyprland
+
+Calamares Installer Sequence
+show:
+exec:
+
+show:
+
+welcome → locale → keyboard → partition → users → summary
+partition → mount → unpackfs → machineid → fstab → locale
+keyboard → localecfg → initcpio → plymouthcfg → users
+displaymanager → networkcfg → hwclock → services-systemd
+grubcfg → bootloader → umount
+finished
+
+Package Manifest — 135 Packages
+Category
+
+Packages
+
+Base
+
+base, linux, linux-firmware, base-devel, sudo
+
+Compositor
+
+hyprland, hyprpaper, xdg-desktop-portalhyprland, xorg-xwayland
+
+Bar
+
+waybar
+
+Category
+
+Packages
+
+Display Manager
+
+sddm, sddm-kcm, qt5-graphicaleffects, qt5-svg,
+qt5-quickcontrols2
+
+Terminal
+
+kitty
+
+Shell
+
+fish, starship
+
+Launcher
+
+wofi
+
+Notifications
+
+mako
+
+Fonts
+
+ttf-jetbrains-mono-nerd, noto-fonts, noto-fontsemoji
+
+Audio
+
+pipewire, pipewire-pulse, pipewire-alsa,
+pipewire-jack, wireplumber, pavucontrol
+
+Screen Lock
+
+swaylock
+
+Browser
+
+chromium
+
+Installer
+
+calamares, partitionmanager
+
+Dev Tools
+
+code, git, neovim, cmake, clang, gdb, docker,
+docker-compose, rustup, go, nodejs, npm,
+android-tools, github-cli
+
+CLI Tools
+
+btop, zellij, lazygit, fastfetch, ranger, ripgrep, fd,
+jq, httpie, strace, tree, curl, wget
+
+Boot
+
+grub, plymouth, efibootmgr
+
+Network
+
+networkmanager, bluez, bluez-utils
+
+Python
+
+python, python-pip
+
+Firmware
+
+intel-ucode, amd-ucode, linux-firmware, soffirmware
+
+9. Commit History (55 commits)
+gitGraph
+commit id: "d13b794 Initial commit"
+commit id: "e296157 CI: GitHub Actions ISO"
+commit id: "Boot + Plymouth fixes (×8)"
+commit id: "Calamares redesign (×6)"
+commit id: "GRUB theme (×4)"
+commit id: "0fcd8e8 PipeWire + dev tools"
+commit id: "07e8ad8 Titan HWM daemon v1"
+commit id: "557c51b Package pruning"
+commit id: "ab4676b HWM: pressure-aware RAM"
+commit id: "1c86cfb HWM: audio whitelist + CASUAL"
+commit id: "3b00b62 HWM: browser → NEUTRAL"
+commit id: "8a5c68c Session guard (4 layers)"
+commit id: "e1bcd33 HWM: full feature upgrade"
+commit id: "79913f2 HWM: audit bug fixes ×3"
+commit id: "42e7183 HWM: CLI status reply fix"
+commit id: "c16845f HWM: review fixes ×4"
+commit id: "76ec6be Waybar: HWM module wired"
+commit id: "822d9bf Pre-finalize checkup"
+
+commit id: "8e1335b titan-hwm: native C++ CLI"
+commit id: "a7dea2b Waybar: JSON parse fix" type: HIGHLIGHT
+
+10. File Structure
+archtitan-os/
+├── airootfs/
+│
+├── etc/
+│
+│
+├── calamares/
+│
+│
+│
+├── settings.conf
+← installer sequence
+│
+│
+│
+├── branding/archtitan/
+← custom branding
+│
+│
+│
+└── modules/
+← 7 configured modules
+│
+│
+├── pacman.d/hooks/
+│
+│
+│
+└── archtitan-session-guard.hook ← Layer 1 guard
+│
+│
+├── sddm.conf.d/
+│
+│
+│
+├── archtitan.conf
+← theme + HiDPI
+│
+│
+│
+└── autologin.conf
+← archtitan/hyprland
+│
+│
+├── skel/.config/
+│
+│
+│
+├── hypr/hyprland.conf
+← full Hyprland config
+│
+│
+│
+├── waybar/config
+← bar layout + HWM module (valid JSON ✅)
+│
+│
+│
+├── waybar/style.css
+← Tokyo Night + HWM CSS
+│
+│
+│
+├── kitty/
+← terminal config
+│
+│
+│
+├── fish/
+← shell config
+│
+│
+│
+└── titan-hwm/config
+← HWM user config
+│
+│
+└── systemd/system/
+│
+│
+├── titan_hw_manager.service
+← After=graphical-session.target
+│
+│
+├── [gdm|lightdm|...].service → /dev/null ← Layer 3 masking
+│
+│
+└── multi-user.target.wants/titan_hw_manager.service
+│
+└── usr/
+│
+├── local/bin/
+│
+│
+├── titan_hw_manager
+← ELF64 daemon binary
+│
+│
+├── titan-hwm
+← ELF64 CLI binary (native, no socat)
+│
+│
+├── titan-hwm-waybar
+← bash JSON state reader
+│
+│
+└── archtitan-session-guard ← Layer 1 abort script
+│
+└── share/
+│
+├── grub/themes/archtitan/ ← custom GRUB theme
+│
+├── sddm/themes/archtitan/ ← custom SDDM QML theme
+│
+└── plymouth/themes/archtitan/ ← boot splash
+├── titan_hw_manager.cpp
+← 575 lines, C++17
+├── titan_hwm_cli.cpp
+← 92 lines, C++17
+├── titan_hw_manager.service ← synced with airootfs
+├── install.sh
+← compiles both binaries, installs all
+├── profiledef.sh
+← ISO build config + file permissions
+├── packages.x86_64
+← 135 packages
+├── pacman.conf
+← IgnorePkg session guard (Layer 2)
+└── grub/grub.cfg
+← UEFI boot entries
+
+11. Pre-Build Verification Checklist
+Check
+
+Status
+
+packages.x86_64 — all 135 packages
+present
+
+✅
+
+socat removed (replaced by native binary)
+
+✅
+
+All binaries in
+
+✅
+
+Check
+
+Status
+
+airootfs/usr/local/bin/
+All scripts have +x in profiledef.sh
+
+✅
+
+Waybar config is valid JSON
+
+✅ (validated with python3 -m json.tool)
+
+HWM service After=graphicalsession.target
+
+✅
+
+SDDM autologin → archtitan +
+hyprland
+
+✅
+
+10 rogue DM services masked → /dev/null
+
+✅
+
+Pacman hook + IgnorePkg configured
+
+✅
+
+Calamares full sequence in settings.conf
+
+✅
+
+GRUB EFI boot mode configured
+
+✅
+
+archtitan user in wheel group
+
+✅
+
+git status — clean, nothing uncommitted
+
+✅
+
+main = origin/main
+
+✅
+
+12. What's Left (Post-Base)
+The base OS is complete and ready for ISO build. Future scope (v2):
+• TitanShare — Android ↔ Linux file sharing daemon (separate branch, already
+implemented)
+• Waybar HWM Widget refinement — richer per-profile display in the bar
+• Custom SDDM animations — smoother login transition
+• HWM config GUI — a simple GTK/Qt config panel instead of text file editing
+• ISO signing — GPG-sign the produced ISO for distribution
+• Package repository — AUR-like custom repo for titan_hw_manager binary updates
+
+
