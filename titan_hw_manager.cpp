@@ -738,16 +738,29 @@ class TitanHardwareManager {
         std::unordered_set<std::string> lsp(cfg.lsp_binaries.begin(),cfg.lsp_binaries.end());
         std::unordered_set<std::string> bd(cfg.build_daemons.begin(),cfg.build_daemons.end());
 
-        for (const auto& [pid,n] : graph) {
-            if (AUDIO_WHITELIST.count(n.name)||lsp.count(n.name)||bd.count(n.name)) continue;
-            if (age_min >= cfg.age_hard_decay_min && ws.tier==WorkspaceTier::FREEZEABLE) {
-                // Hard decay: SIGSTOP non-daemon processes
-                if (n.state!='T') { kill(pid,SIGSTOP); std::cout<<"[Decay] SIGSTOP "<<n.name<<" (ws"<<ws.workspace_id<<" age="<<age_min<<"min)\n"; }
-            } else if (age_min >= cfg.age_soft_decay_min) {
-                // Soft decay: renice to +5
-                setpriority(PRIO_PROCESS, pid, 5);
+        bool frozen_any = false;
+        for (const auto& w : ws.windows) {
+            std::vector<pid_t> pids = {w.pid};
+            auto it = graph.find(w.pid);
+            if (it != graph.end()) {
+                for (pid_t child : it->second.children) pids.push_back(child);
+            }
+            for (pid_t pid : pids) {
+                auto nit = graph.find(pid);
+                if (nit == graph.end()) continue;
+                const auto& n = nit->second;
+                if (AUDIO_WHITELIST.count(n.name)||lsp.count(n.name)||bd.count(n.name)) continue;
+                
+                if (age_min >= cfg.age_hard_decay_min && ws.tier==WorkspaceTier::FREEZEABLE) {
+                    CgroupManager::move_pid(pid, "titan-frozen.slice");
+                    std::cout<<"[Decay] Freeze (cgroup) "<<n.name<<" (ws"<<ws.workspace_id<<" age="<<age_min<<"min)\n";
+                    frozen_any = true;
+                } else if (age_min >= cfg.age_soft_decay_min) {
+                    CgroupManager::move_pid(pid, "titan-background.slice");
+                }
             }
         }
+        if (frozen_any) CgroupManager::freeze("titan-frozen.slice", true);
     }
 
     // Rebalance all workspaces after a workspace switch (P3+P4+P5)
@@ -762,15 +775,31 @@ class TitanHardwareManager {
             ws.tier = evaluate_tier(ws, active_workspace_id, cfg);
             std::cout<<"[Tier] WS"<<id<<" → "<<(ws.tier==WorkspaceTier::ACTIVE?"ACTIVE":ws.tier==WorkspaceTier::PROTECTED?"PROTECTED":"FREEZEABLE")<<"\n";
 
-            if (ws.tier == WorkspaceTier::FREEZEABLE) apply_age_decay(ws, graph);
-
-            // SIGCONT any processes that tier-upgraded to PROTECTED or ACTIVE
-            if (ws.tier != WorkspaceTier::FREEZEABLE) {
+            if (ws.tier == WorkspaceTier::FREEZEABLE) {
+                apply_age_decay(ws, graph);
+            } else {
+                // Thaw processes that tier-upgraded to PROTECTED or ACTIVE
                 std::unordered_set<std::string> lsp(cfg.lsp_binaries.begin(),cfg.lsp_binaries.end());
                 std::unordered_set<std::string> bd(cfg.build_daemons.begin(),cfg.build_daemons.end());
-                for (const auto& [pid,n]:graph) {
-                    if (n.state=='T'&&(lsp.count(n.name)||bd.count(n.name))) {
-                        kill(pid,SIGCONT); std::cout<<"[Tier] SIGCONT protected daemon: "<<n.name<<"\n";
+                std::string target_slice = (ws.tier == WorkspaceTier::ACTIVE) ? "titan-active.slice" : "titan-background.slice";
+                
+                for (const auto& w : ws.windows) {
+                    std::vector<pid_t> pids = {w.pid};
+                    auto it = graph.find(w.pid);
+                    if (it != graph.end()) {
+                        for (pid_t child : it->second.children) pids.push_back(child);
+                    }
+                    for (pid_t pid : pids) {
+                        auto nit = graph.find(pid);
+                        if (nit == graph.end()) continue;
+                        const auto& n = nit->second;
+                        if (AUDIO_WHITELIST.count(n.name)) continue;
+                        
+                        // Moving a process out of a frozen cgroup thaws it automatically in cgroup v2
+                        CgroupManager::move_pid(pid, target_slice);
+                        if (lsp.count(n.name) || bd.count(n.name)) {
+                            std::cout<<"[Tier] Restored protected daemon: "<<n.name<<"\n";
+                        }
                     }
                 }
             }
@@ -989,11 +1018,12 @@ public:
 
     void run() {
         cfg=load_config(); apply_extras();
-        cli_thd  =std::thread(&TitanHardwareManager::run_cli_server,this);
-        guard_thd=std::thread(&TitanHardwareManager::run_process_guard,this);
 
         std::string sock=HyprlandIPC::find_sock(".socket2.sock");
         if (sock.empty()) { std::this_thread::sleep_for(std::chrono::seconds(5)); return; }
+
+        cli_thd  =std::thread(&TitanHardwareManager::run_cli_server,this);
+        guard_thd=std::thread(&TitanHardwareManager::run_process_guard,this);
 
         while (true) {
             int fd=socket(AF_UNIX,SOCK_STREAM,0); if (fd<0) exit(1);
