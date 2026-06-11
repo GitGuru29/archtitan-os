@@ -669,12 +669,12 @@ static void cg_escalate_to_frozen(
             std::cout<<"[Cgroup] Freeze-skip protected daemon: "<<n.name<<"\n";
             continue;
         }
-        CgroupManager::move_pid(pid, "titan-frozen.slice");
-        // §5.2.5: SIGSTOP + register in frozen PID registry
+        // §5.2.5: SIGSTOP *first*, then cgroup migrate, to prevent run-window in frozen slice
         if (!registry_is_frozen(pid)) {
             ::kill(pid, SIGSTOP);
             registry_freeze(pid, WorkspaceTier::FREEZEABLE, n.rss_kb);
         }
+        CgroupManager::move_pid(pid, "titan-frozen.slice");
     }
     CgroupManager::freeze("titan-frozen.slice", true);
     std::cout<<"[Cgroup] Escalated to frozen slice\n";
@@ -1178,7 +1178,10 @@ class TitanHardwareManager {
           pending_class=wm_class; pending_title=title; pending_pid=pid;
           pending_ws=ws; pending_is_ws=is_ws; have_pending=true; }
         gen = ++debounce_gen;
-        if (debounce_thd.joinable()) debounce_thd.detach();
+        // §5.2.5: move old thread out and detach only after gen invalidates it,
+        // preventing zombie accumulation on rapid workspace switches
+        std::thread old_thd = std::move(debounce_thd);
+        if (old_thd.joinable()) old_thd.detach();
         debounce_thd=std::thread([this,gen](){
             std::this_thread::sleep_for(std::chrono::milliseconds(cfg.debounce_ms));
             if (debounce_gen.load()!=gen||!have_pending.load()) return;
