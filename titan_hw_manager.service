@@ -14,5 +14,9 @@ RestartSec=3
 User=root
 Group=root
 
+# Allow THM to create and manage its own cgroup slices
+# (titan-active.slice, titan-background.slice, titan-frozen.slice)
+Delegate=yes
+
 [Install]
 WantedBy=graphical-session.target

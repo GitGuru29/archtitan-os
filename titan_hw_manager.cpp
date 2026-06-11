@@ -8,6 +8,9 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/resource.h>
+#include <sys/inotify.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <csignal>
 #include <thread>
@@ -64,7 +67,7 @@ struct Config {
     std::vector<std::string> web_extra, android_extra, system_extra;
     // [classifier]
     std::vector<std::string> lsp_binaries   = {"clangd","ccls","rust-analyzer","tsserver","eslint_d"};
-    std::vector<std::string> build_daemons  = {"gradle","cargo","webpack","vite","java","cmake"};
+    std::vector<std::string> build_daemons  = {"gradle","cargo","webpack","vite","java","cmake","adb"};
     std::vector<std::string> ai_inference   = {"ollama","llama-server","python3"};
     std::vector<std::string> known_ides     = {"code","cursor","zed","windsurf","antigravity",
                                                "fleet","idea","android-studio"};
@@ -106,6 +109,7 @@ static Config load_config() {
         std::string k=line.substr(0,eq), v=line.substr(eq+1);
         k.erase(0,k.find_first_not_of(" \t")); k.erase(k.find_last_not_of(" \t")+1);
         v.erase(0,v.find_first_not_of(" \t")); v.erase(v.find_last_not_of(" \t")+1);
+        try {
         if      (k=="debounce_ms")             c.debounce_ms      = std::stoi(v);
         else if (k=="ram_freeze_pct")          c.ram_freeze_pct   = std::stof(v);
         else if (k=="ram_kill_pct")            c.ram_kill_pct     = std::stof(v);
@@ -130,6 +134,9 @@ static Config load_config() {
         else if (k=="age_hard_decay_min")      c.age_hard_decay_min=std::stoi(v);
         else if (k=="lsp_protection")          c.lsp_protection   = (v=="true"||v=="1");
         else if (k=="aggressive_swap")         c.aggressive_swap  = (v=="true"||v=="1");
+        } catch (const std::exception& e) {
+            std::cerr << "[Config] Bad value for '" << k << "': " << e.what() << " — skipping\n";
+        }
     }
     return c;
 }
@@ -184,10 +191,24 @@ static void set_cpu_governor(const std::string& gov) {
         std::string n=cpu.path().filename().string();
         if (n.rfind("cpu",0)!=0||!std::isdigit(n[3])) continue;
         std::string p=cpu.path().string()+"/cpufreq/scaling_governor";
-        if (!fs::exists(p)) continue; std::ofstream f(p); if (f) f<<gov;
+        if (!fs::exists(p)) continue;
+        std::ofstream f(p); if (f) f<<gov;
     } std::cout<<"[SysTuner] governor → "<<gov<<"\n"; } catch(...) {}
 }
 static void set_swappiness(int v) { std::ofstream f("/proc/sys/vm/swappiness"); if (f) { f<<v; std::cout<<"[SysTuner] swappiness → "<<v<<"\n"; } }
+// §5.2.7 — I/O scheduler assignment per profile
+static void set_io_scheduler(const std::string& sched) {
+    try {
+        for (const auto& q : fs::directory_iterator("/sys/block")) {
+            std::string dev = q.path().filename().string();
+            if (dev.rfind("loop",0)==0||dev.rfind("ram",0)==0) continue;
+            std::string p = q.path().string()+"/queue/scheduler";
+            if (!fs::exists(p)) continue;
+            std::ofstream f(p); if (f) f<<sched;
+        }
+        std::cout<<"[SysTuner] io_scheduler → "<<sched<<"\n";
+    } catch(...) {}
+}
 static void set_oom(pid_t pid, int score) { std::ofstream f("/proc/"+std::to_string(pid)+"/oom_score_adj"); if (f) f<<score; }
 
 // ==========================================
@@ -208,8 +229,14 @@ static PSI read_memory_psi() {
 // Notify
 // ==========================================
 static void notify(const std::string& title, const std::string& body) {
-    system(("notify-send --app-name='Titan HWM' --icon=dialog-information '"+title+"' '"+body+"' &").c_str());
+    // Sanitize: strip single quotes to prevent shell injection from window titles
+    auto sanitize = [](std::string s) {
+        s.erase(std::remove(s.begin(), s.end(), '\''), s.end()); return s;
+    };
+    std::string t = sanitize(title), b = sanitize(body);
+    system(("notify-send --app-name='Titan HWM' --icon=dialog-information '"+t+"' '"+b+"' &").c_str());
 }
+
 
 // ==========================================
 // ProcessNode + MemoryGraph
@@ -258,6 +285,23 @@ public:
     }
 };
 
+// §5.2.1 — Recursive child walk: collects all descendant cmdlines up to depth limit
+static void walk_children_recursive(
+    pid_t pid,
+    const std::unordered_map<pid_t,ProcessNode>& graph,
+    std::vector<std::string>& out,
+    int depth = 3)
+{
+    if (depth <= 0) return;
+    auto it = graph.find(pid);
+    if (it == graph.end()) return;
+    for (pid_t child : it->second.children) {
+        std::string cmd = read_cmdline(child);
+        if (!cmd.empty()) out.push_back(cmd);
+        walk_children_recursive(child, graph, out, depth-1);
+    }
+}
+
 // ==========================================
 // PROBLEM 1 — FusionClassifier
 // 3-signal fusion: children→cmdline, window title, cwd project markers
@@ -284,33 +328,37 @@ public:
         // Scores per workload type accumulated from child processes
         std::map<WorkloadType,float> scores;
 
-        auto it = graph.find(pid); if (it==graph.end()) return r;
-        for (pid_t child : it->second.children) {
-            std::string cmd = read_cmdline(child);
+        // §5.2.1 — Use recursive walk (depth 3) to catch grandchild LSP servers
+        std::vector<std::string> all_cmds;
+        walk_children_recursive(pid, graph, all_cmds, 3);
+
+        for (const std::string& cmd : all_cmds) {
             if (cmd.empty()) continue;
 
             // AI modifier — set flag and continue (doesn't override profile)
             if (ai_set.count(cmd)) { r.ai_modifier = true; continue; }
 
-            // LSP detection (high confidence → 0.5 weight per signal)
+            // LSP detection (highest confidence → 0.6 weight)
             if (lsp_set.count(cmd)) {
                 r.has_lsp = true;
-                if (cmd=="clangd"||cmd=="ccls"||cmd=="rust-analyzer") scores[WorkloadType::SYSTEM_DEV]+=0.5f;
-                else if (cmd=="tsserver"||cmd=="eslint_d")             scores[WorkloadType::WEB_DEV]+=0.5f;
+                if (cmd=="clangd"||cmd=="ccls"||cmd=="rust-analyzer") scores[WorkloadType::SYSTEM_DEV]+=0.6f;
+                else if (cmd=="tsserver"||cmd=="eslint_d")             scores[WorkloadType::WEB_DEV]+=0.6f;
                 continue;
             }
-            // Build daemon detection (high confidence → 0.5 weight)
+            // Build daemon detection (highest confidence → 0.6 weight)
             if (build_set.count(cmd)) {
                 r.has_build = true;
-                if (cmd=="gradle"||cmd=="java")           scores[WorkloadType::ANDROID_DEV]+=0.5f;
-                else if (cmd=="cargo"||cmd=="cmake")      scores[WorkloadType::SYSTEM_DEV]+=0.5f;
-                else if (cmd=="webpack"||cmd=="vite")     scores[WorkloadType::WEB_DEV]+=0.5f;
+                // §5.2.1 spec: gradle/adb → ANDROID_DEV
+                if (cmd=="gradle"||cmd=="java")           scores[WorkloadType::ANDROID_DEV]+=0.6f;
+                else if (cmd=="cargo"||cmd=="cmake")      scores[WorkloadType::SYSTEM_DEV]+=0.6f;
+                else if (cmd=="webpack"||cmd=="vite")     scores[WorkloadType::WEB_DEV]+=0.6f;
                 continue;
             }
-            // Generic child matching
-            if (cmd=="adb"||cmd=="kotlin-compiler")       scores[WorkloadType::ANDROID_DEV]+=0.3f;
-            else if (cmd=="node"||cmd=="esbuild"||cmd=="bun") scores[WorkloadType::WEB_DEV]+=0.3f;
-            else if (cmd=="gdb"||cmd=="make")             scores[WorkloadType::SYSTEM_DEV]+=0.3f;
+            // §5.2.1 spec: adb is in build_daemons — routed via build_set above.
+            // These are supplementary lower-confidence signals for unlisted child processes.
+            if (cmd=="kotlin-compiler"||cmd=="aapt2") { r.has_build=true; scores[WorkloadType::ANDROID_DEV]+=0.6f; }
+            else if (cmd=="node"||cmd=="esbuild"||cmd=="bun")   scores[WorkloadType::WEB_DEV]+=0.3f;
+            else if (cmd=="gdb"||cmd=="make"||cmd=="ninja")     scores[WorkloadType::SYSTEM_DEV]+=0.3f;
         }
         if (!scores.empty()) {
             auto best = std::max_element(scores.begin(), scores.end(),
@@ -321,14 +369,32 @@ public:
     }
 
     // Signal 2: parse window title for file extension / project markers
+    // Uses suffix checks to avoid false matches (e.g. ".ts" inside "settings")
     static std::optional<WorkloadType> from_title(const std::string& title) {
-        auto has = [&](const std::string& s){ return title.find(s) != std::string::npos; };
-        // Android
-        if (has("build.gradle")||has("AndroidManifest")||has(".apk")||has("gradlew")) return WorkloadType::ANDROID_DEV;
+        auto has  = [&](const std::string& s){ return title.find(s) != std::string::npos; };
+        // Suffix check: does title end with ext or contain " ext" / "/ext"
+        auto has_ext = [&](const std::string& ext) {
+            // Check bare suffix at end of string
+            if (title.size() >= ext.size() &&
+                title.compare(title.size()-ext.size(), ext.size(), ext)==0) return true;
+            // Check preceded by space, slash, or colon (path separator in window titles)
+            for (char sep : {' ', '/', '\\', ':', '|'}) {
+                std::string needle = sep + ext;
+                if (title.find(needle) != std::string::npos) return true;
+            }
+            return false;
+        };
+        // Android — highest specificity, checked first
+        if (has("build.gradle")||has("AndroidManifest")||has(".apk")||has("gradlew"))
+            return WorkloadType::ANDROID_DEV;
         // Web
-        if (has(".ts")||has(".tsx")||has(".jsx")||has("package.json")||has(".html")||has(".vue")) return WorkloadType::WEB_DEV;
-        // System
-        if (has(".cpp")||has(".rs")||has("CMakeLists")||has("Cargo.toml")||has(".c ")||has(".h ")) return WorkloadType::SYSTEM_DEV;
+        if (has_ext(".ts")||has_ext(".tsx")||has_ext(".jsx")||has_ext(".vue")||
+            has("package.json")||has_ext(".html")||has_ext(".svelte"))
+            return WorkloadType::WEB_DEV;
+        // System — use has_ext to avoid ".c" matching ".class" etc.
+        if (has_ext(".cpp")||has_ext(".rs")||has_ext(".c")||has_ext(".h")||
+            has_ext(".cc")||has_ext(".cxx")||has("CMakeLists")||has("Cargo.toml"))
+            return WorkloadType::SYSTEM_DEV;
         return std::nullopt;
     }
 
@@ -342,27 +408,39 @@ public:
         return std::nullopt;
     }
 
-    // Main fusion entry point — combines all 3 signals with weighted vote
+    // Main fusion entry point — accumulates weighted votes from all 3 signals
+    // Signal 1 (child walk) = weight 0.6+  per matching process
+    // Signal 2 (title)      = weight 0.3   single vote
+    // Signal 3 (cwd stat)   = weight 0.2   tiebreaker vote
+    // All signals vote into the same score map — disagreement is handled by
+    // the highest accumulated score winning, not by silent signal suppression.
     static FusionResult classify(pid_t pid, const std::string& title,
                                  const std::unordered_map<pid_t,ProcessNode>& graph,
                                  const Config& cfg) {
-        // Signal 1 (highest weight — 0.5 base already inside)
+        // Signal 1 — builds FusionResult with its own scores map + metadata
         FusionResult r = from_children(pid, graph, cfg);
 
-        // Signal 2 — medium confidence: adds 0.3 to vote
-        auto t2 = from_title(title);
-        if (t2) {
-            if (r.type == *t2 || r.type == WorkloadType::NEUTRAL) {
-                r.type = *t2; r.confidence += 0.3f;
-            }
-        }
+        // Build a unified score accumulator: start with Signal 1's result
+        std::map<WorkloadType, float> vote;
+        if (r.type != WorkloadType::NEUTRAL)
+            vote[r.type] += r.confidence;   // seed from S1 accumulated score
 
-        // Signal 3 — tiebreaker: adds 0.2 to vote
+        // Signal 2 — medium confidence: 0.3 vote regardless of S1 agreement
+        auto t2 = from_title(title);
+        if (t2 && *t2 != WorkloadType::NEUTRAL)
+            vote[*t2] += 0.3f;
+
+        // Signal 3 — tiebreaker: 0.2 vote regardless of S1/S2 agreement
         auto t3 = from_cwd(pid);
-        if (t3) {
-            if (r.type == *t3 || r.type == WorkloadType::NEUTRAL) {
-                r.type = *t3; r.confidence += 0.2f;
-            }
+        if (t3 && *t3 != WorkloadType::NEUTRAL)
+            vote[*t3] += 0.2f;
+
+        // Pick winner — highest accumulated vote wins
+        if (!vote.empty()) {
+            auto best = std::max_element(vote.begin(), vote.end(),
+                [](const auto& a, const auto& b){ return a.second < b.second; });
+            r.type       = best->first;
+            r.confidence = best->second;
         }
         return r;
     }
@@ -399,6 +477,33 @@ struct WorkspaceProfile {
 
 // Workspace tier — controls how aggressively THM manages it
 enum class WorkspaceTier { ACTIVE, PROTECTED, FREEZEABLE };
+
+// ==========================================
+// §5.2.5 — Frozen PID Registry
+// Tracks all SIGSTOP-suspended PIDs with tier metadata and RssAnon
+// ==========================================
+struct FrozenEntry {
+    pid_t         pid;
+    WorkspaceTier tier;
+    long          rss_anon_kb;
+    time_point    frozen_at;
+};
+static std::mutex frozen_mtx;
+static std::unordered_map<pid_t, FrozenEntry> frozen_registry;
+
+static void registry_freeze(pid_t pid, WorkspaceTier tier, long rss_kb) {
+    std::lock_guard<std::mutex> lk(frozen_mtx);
+    FrozenEntry e; e.pid=pid; e.tier=tier; e.rss_anon_kb=rss_kb; e.frozen_at=ms_clock::now();
+    frozen_registry[pid] = e;
+}
+static void registry_thaw(pid_t pid) {
+    std::lock_guard<std::mutex> lk(frozen_mtx);
+    frozen_registry.erase(pid);
+}
+static bool registry_is_frozen(pid_t pid) {
+    std::lock_guard<std::mutex> lk(frozen_mtx);
+    return frozen_registry.count(pid) > 0;
+}
 
 struct WorkspaceState {
     int                        workspace_id    = 0;
@@ -483,6 +588,44 @@ static std::unordered_set<int> query_visible_workspaces(const std::string& sock_
         } catch(...) { break; }
     }
     return visible;
+}
+
+// §5.2.2 — Query Hyprland j/clients to get all PIDs on a specific workspace
+// Returns map of workspace_id → set of PIDs
+static std::unordered_map<int, std::vector<pid_t>> query_workspace_pids(const std::string& sock_path) {
+    std::unordered_map<int, std::vector<pid_t>> result;
+    int fd = socket(AF_UNIX, SOCK_STREAM, 0); if (fd < 0) return result;
+    struct sockaddr_un a{}; a.sun_family = AF_UNIX;
+    strncpy(a.sun_path, sock_path.c_str(), sizeof(a.sun_path)-1);
+    if (connect(fd, (struct sockaddr*)&a, sizeof(a)) < 0) { close(fd); return result; }
+    const char* cmd = "j/clients";
+    ::send(fd, cmd, strlen(cmd), 0);
+    std::string resp; char buf[16384]; ssize_t n;
+    while ((n=read(fd,buf,sizeof(buf)-1))>0) { buf[n]='\0'; resp+=buf; }
+    close(fd);
+    // Minimal scan: find consecutive "workspace":{"id":N, then "pid":P patterns
+    // Each client block has both. We track current workspace context.
+    size_t pos = 0;
+    while (pos < resp.size()) {
+        // Find next client pid
+        auto pid_pos = resp.find("\"pid\":", pos);
+        if (pid_pos == std::string::npos) break;
+        pid_pos += 6;
+        pid_t pid = 0;
+        try { size_t end; pid = std::stoi(resp.substr(pid_pos), &end); pos = pid_pos + end; }
+        catch(...) { ++pos; continue; }
+        // Look backwards from pid_pos for most recent workspace id in this block
+        // Find "workspace" before this pid_pos
+        auto ws_search_start = (pid_pos > 2000) ? pid_pos - 2000 : 0;
+        auto ws_pos = resp.rfind("\"workspace\"", pid_pos);
+        if (ws_pos == std::string::npos || ws_pos < ws_search_start) continue;
+        auto id_pos = resp.find("\"id\":", ws_pos);
+        if (id_pos == std::string::npos || id_pos > pid_pos) continue;
+        id_pos += 5;
+        try { size_t end; int ws_id = std::stoi(resp.substr(id_pos), &end); result[ws_id].push_back(pid); }
+        catch(...) {}
+    }
+    return result;
 }
 
 // ==========================================
@@ -591,9 +734,14 @@ public:
         PSI psi=read_memory_psi();
         std::cout<<"[PSI] some_avg10="<<psi.some_avg10<<"% full_avg10="<<psi.full_avg10<<"%\n";
         bool protect = multi_ctx && cfg && cfg->lsp_protection;
-        if (ram_pct>freeze_t&&psi.some_avg10<5.0f) { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
-        if (ram_pct>kill_t  &&psi.some_avg10<20.0f){ deprioritize(targets,g,oom_expose,protect,cfg); throttle_memory(available_kb); return 0; }
-        if (psi.some_avg10<40.0f) { std::cout<<"[Pruner] HIGH — cgroup freeze\n"; freeze_targets(targets,g); return 0; }
+        // Healthy: ram ok AND psi low — just deprioritize, no freeze
+        if (ram_pct>=freeze_t && psi.some_avg10<5.0f)  { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
+        // Medium pressure: ram tightening — deprioritize + throttle memory.high
+        if (ram_pct>=kill_t   && psi.some_avg10<20.0f) { deprioritize(targets,g,oom_expose,protect,cfg); throttle_memory(available_kb); return 0; }
+        // High PSI but not yet critical — only freeze if ram is also actually low
+        if (psi.some_avg10<40.0f && ram_pct<freeze_t)  { std::cout<<"[Pruner] HIGH — cgroup freeze\n"; freeze_targets(targets,g); return 0; }
+        // Healthy ram + mid PSI (e.g. burst I/O) — just deprioritize, don't freeze
+        if (psi.some_avg10<40.0f) { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
         std::cout<<"[Pruner] CRITICAL PSI ("<<psi.some_avg10<<"%) — emergency kill\n";
         return emergency_kill(targets,g,grace_ms,cfg);
     }
@@ -660,7 +808,7 @@ class TitanHardwareManager {
     int         pending_ws  = -1;
     bool        pending_is_ws = false;
 
-    std::thread debounce_thd, cli_thd, guard_thd;
+    std::thread debounce_thd, cli_thd, guard_thd, hotreload_thd;
 
     // Workspace state registry (P3/P4/P5)
     std::mutex ws_mtx;
@@ -729,7 +877,7 @@ class TitanHardwareManager {
         return WorkloadType::NEUTRAL;
     }
 
-    // Apply age decay to a workspace (P4)
+    // Apply age decay to a workspace (§5.2.4)
     void apply_age_decay(WorkspaceState& ws, const std::unordered_map<pid_t,ProcessNode>& graph) {
         auto age_min = std::chrono::duration_cast<std::chrono::minutes>(
             ms_clock::now() - ws.last_active_ms).count();
@@ -750,55 +898,93 @@ class TitanHardwareManager {
                 if (nit == graph.end()) continue;
                 const auto& n = nit->second;
                 if (AUDIO_WHITELIST.count(n.name)||lsp.count(n.name)||bd.count(n.name)) continue;
-                
+
                 if (age_min >= cfg.age_hard_decay_min && ws.tier==WorkspaceTier::FREEZEABLE) {
-                    CgroupManager::move_pid(pid, "titan-frozen.slice");
-                    std::cout<<"[Decay] Freeze (cgroup) "<<n.name<<" (ws"<<ws.workspace_id<<" age="<<age_min<<"min)\n";
+                    // §5.2.4 hard decay: SIGSTOP + cgroup freeze + frozen registry
+                    long rss = read_rss(pid);
+                    if (!registry_is_frozen(pid)) {
+                        ::kill(pid, SIGSTOP);
+                        registry_freeze(pid, WorkspaceTier::FREEZEABLE, rss);
+                        CgroupManager::move_pid(pid, "titan-frozen.slice");
+                        std::cout<<"[Decay] SIGSTOP+cgroup-freeze "
+                                 <<n.name<<" (ws"<<ws.workspace_id<<" age="<<age_min<<"min rss="<<rss/1024<<"MB)\n";
+                    }
                     frozen_any = true;
                 } else if (age_min >= cfg.age_soft_decay_min) {
+                    // §5.2.4 soft decay: renice to +5, move to background slice
+                    ::setpriority(PRIO_PROCESS, pid, 5);
                     CgroupManager::move_pid(pid, "titan-background.slice");
+                    std::cout<<"[Decay] Soft renice+bg "
+                             <<n.name<<" (ws"<<ws.workspace_id<<" age="<<age_min<<"min)\n";
                 }
             }
         }
         if (frozen_any) CgroupManager::freeze("titan-frozen.slice", true);
     }
 
-    // Rebalance all workspaces after a workspace switch (P3+P4+P5)
+    // Rebalance all workspaces after a workspace switch (§5.2.3 + §5.2.4 + §5.2.5)
     void rebalance_workspaces(const std::unordered_map<pid_t,ProcessNode>& graph) {
-        // P5: query monitors for visible workspaces
+        // §5.2.5 multi-monitor: query monitors for visible workspaces
         std::string sock = HyprlandIPC::find_sock(".socket.sock");
         auto visible = query_visible_workspaces(sock);
+        // §5.2.2: get all PIDs per workspace from j/clients
+        auto ws_pids_map = query_workspace_pids(sock);
+
+        std::unordered_set<std::string> lsp_set(cfg.lsp_binaries.begin(), cfg.lsp_binaries.end());
+        std::unordered_set<std::string> bd_set(cfg.build_daemons.begin(),  cfg.build_daemons.end());
 
         std::lock_guard<std::mutex> lk(ws_mtx);
         for (auto& [id, ws] : workspace_states) {
             ws.is_visible = visible.count(id) > 0;
+
+            // §5.2.3 — Populate has_protected_daemons by scanning actual child processes
+            ws.has_protected_daemons = false;
+            auto pit = ws_pids_map.find(id);
+            if (pit != ws_pids_map.end()) {
+                for (pid_t wpid : pit->second) {
+                    std::vector<std::string> cmds;
+                    walk_children_recursive(wpid, graph, cmds, 3);
+                    for (const auto& cmd : cmds) {
+                        if (lsp_set.count(cmd) || bd_set.count(cmd)) {
+                            ws.has_protected_daemons = true;
+                            break;
+                        }
+                    }
+                    if (ws.has_protected_daemons) break;
+                }
+            }
+
             ws.tier = evaluate_tier(ws, active_workspace_id, cfg);
-            std::cout<<"[Tier] WS"<<id<<" → "<<(ws.tier==WorkspaceTier::ACTIVE?"ACTIVE":ws.tier==WorkspaceTier::PROTECTED?"PROTECTED":"FREEZEABLE")<<"\n";
+            const char* tier_str = ws.tier==WorkspaceTier::ACTIVE?"ACTIVE":
+                                   ws.tier==WorkspaceTier::PROTECTED?"PROTECTED":"FREEZEABLE";
+            std::cout<<"[Tier] WS"<<id<<" → "<<tier_str
+                     <<" daemons="<<ws.has_protected_daemons<<"\n";
 
             if (ws.tier == WorkspaceTier::FREEZEABLE) {
                 apply_age_decay(ws, graph);
             } else {
                 // Thaw processes that tier-upgraded to PROTECTED or ACTIVE
-                std::unordered_set<std::string> lsp(cfg.lsp_binaries.begin(),cfg.lsp_binaries.end());
-                std::unordered_set<std::string> bd(cfg.build_daemons.begin(),cfg.build_daemons.end());
                 std::string target_slice = (ws.tier == WorkspaceTier::ACTIVE) ? "titan-active.slice" : "titan-background.slice";
-                
-                for (const auto& w : ws.windows) {
-                    std::vector<pid_t> pids = {w.pid};
-                    auto it = graph.find(w.pid);
-                    if (it != graph.end()) {
-                        for (pid_t child : it->second.children) pids.push_back(child);
-                    }
-                    for (pid_t pid : pids) {
-                        auto nit = graph.find(pid);
-                        if (nit == graph.end()) continue;
-                        const auto& n = nit->second;
-                        if (AUDIO_WHITELIST.count(n.name)) continue;
-                        
-                        // Moving a process out of a frozen cgroup thaws it automatically in cgroup v2
-                        CgroupManager::move_pid(pid, target_slice);
-                        if (lsp.count(n.name) || bd.count(n.name)) {
-                            std::cout<<"[Tier] Restored protected daemon: "<<n.name<<"\n";
+                auto pit2 = ws_pids_map.find(id);
+                if (pit2 != ws_pids_map.end()) {
+                    for (pid_t wpid : pit2->second) {
+                        std::vector<pid_t> pids_to_move = {wpid};
+                        auto it = graph.find(wpid);
+                        if (it != graph.end())
+                            for (pid_t c : it->second.children) pids_to_move.push_back(c);
+                        for (pid_t pid : pids_to_move) {
+                            auto nit = graph.find(pid);
+                            if (nit == graph.end()) continue;
+                            if (AUDIO_WHITELIST.count(nit->second.name)) continue;
+                            // §5.2.5: SIGCONT if in frozen registry
+                            if (registry_is_frozen(pid)) {
+                                ::kill(pid, SIGCONT);
+                                registry_thaw(pid);
+                                std::cout<<"[Tier] SIGCONT "<<nit->second.name<<"\n";
+                            }
+                            // Restore nice value
+                            ::setpriority(PRIO_PROCESS, pid, 0);
+                            CgroupManager::move_pid(pid, target_slice);
                         }
                     }
                 }
@@ -808,6 +994,8 @@ class TitanHardwareManager {
 
     // Core transition logic — now composite + AI-modifier aware
     void do_transition(WorkloadType np, bool multi_ctx=false, bool ai_mod=false) {
+        // Serialize transitions — debounce thread and CLI thread both call this
+        std::lock_guard<std::mutex> lk(mtx);
         if (np==WorkloadType::NEUTRAL||np==cur) return;
         WorkloadType old=cur; cur=np;
         MemInfo mem=read_meminfo(); float pct=mem.pct();
@@ -839,14 +1027,17 @@ class TitanHardwareManager {
             to_prune={"studio","java","gradle","emulator","rust-analyzer","clangd","ccls","cargo"};
             to_thaw=web_tools; theme="keyword general:col.active_border rgba(00d8ffff) rgba(f7df1eff) 45deg";
             set_cpu_governor("performance"); set_swappiness(ai_mod?5:10);
+            set_io_scheduler("mq-deadline");   // §5.2.7: web dev — low-latency I/O
         } else if (np==WorkloadType::ANDROID_DEV) {
             to_prune={"node","webpack","vite","bun","rust-analyzer","clangd","ccls","docker","dockerd"};
             to_thaw=android_tools; theme="keyword general:col.active_border rgba(3ddc84ff) rgba(073042ff) 45deg";
             set_cpu_governor("performance"); set_swappiness(ai_mod?5:10);
+            set_io_scheduler("bfq");            // §5.2.7: android — balanced I/O for emulator/gradle
         } else if (np==WorkloadType::SYSTEM_DEV) {
             to_prune={"studio","java","gradle","emulator","node","webpack","electron","dockerd"};
             to_thaw=system_tools; theme="keyword general:col.active_border rgba(1793d1ff) rgba(333333ff) 45deg";
             set_cpu_governor("performance"); set_swappiness(ai_mod?5:10);
+            set_io_scheduler("mq-deadline");   // §5.2.7: system dev — fast compile I/O
         } else { // CASUAL
             to_thaw=casual_tools;
             std::unordered_set<std::string> all_dev;
@@ -858,6 +1049,7 @@ class TitanHardwareManager {
             to_prune=all_dev;
             theme="keyword general:col.active_border rgba(cba6f7ff) rgba(89b4faff) 45deg";
             set_cpu_governor("schedutil"); set_swappiness(60);
+            set_io_scheduler("bfq");            // §5.2.7: casual — fair I/O
         }
 
         // P2: When multi_context, remove LSP/build daemons from prune set entirely
@@ -923,23 +1115,23 @@ class TitanHardwareManager {
         debounce_thd=std::thread([this,gen](){
             std::this_thread::sleep_for(std::chrono::milliseconds(cfg.debounce_ms));
             if (debounce_gen.load()!=gen||!have_pending.load()) return;
-            std::string wc,title; pid_t pid; int ws; bool is_ws;
+            std::string wc,ev_title; pid_t ev_pid; int ev_ws; bool ev_is_ws;
             { std::lock_guard<std::mutex> lk(mtx); if(!have_pending.load())return;
-              wc=pending_class; title=pending_title; pid=pending_pid;
-              ws=pending_ws; is_ws=pending_is_ws; have_pending=false; }
-            if (is_ws) {
+              wc=pending_class; ev_title=pending_title; ev_pid=pending_pid;
+              ev_ws=pending_ws; ev_is_ws=pending_is_ws; have_pending=false; }
+            if (ev_is_ws) {
                 // Workspace switch — update active workspace, rebalance tiers (P3/P4/P5)
                 { std::lock_guard<std::mutex> lk(ws_mtx);
                   if (workspace_states.count(active_workspace_id))
                       workspace_states[active_workspace_id].last_active_ms = ms_clock::now();
-                  active_workspace_id = ws;
-                  workspace_states[ws].last_active_ms = ms_clock::now(); }
-                WorkloadType np = classify_ws(ws);
+                  active_workspace_id = ev_ws;
+                  workspace_states[ev_ws].last_active_ms = ms_clock::now(); }
+                WorkloadType np = classify_ws(ev_ws);
                 do_transition(np);
             } else {
                 // Window focus — run fusion classifier (P1+P2)
                 MemoryGraph g; g.build();
-                FusionResult fr = classify_window(wc, title, pid, g.graph);
+                FusionResult fr = classify_window(wc, ev_title, ev_pid, g.graph);
                 std::cout<<"[Fusion] Result: "<<wt_label(fr.type)
                          <<" conf="<<fr.confidence
                          <<" lsp="<<fr.has_lsp
@@ -947,7 +1139,8 @@ class TitanHardwareManager {
                          <<" ai="<<fr.ai_modifier<<"\n";
                 // Build composite for active workspace (P2) — simplified: use focused window
                 // Full multi-window composite would require querying j/clients from Hyprland
-                do_transition(fr.type, fr.has_lsp&&fr.has_build, fr.ai_modifier);
+                // multi_ctx = OR: either an LSP OR a build daemon is enough to trigger protection
+                do_transition(fr.type, fr.has_lsp||fr.has_build, fr.ai_modifier);
             }
         });
     }
@@ -971,7 +1164,9 @@ class TitanHardwareManager {
             else if (cmd=="switch system"||cmd=="sw system")   do_transition(WorkloadType::SYSTEM_DEV);
             else if (cmd=="status") {
                 MemInfo m=read_meminfo(); int t_c=read_max_temp_mc()/1000;
-                std::string r="profile="+std::string(wt_label(cur))
+                WorkloadType snap_cur;
+                { std::lock_guard<std::mutex> lk(mtx); snap_cur = cur; }
+                std::string r="profile="+std::string(wt_label(snap_cur))
                              +"\nram_pct="+std::to_string((int)m.pct())
                              +"\nram_free_mb="+std::to_string(m.available_kb/1024)
                              +"\ncpu_temp_c="+std::to_string(t_c)+"\n";
@@ -984,36 +1179,111 @@ class TitanHardwareManager {
 
 public:
     // Rogue DM guard — extended to protect LSP/build daemons from scan (unchanged logic)
+    // Helper: read a field from /proc/<pid>/status
+    static std::string read_proc_status_field(const std::string& pid_str, const std::string& field) {
+        std::ifstream f("/proc/" + pid_str + "/status");
+        std::string line;
+        while (std::getline(f, line)) {
+            if (line.rfind(field + ":", 0) == 0) {
+                size_t start = line.find_first_not_of(" \t", field.size() + 1);
+                if (start != std::string::npos) return line.substr(start);
+            }
+        }
+        return "";
+    }
+
+    // §5.2.7 — inotify config hot-reload thread
+    // Watches ~/.config/titan-hwm/config for IN_CLOSE_WRITE and reloads live
+    void run_config_hotreload() {
+        const char* h = getenv("HOME"); if (!h) return;
+        std::string cfg_path = std::string(h) + "/.config/titan-hwm/config";
+        int ifd = inotify_init1(IN_NONBLOCK);
+        if (ifd < 0) { std::cerr<<"[HotReload] inotify_init1 failed\n"; return; }
+        int wd = inotify_add_watch(ifd, cfg_path.c_str(), IN_CLOSE_WRITE | IN_MODIFY);
+        if (wd < 0) {
+            // File may not exist yet — watch parent dir for creation
+            std::string dir = std::string(h) + "/.config/titan-hwm";
+            wd = inotify_add_watch(ifd, dir.c_str(), IN_CREATE | IN_CLOSE_WRITE);
+        }
+        std::cout<<"[HotReload] Watching config: "<<cfg_path<<"\n";
+        char ev_buf[4096] __attribute__((aligned(__alignof__(struct inotify_event))));
+        while (running.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            ssize_t len = read(ifd, ev_buf, sizeof(ev_buf));
+            if (len <= 0) continue;
+            // Any event → reload config
+            Config new_cfg = load_config();
+            { std::lock_guard<std::mutex> lk(mtx); cfg = new_cfg; }
+            apply_extras();
+            std::cout<<"[HotReload] Config reloaded from "<<cfg_path<<"\n";
+        }
+        close(ifd);
+    }
+
     void run_process_guard() {
-        std::cout<<"[HWM] Process guard active (60s interval)\n";
+        std::cout<<"[HWM] Process guard active — waits for confirmed Hyprland session\n";
         while (running.load()) {
             std::this_thread::sleep_for(std::chrono::seconds(60));
             if (!running.load()) break;
-            for (const auto& e:fs::directory_iterator("/proc")) {
+
+            // SAFETY GATE: only run the guard if a live Hyprland socket exists.
+            // If Hyprland is not running, we are still in the SDDM/login phase —
+            // killing anything here would destroy the login session.
+            std::string hypr_sock = HyprlandIPC::find_sock(".socket.sock");
+            if (hypr_sock.empty()) {
+                std::cout<<"[Guard] No Hyprland socket — skipping scan (not in session yet)\n";
+                continue;
+            }
+
+            for (const auto& e : fs::directory_iterator("/proc")) {
                 if (!e.is_directory()) continue;
-                std::string d=e.path().filename().string();
-                if (!std::all_of(d.begin(),d.end(),::isdigit)) continue;
-                std::ifstream sf(e.path().string()+"/stat"); std::string l;
-                if (!std::getline(sf,l)) continue;
-                size_t lp=l.find('('),rp=l.rfind(')');
-                if (lp==std::string::npos||rp==std::string::npos) continue;
-                std::string name=l.substr(lp+1,rp-lp-1);
-                if (rogue_dms.count(name)) {
-                    pid_t pid=std::stoi(d);
-                    std::cout<<"[Guard] Rogue DM: "<<name<<" PID:"<<pid<<" — terminating\n";
-                    notify("ArchTitan Session Guard","Blocked rogue DM: "+name);
-                    kill(pid,SIGTERM); std::this_thread::sleep_for(std::chrono::milliseconds(500));
-                    if (kill(pid,0)==0) kill(pid,SIGKILL);
+                std::string d = e.path().filename().string();
+                if (!std::all_of(d.begin(), d.end(), ::isdigit)) continue;
+
+                std::ifstream sf(e.path().string() + "/stat"); std::string l;
+                if (!std::getline(sf, l)) continue;
+                size_t lp = l.find('('), rp = l.rfind(')');
+                if (lp == std::string::npos || rp == std::string::npos) continue;
+                std::string name = l.substr(lp + 1, rp - lp - 1);
+
+                if (!rogue_dms.count(name)) continue;
+
+                pid_t pid = std::stoi(d);
+
+                // SAFETY CHECK 1: read the UID of this process.
+                // Only act on processes owned by non-root users (uid > 0) OR
+                // root-owned DMs that are NOT PID 1 children (i.e., not core services).
+                std::string uid_str = read_proc_status_field(d, "Uid");
+                std::string ppid_str = read_proc_status_field(d, "PPid");
+                int uid = -1, ppid = -1;
+                try { uid = std::stoi(uid_str); } catch(...) { continue; }
+                try { ppid = std::stoi(ppid_str); } catch(...) { continue; }
+
+                // SAFETY CHECK 2: if PPID==1 and uid==0, this is a core system daemon
+                // started by systemd — never touch it. (SDDM has ppid=1, uid=0)
+                if (ppid == 1 && uid == 0) {
+                    std::cout<<"[Guard] Skipping " <<name<<" (PID "<<pid<<") — system daemon (ppid=1,uid=0)\n";
+                    continue;
                 }
+
+                // SAFETY CHECK 3: pid=1 itself is init — never kill.
+                if (pid <= 1) continue;
+
+                std::cout<<"[Guard] Rogue DM: "<<name<<" PID:"<<pid<<" uid="<<uid<<" ppid="<<ppid<<" — terminating\n";
+                notify("ArchTitan Session Guard", "Blocked rogue DM: " + name);
+                kill(pid, SIGTERM);
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                if (kill(pid, 0) == 0) kill(pid, SIGKILL);
             }
         }
     }
 
     ~TitanHardwareManager() {
         running=false;
-        if (debounce_thd.joinable()) debounce_thd.join();
-        if (cli_thd.joinable()) cli_thd.detach();
-        if (guard_thd.joinable()) guard_thd.detach();
+        if (debounce_thd.joinable())    debounce_thd.join();
+        if (cli_thd.joinable())         cli_thd.detach();
+        if (guard_thd.joinable())       guard_thd.detach();
+        if (hotreload_thd.joinable())   hotreload_thd.detach();
     }
 
     void run() {
@@ -1022,11 +1292,13 @@ public:
         std::string sock=HyprlandIPC::find_sock(".socket2.sock");
         if (sock.empty()) { std::this_thread::sleep_for(std::chrono::seconds(5)); return; }
 
-        cli_thd  =std::thread(&TitanHardwareManager::run_cli_server,this);
-        guard_thd=std::thread(&TitanHardwareManager::run_process_guard,this);
+        cli_thd       = std::thread(&TitanHardwareManager::run_cli_server,    this);
+        guard_thd     = std::thread(&TitanHardwareManager::run_process_guard,  this);
+        hotreload_thd = std::thread(&TitanHardwareManager::run_config_hotreload, this);
 
         while (true) {
-            int fd=socket(AF_UNIX,SOCK_STREAM,0); if (fd<0) exit(1);
+            int fd=socket(AF_UNIX,SOCK_STREAM,0);
+            if (fd<0) { std::cerr<<"[HWM] socket() failed: "<<strerror(errno)<<" — retrying\n"; std::this_thread::sleep_for(std::chrono::seconds(3)); continue; }
             struct sockaddr_un a{}; a.sun_family=AF_UNIX;
             strncpy(a.sun_path,sock.c_str(),sizeof(a.sun_path)-1);
             if (connect(fd,(struct sockaddr*)&a,sizeof(a))<0) {
@@ -1040,15 +1312,29 @@ public:
                 while ((pos=data.find('\n'))!=std::string::npos) {
                     std::string ev=data.substr(0,pos); data.erase(0,pos+1);
 
-                    // activewindow>>class,title — P1: pass title for fusion
-                    if (ev.rfind("activewindow>>",0)==0) {
+                    // activewindowv2>>address,pid,wm_class,title — use pid for fusion
+                    if (ev.rfind("activewindowv2>>",0)==0) {
+                        std::string info=ev.substr(16);
+                        // format: addr,pid,class,title
+                        size_t c1=info.find(',');
+                        if (c1!=std::string::npos) {
+                            size_t c2=info.find(',',c1+1);
+                            if (c2!=std::string::npos) {
+                                pid_t pid=0;
+                                try { pid=std::stoi(info.substr(c1+1,c2-c1-1)); } catch(...) {}
+                                size_t c3=info.find(',',c2+1);
+                                std::string wm_class = (c3!=std::string::npos) ? info.substr(c2+1,c3-c2-1) : info.substr(c2+1);
+                                std::string title    = (c3!=std::string::npos) ? info.substr(c3+1) : "";
+                                schedule(wm_class, title, pid);
+                            }
+                        }
+                    }
+                    // activewindow>>class,title — fallback (no pid, fusion Signal1/3 won't fire)
+                    else if (ev.rfind("activewindow>>",0)==0) {
                         std::string info=ev.substr(14);
                         size_t c=info.find(',');
                         if (c!=std::string::npos) {
-                            std::string wm_class=info.substr(0,c);
-                            std::string title=info.substr(c+1);
-                            // pid: parse from activewindowv2 if available, else use 0
-                            schedule(wm_class, title, 0);
+                            schedule(info.substr(0,c), info.substr(c+1), 0);
                         }
                     }
                     // workspace>>id — P3/P4/P5
