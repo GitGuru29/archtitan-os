@@ -854,7 +854,7 @@ class TitanHardwareManager {
 
     // Rogue DM guard list
     const std::unordered_set<std::string> rogue_dms{
-        "gdm","gdm3","lightdm","lxdm","xdm","slim","ly","greetd","emptty",
+        "gdm","gdm3","lightdm","lxdm","xdm","slim","ly","greetd","emptty","lemurs",
         "gnome-shell","gnome-session","plasmashell","kwin_wayland","kwin_x11","xfwm4","openbox","Xorg","X"
     };
 
