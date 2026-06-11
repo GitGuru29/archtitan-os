@@ -732,7 +732,6 @@ public:
         cg_thaw_from_frozen(targets,g);
         CgroupManager::ensure("titan-active.slice");
         CgroupManager::set_cpu_weight("titan-active.slice",500);
-        CgroupManager::set_memory_low("titan-active.slice","1G");
         for (const auto& [pid,n]:g) {
             if (!targets.count(n.name)||AUDIO_WHITELIST.count(n.name)) continue;
             CgroupManager::move_pid(pid,"titan-active.slice"); set_oom(pid,oom);
@@ -957,8 +956,36 @@ class TitanHardwareManager {
         if (frozen_any) CgroupManager::freeze("titan-frozen.slice", true);
     }
 
+    // §5.2.3 — Apply strict tier memory budgets
+    void apply_tier_budgets() {
+        long total_bytes = read_meminfo().total_kb * 1024L;
+        if (total_bytes <= 0) return;
+
+        // ACTIVE: 70% ceiling (memory.high)
+        long active_high = total_bytes * cfg.active_ceiling;
+        CgroupManager::ensure("titan-active.slice");
+        CgroupManager::set_memory_high("titan-active.slice", std::to_string(active_high));
+
+        // PROTECTED: 20% reservation (memory.low)
+        long protected_low = total_bytes * cfg.protected_reserve;
+        CgroupManager::ensure("titan-background.slice");
+        CgroupManager::set_memory_low("titan-background.slice", std::to_string(protected_low));
+
+        // FREEZEABLE: 5% budget (memory.high)
+        long frozen_high = total_bytes * cfg.freezeable_budget;
+        CgroupManager::ensure("titan-frozen.slice");
+        CgroupManager::set_memory_high("titan-frozen.slice", std::to_string(frozen_high));
+
+        std::cout << "[Tier] Applied memory budgets: ACTIVE ceiling=" << active_high/1024/1024
+                  << "MB, PROTECTED reserve=" << protected_low/1024/1024
+                  << "MB, FREEZEABLE budget=" << frozen_high/1024/1024 << "MB\n";
+    }
+
     // Rebalance all workspaces after a workspace switch (§5.2.3 + §5.2.4 + §5.2.5)
     void rebalance_workspaces(const std::unordered_map<pid_t,ProcessNode>& graph) {
+        // Apply cgroup memory budgets based on spec
+        apply_tier_budgets();
+
         // §5.2.5 multi-monitor: query monitors for visible workspaces
         std::string sock = HyprlandIPC::find_sock(".socket.sock");
         auto visible = query_visible_workspaces(sock);
