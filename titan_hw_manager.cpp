@@ -933,12 +933,12 @@ class TitanHardwareManager {
                 const auto& n = nit->second;
                 if (AUDIO_WHITELIST.count(n.name)||lsp.count(n.name)||bd.count(n.name)) continue;
 
-                if (age_min >= cfg.age_hard_decay_min && ws.tier==WorkspaceTier::FREEZEABLE) {
+                if (age_min >= cfg.age_hard_decay_min) {
                     // §5.2.4 hard decay: SIGSTOP + cgroup freeze + frozen registry
                     long rss = read_rss(pid);
                     if (!registry_is_frozen(pid)) {
                         ::kill(pid, SIGSTOP);
-                        registry_freeze(pid, WorkspaceTier::FREEZEABLE, rss);
+                        registry_freeze(pid, ws.tier, rss);
                         CgroupManager::move_pid(pid, "titan-frozen.slice");
                         std::cout<<"[Decay] SIGSTOP+cgroup-freeze "
                                  <<n.name<<" (ws"<<ws.workspace_id<<" age="<<age_min<<"min rss="<<rss/1024<<"MB)\n";
@@ -1022,11 +1022,11 @@ class TitanHardwareManager {
             std::cout<<"[Tier] WS"<<id<<" → "<<tier_str
                      <<" daemons="<<ws.has_protected_daemons<<"\n";
 
-            if (ws.tier == WorkspaceTier::FREEZEABLE) {
+            if (ws.tier != WorkspaceTier::ACTIVE) {
                 apply_age_decay(ws, graph);
             } else {
-                // Thaw processes that tier-upgraded to PROTECTED or ACTIVE
-                std::string target_slice = (ws.tier == WorkspaceTier::ACTIVE) ? "titan-active.slice" : "titan-background.slice";
+                // Thaw processes that upgraded to ACTIVE
+                std::string target_slice = "titan-active.slice";
                 auto pit2 = ws_pids_map.find(id);
                 if (pit2 != ws_pids_map.end()) {
                     for (pid_t wpid : pit2->second) {
