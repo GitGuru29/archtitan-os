@@ -23,6 +23,7 @@
 #include <cstdlib>
 #include <optional>
 #include <map>
+#include <functional>
 
 namespace fs = std::filesystem;
 using ms_clock = std::chrono::steady_clock;
@@ -350,8 +351,8 @@ public:
             // Build daemon detection (highest confidence → 0.6 weight)
             if (build_set.count(cmd)) {
                 r.has_build = true;
-                // §5.2.1 spec: gradle/adb → ANDROID_DEV
-                if (cmd=="gradle"||cmd=="java")           scores[WorkloadType::ANDROID_DEV]+=0.6f;
+                // §5.2.1 spec: gradle/java/adb → ANDROID_DEV
+                if (cmd=="gradle"||cmd=="java"||cmd=="adb") scores[WorkloadType::ANDROID_DEV]+=0.6f;
                 else if (cmd=="cargo"||cmd=="cmake")      scores[WorkloadType::SYSTEM_DEV]+=0.6f;
                 else if (cmd=="webpack"||cmd=="vite")     scores[WorkloadType::WEB_DEV]+=0.6f;
                 continue;
@@ -514,7 +515,8 @@ struct WorkspaceState {
     WorkspaceProfile           composite;
     bool                       has_protected_daemons = false;
     time_point                 last_active_ms  = ms_clock::now();
-    WorkspaceTier              tier            = WorkspaceTier::FREEZEABLE;
+    // Start PROTECTED so a newly-seen workspace isn't immediately eligible for freeze
+    WorkspaceTier              tier            = WorkspaceTier::PROTECTED;
 };
 
 // Build WorkspaceProfile from all windows using weighted scoring (P2)
@@ -917,7 +919,7 @@ class TitanHardwareManager {
     }
 
     // Apply age decay to a workspace (§5.2.4)
-    void apply_age_decay(WorkspaceState& ws, const std::unordered_map<pid_t,ProcessNode>& graph) {
+    void apply_age_decay(WorkspaceState& ws, const std::unordered_map<pid_t,ProcessNode>& graph, const std::vector<pid_t>& current_pids) {
         auto age_min = std::chrono::duration_cast<std::chrono::minutes>(
             ms_clock::now() - ws.last_active_ms).count();
         if (age_min < cfg.age_soft_decay_min) return;
@@ -926,12 +928,25 @@ class TitanHardwareManager {
         std::unordered_set<std::string> bd(cfg.build_daemons.begin(),cfg.build_daemons.end());
 
         bool frozen_any = false;
-        for (const auto& w : ws.windows) {
-            std::vector<pid_t> pids = {w.pid};
-            auto it = graph.find(w.pid);
-            if (it != graph.end()) {
-                for (pid_t child : it->second.children) pids.push_back(child);
-            }
+        for (pid_t root_pid : current_pids) {
+            // §5.2.4: recursively collect all descendant PIDs (not just direct children)
+            // so LSP grandchildren are correctly filtered by the daemon protection check
+            std::vector<std::string> descendant_cmds;
+            walk_children_recursive(root_pid, graph, descendant_cmds, 3);
+
+            // Build the PID list: parent + all descendants
+            std::vector<pid_t> pids = {root_pid};
+            std::function<void(pid_t,int)> collect_pids = [&](pid_t p, int depth) {
+                if (depth <= 0) return;
+                auto it = graph.find(p);
+                if (it == graph.end()) return;
+                for (pid_t child : it->second.children) {
+                    pids.push_back(child);
+                    collect_pids(child, depth-1);
+                }
+            };
+            collect_pids(root_pid, 3);
+
             for (pid_t pid : pids) {
                 auto nit = graph.find(pid);
                 if (nit == graph.end()) continue;
@@ -1028,7 +1043,8 @@ class TitanHardwareManager {
                      <<" daemons="<<ws.has_protected_daemons<<"\n";
 
             if (ws.tier != WorkspaceTier::ACTIVE) {
-                apply_age_decay(ws, graph);
+                std::vector<pid_t> empty_pids;
+                apply_age_decay(ws, graph, pit != ws_pids_map.end() ? pit->second : empty_pids);
             } else {
                 // Thaw processes that upgraded to ACTIVE
                 std::string target_slice = "titan-active.slice";
