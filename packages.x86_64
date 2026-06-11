@@ -80,8 +80,6 @@ partitionmanager
 kcoreaddons
 kconfig
 ki18n
-sddm
-sddm-kcm
 qt5-graphicaleffects
 qt5-svg
 qt5-quickcontrols2
@@ -132,3 +130,5 @@ tree
 jq
 httpie
 strace
+sddm
+sddm-kcm
