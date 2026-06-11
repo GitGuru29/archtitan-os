@@ -668,8 +668,11 @@ static void cg_escalate_to_frozen(
             continue;
         }
         CgroupManager::move_pid(pid, "titan-frozen.slice");
-        // §5.2.5: register in frozen PID registry
-        registry_freeze(pid, WorkspaceTier::FREEZEABLE, n.rss_kb);
+        // §5.2.5: SIGSTOP + register in frozen PID registry
+        if (!registry_is_frozen(pid)) {
+            ::kill(pid, SIGSTOP);
+            registry_freeze(pid, WorkspaceTier::FREEZEABLE, n.rss_kb);
+        }
     }
     CgroupManager::freeze("titan-frozen.slice", true);
     std::cout<<"[Cgroup] Escalated to frozen slice\n";
