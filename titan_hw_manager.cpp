@@ -84,10 +84,12 @@ struct Config {
     bool  aggressive_swap         = false;
 };
 
-static std::vector<std::string> csv(const std::string& s) {
+static std::vector<std::string> csv(std::string s) {
+    if (!s.empty() && s.front() == '[') s.erase(0, 1);
+    if (!s.empty() && s.back() == ']') s.pop_back();
     std::vector<std::string> r; std::istringstream ss(s); std::string t;
     while (std::getline(ss, t, ',')) {
-        t.erase(0,t.find_first_not_of(" \t")); t.erase(t.find_last_not_of(" \t")+1);
+        t.erase(0,t.find_first_not_of(" \t\"'")); t.erase(t.find_last_not_of(" \t\"'")+1);
         if (!t.empty()) r.push_back(t);
     }
     return r;
@@ -150,18 +152,18 @@ static void write_default_config() {
     f << "# Titan Hardware Manager Config v2\n"
       << "debounce_ms = 800\nram_freeze_pct = 50\nram_kill_pct = 25\n"
       << "thermal_hot_temp = 80\noom_protect_score = -200\noom_expose_score = 300\n"
-      << "sigterm_grace_ms = 500\ncasual_workspaces = 1\nweb_workspaces = 2\n"
-      << "android_workspaces = 3\nsystem_workspaces = 4, 5\n"
-      << "web_extra_tools =\nandroid_extra_tools =\nsystem_extra_tools =\n"
-      << "# [classifier]\n"
-      << "lsp_binaries = clangd,ccls,rust-analyzer,tsserver,eslint_d\n"
-      << "build_daemons = gradle,cargo,webpack,vite,java,cmake\n"
-      << "ai_inference = ollama,llama-server,python3\n"
-      << "known_ides = code,cursor,zed,windsurf,antigravity,fleet,idea,android-studio\n"
-      << "# [workspace_tiers]\n"
+      << "sigterm_grace_ms = 500\ncasual_workspaces = [1]\nweb_workspaces = [2]\n"
+      << "android_workspaces = [3]\nsystem_workspaces = [4, 5]\n"
+      << "web_extra_tools = []\nandroid_extra_tools = []\nsystem_extra_tools = []\n"
+      << "\n[classifier]\n"
+      << "lsp_binaries = [\"clangd\",\"ccls\",\"rust-analyzer\",\"tsserver\",\"eslint_d\"]\n"
+      << "build_daemons = [\"gradle\",\"cargo\",\"webpack\",\"vite\",\"java\",\"cmake\"]\n"
+      << "ai_inference = [\"ollama\",\"llama-server\",\"python3\"]\n"
+      << "known_ides = [\"code\",\"cursor\",\"zed\",\"windsurf\",\"antigravity\",\"fleet\",\"idea\",\"android-studio\"]\n"
+      << "\n[workspace_tiers]\n"
       << "active_ceiling = 0.70\nprotected_reserve = 0.20\n"
       << "age_soft_decay_min = 5\nage_hard_decay_min = 15\n"
-      << "# [multi_context]\nlsp_protection = true\naggressive_swap = false\n";
+      << "\n[multi_context]\nlsp_protection = true\naggressive_swap = false\n";
     std::cout << "[HWM] Default config written to " << path << "\n";
 }
 
@@ -1091,17 +1093,17 @@ class TitanHardwareManager {
         if (np==WorkloadType::WEB_DEV) {
             to_prune={"studio","java","gradle","emulator","rust-analyzer","clangd","ccls","cargo"};
             to_thaw=web_tools; theme="keyword general:col.active_border rgba(00d8ffff) rgba(f7df1eff) 45deg";
-            set_cpu_governor("performance"); set_swappiness(ai_mod?5:10);
+            set_cpu_governor(hot ? "powersave" : "performance"); set_swappiness(ai_mod?5:10);
             set_io_scheduler("mq-deadline");   // §5.2.7: web dev — low-latency I/O
         } else if (np==WorkloadType::ANDROID_DEV) {
             to_prune={"node","webpack","vite","bun","rust-analyzer","clangd","ccls","docker","dockerd"};
             to_thaw=android_tools; theme="keyword general:col.active_border rgba(3ddc84ff) rgba(073042ff) 45deg";
-            set_cpu_governor("performance"); set_swappiness(ai_mod?5:10);
+            set_cpu_governor(hot ? "powersave" : "performance"); set_swappiness(ai_mod?5:10);
             set_io_scheduler("bfq");            // §5.2.7: android — balanced I/O for emulator/gradle
         } else if (np==WorkloadType::SYSTEM_DEV) {
             to_prune={"studio","java","gradle","emulator","node","webpack","electron","dockerd"};
             to_thaw=system_tools; theme="keyword general:col.active_border rgba(1793d1ff) rgba(333333ff) 45deg";
-            set_cpu_governor("performance"); set_swappiness(ai_mod?5:10);
+            set_cpu_governor(hot ? "powersave" : "performance"); set_swappiness(ai_mod?5:10);
             set_io_scheduler("mq-deadline");   // §5.2.7: system dev — fast compile I/O
         } else { // CASUAL
             to_thaw=casual_tools;
@@ -1113,7 +1115,7 @@ class TitanHardwareManager {
                           "electron","dockerd","docker","rust-analyzer","clangd","ccls","cargo","make","cmake","gdb"}) all_dev.insert(s);
             to_prune=all_dev;
             theme="keyword general:col.active_border rgba(cba6f7ff) rgba(89b4faff) 45deg";
-            set_cpu_governor("schedutil"); set_swappiness(60);
+            set_cpu_governor(hot ? "powersave" : "schedutil"); set_swappiness(60);
             set_io_scheduler("bfq");            // §5.2.7: casual — fair I/O
         }
 
