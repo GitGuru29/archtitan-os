@@ -649,15 +649,45 @@ public:
     static long memory_current(const std::string& slice) { std::ifstream f(path(slice,"memory.current")); long v=0; if(f)f>>v; return v; }
 };
 
-// cgroup helpers (need ProcessNode + CgroupManager both defined above)
-static void cg_escalate_to_frozen(const std::unordered_set<std::string>& targets, const std::unordered_map<pid_t,ProcessNode>& g) {
-    for (const auto& [pid,n]:g) if (targets.count(n.name)&&!AUDIO_WHITELIST.count(n.name)) CgroupManager::move_pid(pid,"titan-frozen.slice");
-    CgroupManager::freeze("titan-frozen.slice",true);
+// cgroup helpers — LSP/build protection in freeze path, frozen_registry tracking
+static void cg_escalate_to_frozen(
+    const std::unordered_set<std::string>& targets,
+    const std::unordered_map<pid_t,ProcessNode>& g,
+    const Config* cfg = nullptr)   // §5.2.2: pass cfg to protect LSP/build in MULTI_CONTEXT
+{
+    std::unordered_set<std::string> lsp_set, bd_set;
+    if (cfg) {
+        lsp_set.insert(cfg->lsp_binaries.begin(), cfg->lsp_binaries.end());
+        bd_set.insert(cfg->build_daemons.begin(), cfg->build_daemons.end());
+    }
+    for (const auto& [pid,n] : g) {
+        if (!targets.count(n.name) || AUDIO_WHITELIST.count(n.name)) continue;
+        // §5.2.2 MULTI_CONTEXT: never freeze LSP servers or build daemons
+        if (cfg && (lsp_set.count(n.name) || bd_set.count(n.name))) {
+            std::cout<<"[Cgroup] Freeze-skip protected daemon: "<<n.name<<"\n";
+            continue;
+        }
+        CgroupManager::move_pid(pid, "titan-frozen.slice");
+        // §5.2.5: register in frozen PID registry
+        registry_freeze(pid, WorkspaceTier::FREEZEABLE, n.rss_kb);
+    }
+    CgroupManager::freeze("titan-frozen.slice", true);
     std::cout<<"[Cgroup] Escalated to frozen slice\n";
 }
-static void cg_thaw_from_frozen(const std::unordered_set<std::string>& targets, const std::unordered_map<pid_t,ProcessNode>& g) {
-    CgroupManager::freeze("titan-frozen.slice",false);
-    for (const auto& [pid,n]:g) if (targets.count(n.name)&&!AUDIO_WHITELIST.count(n.name)) CgroupManager::move_pid(pid,"titan-background.slice");
+static void cg_thaw_from_frozen(
+    const std::unordered_set<std::string>& targets,
+    const std::unordered_map<pid_t,ProcessNode>& g)
+{
+    CgroupManager::freeze("titan-frozen.slice", false);
+    for (const auto& [pid,n] : g) {
+        if (!targets.count(n.name) || AUDIO_WHITELIST.count(n.name)) continue;
+        CgroupManager::move_pid(pid, "titan-background.slice");
+        // §5.2.5: clear from frozen registry and send SIGCONT
+        if (registry_is_frozen(pid)) {
+            ::kill(pid, SIGCONT);
+            registry_thaw(pid);
+        }
+    }
     std::cout<<"[Cgroup] Thawed from frozen slice\n";
 }
 
@@ -693,7 +723,11 @@ public:
         CgroupManager::set_memory_high("titan-background.slice",std::to_string(cap));
         std::cout<<"[Cgroup] memory.high → "<<cap/1024/1024<<"MB\n";
     }
-    static void freeze_targets(const std::unordered_set<std::string>& targets, const std::unordered_map<pid_t,ProcessNode>& g) { cg_escalate_to_frozen(targets,g); }
+    static void freeze_targets(
+        const std::unordered_set<std::string>& targets,
+        const std::unordered_map<pid_t,ProcessNode>& g,
+        const Config* cfg = nullptr)   // §5.2.2: forward cfg for LSP protection
+    { cg_escalate_to_frozen(targets, g, cfg); }
     static void thaw(const std::unordered_set<std::string>& targets, const std::unordered_map<pid_t,ProcessNode>& g, int oom=-200) {
         cg_thaw_from_frozen(targets,g);
         CgroupManager::ensure("titan-active.slice");
@@ -739,7 +773,8 @@ public:
         // Medium pressure: ram tightening — deprioritize + throttle memory.high
         if (ram_pct>=kill_t   && psi.some_avg10<20.0f) { deprioritize(targets,g,oom_expose,protect,cfg); throttle_memory(available_kb); return 0; }
         // High PSI but not yet critical — only freeze if ram is also actually low
-        if (psi.some_avg10<40.0f && ram_pct<freeze_t)  { std::cout<<"[Pruner] HIGH — cgroup freeze\n"; freeze_targets(targets,g); return 0; }
+        // §5.2.2: pass cfg into freeze so LSP/build daemons are never frozen in MULTI_CONTEXT
+        if (psi.some_avg10<40.0f && ram_pct<freeze_t)  { std::cout<<"[Pruner] HIGH — cgroup freeze\n"; freeze_targets(targets,g,cfg); return 0; }
         // Healthy ram + mid PSI (e.g. burst I/O) — just deprioritize, don't freeze
         if (psi.some_avg10<40.0f) { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
         std::cout<<"[Pruner] CRITICAL PSI ("<<psi.some_avg10<<"%) — emergency kill\n";
@@ -1129,7 +1164,7 @@ class TitanHardwareManager {
                 WorkloadType np = classify_ws(ev_ws);
                 do_transition(np);
             } else {
-                // Window focus — run fusion classifier (P1+P2)
+                // Window focus — run fusion classifier (Signal 1+2+3)
                 MemoryGraph g; g.build();
                 FusionResult fr = classify_window(wc, ev_title, ev_pid, g.graph);
                 std::cout<<"[Fusion] Result: "<<wt_label(fr.type)
@@ -1137,10 +1172,58 @@ class TitanHardwareManager {
                          <<" lsp="<<fr.has_lsp
                          <<" build="<<fr.has_build
                          <<" ai="<<fr.ai_modifier<<"\n";
-                // Build composite for active workspace (P2) — simplified: use focused window
-                // Full multi-window composite would require querying j/clients from Hyprland
-                // multi_ctx = OR: either an LSP OR a build daemon is enough to trigger protection
-                do_transition(fr.type, fr.has_lsp||fr.has_build, fr.ai_modifier);
+
+                // §5.2.2: Build workspace composite from ALL windows on active workspace
+                // Query j/clients to get every PID on this workspace, classify each,
+                // then feed into build_composite() for multi-window scoring.
+                std::string sock = HyprlandIPC::find_sock(".socket.sock");
+                auto ws_pids = query_workspace_pids(sock);
+                std::vector<WindowContext> ws_windows;
+
+                int active_ws_snap;
+                { std::lock_guard<std::mutex> lk(ws_mtx); active_ws_snap = active_workspace_id; }
+
+                auto pit = ws_pids.find(active_ws_snap);
+                if (pit != ws_pids.end()) {
+                    for (pid_t wpid : pit->second) {
+                        // Find wm_class from graph (name field from /proc/stat)
+                        std::string wname;
+                        auto nit = g.graph.find(wpid);
+                        if (nit != g.graph.end()) wname = nit->second.name;
+
+                        FusionResult wfr = classify_window(wname, "", wpid, g.graph);
+                        WindowContext wctx;
+                        wctx.pid             = wpid;
+                        wctx.wm_class        = wname;
+                        wctx.inferred_type   = wfr.type;
+                        wctx.has_active_lsp  = wfr.has_lsp;
+                        wctx.has_build_daemon= wfr.has_build;
+                        wctx.ai_modifier     = wfr.ai_modifier;
+                        wctx.is_focused      = (wpid == ev_pid);  // focused = resource hint only
+                        ws_windows.push_back(wctx);
+                    }
+                }
+                // Fallback: if j/clients returned nothing, use the focused window alone
+                if (ws_windows.empty()) {
+                    WindowContext wctx;
+                    wctx.pid=ev_pid; wctx.wm_class=wc; wctx.inferred_type=fr.type;
+                    wctx.has_active_lsp=fr.has_lsp; wctx.has_build_daemon=fr.has_build;
+                    wctx.ai_modifier=fr.ai_modifier; wctx.is_focused=true;
+                    ws_windows.push_back(wctx);
+                }
+
+                // Persist windows into workspace state for tier/decay logic
+                { std::lock_guard<std::mutex> lk(ws_mtx);
+                  workspace_states[active_ws_snap].windows = ws_windows; }
+
+                WorkspaceProfile composite = build_composite(ws_windows);
+                std::cout<<"[Composite] WS"<<active_ws_snap
+                         <<" dominant="<<wt_label(composite.dominant)
+                         <<" multi_ctx="<<composite.multi_context
+                         <<" ai="<<composite.ai_modifier<<"\n";
+
+                // dominant WorkloadType drives transition; multi_context enables protection
+                do_transition(composite.dominant, composite.multi_context, composite.ai_modifier);
             }
         });
     }
