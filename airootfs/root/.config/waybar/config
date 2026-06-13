@@ -40,11 +40,11 @@
     },
 
     "custom/titan-hwm": {
-        "exec": "titan-hwm-waybar",
+        "exec": "bash -c 'if [ -d /run/archiso ]; then echo \"{\\\"text\\\":\\\"⬇ Live Mode\\\",\\\"tooltip\\\":\\\"ArchTitan Live ISO — HWM inactive\\\",\\\"class\\\":\\\"live\\\"}\"; else titan-hwm-waybar; fi'",
         "interval": 5,
         "return-type": "json",
-        "on-click": "titan-hwm status",
-        "on-right-click": "kitty --title='Titan HWM' -e bash -c 'titan-hwm status; echo; read -p \"Press Enter...\"'"
+        "on-click": "bash -c 'if [ ! -d /run/archiso ]; then titan-hwm status; fi'",
+        "on-right-click": "bash -c 'if [ ! -d /run/archiso ]; then kitty --title=\"Titan HWM\" -e bash -c \"titan-hwm status; echo; read -p \\\"Press Enter...\\\"\"; fi'"
     },
 
     "hyprland/workspaces": {
@@ -91,7 +91,7 @@
     "mpris": {
         "format": "{player_icon}  {title} — {artist}",
         "format-paused": "{status_icon}  {title}",
-        "format-stopped": "No media",
+        "format-stopped": "",
         "player-icons": {
             "default": "▶",
             "spotify": ""

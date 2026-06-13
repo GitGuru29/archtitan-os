@@ -6,7 +6,7 @@ ConditionPathExists=!/home/archtitan/.config
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c 'mkdir -p /home/archtitan && cp -rT /etc/skel /home/archtitan && chown -R 1000:1000 /home/archtitan'
+ExecStart=/bin/bash -c 'mkdir -p /home/archtitan && cp -rT /etc/skel /home/archtitan && cp /root/.config/waybar/config /home/archtitan/.config/waybar/config && chown -R 1000:1000 /home/archtitan'
 RemainAfterExit=yes
 
 [Install]

@@ -106,6 +106,7 @@ grim
 slurp
 wl-clipboard
 xdg-desktop-portal-hyprland
+xorg-server
 xorg-xwayland
 qt5-wayland
 qt6-wayland
@@ -132,3 +133,5 @@ httpie
 strace
 sddm
 sddm-kcm
+playerctl
+brightnessctl

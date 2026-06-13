@@ -1421,6 +1421,20 @@ public:
     }
 
     void run() {
+        // ── LIVE ISO GUARD ────────────────────────────────────────────────────
+        // On live media (/run/archiso exists) the THM has no useful work to do:
+        // there is no persistent dev workspace, and its process guard + cgroup
+        // management can destabilize the Calamares installer session.
+        // Enter a permanent sleep loop instead of the normal operating path.
+        if (fs::exists("/run/archiso")) {
+            std::cout << "[HWM] Live ISO detected — entering inert mode. "
+                         "All resource management disabled to protect installer.\n";
+            while (true) {
+                std::this_thread::sleep_for(std::chrono::seconds(60));
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         cfg=load_config(); apply_extras();
 
         std::string sock=HyprlandIPC::find_sock(".socket2.sock");

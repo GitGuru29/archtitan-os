@@ -10,15 +10,21 @@ if [[ ! -f "$STATE" ]]; then
     exit 0
 fi
 
-profile=$(grep "^profile="         "$STATE" | cut -d= -f2)
-mem_pct=$(grep "^mem_available_pct=" "$STATE" | cut -d= -f2)
-action=$(grep  "^last_action="     "$STATE" | cut -d= -f2)
-freed=$(grep   "^freed_mb="        "$STATE" | cut -d= -f2)
-temp=$(grep    "^cpu_temp_c="      "$STATE" | cut -d= -f2)
-psi=$(grep     "^psi_some_avg10="  "$STATE" | cut -d= -f2)
+profile=$(grep "^profile="         "$STATE" 2>/dev/null | cut -d= -f2)
+mem_pct=$(grep "^mem_available_pct=" "$STATE" 2>/dev/null | cut -d= -f2)
+action=$(grep  "^last_action="     "$STATE" 2>/dev/null | cut -d= -f2)
+freed=$(grep   "^freed_mb="        "$STATE" 2>/dev/null | cut -d= -f2)
+temp=$(grep    "^cpu_temp_c="      "$STATE" 2>/dev/null | cut -d= -f2)
+psi=$(grep     "^psi_some_avg10="  "$STATE" 2>/dev/null | cut -d= -f2)
+
+# Sanitize numerics — strip anything that's not a digit or decimal point
+psi_clean="${psi//[^0-9.]/}"
+mem_pct="${mem_pct//[^0-9.]/}"
+freed="${freed//[^0-9.]/}"
+temp="${temp//[^0-9.]/}"
 
 # Trim to 1 decimal for PSI display
-psi_display=$(printf "%.1f" "${psi:-0}")
+psi_display=$(printf "%.1f" "${psi_clean:-0}" 2>/dev/null || echo "0.0")
 
 case "$profile" in
     "Web Dev")     icon="🌐"; css_class="web"     ;;
@@ -29,8 +35,9 @@ case "$profile" in
     *)             icon="⚙";  css_class="inactive";;
 esac
 
-text="${icon} ${profile}"
+text="${icon} ${profile:-Unknown}"
 
-tooltip="Profile: ${profile}\\nRAM Free: ${mem_pct}%\\nPSI: ${psi_display}%\\nAction: ${action}\\nFreed: ${freed}MB\\nCPU Temp: ${temp}°C"
+tooltip="Profile: ${profile:-Unknown}\\nRAM Free: ${mem_pct:-0}%\\nPSI: ${psi_display}%\\nAction: ${action:-none}\\nFreed: ${freed:-0}MB\\nCPU Temp: ${temp:-0}°C"
 
-echo "{\"text\":\"${text}\",\"class\":\"${css_class}\",\"tooltip\":\"${tooltip}\"}"
+printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' \
+    "$text" "$css_class" "$tooltip"

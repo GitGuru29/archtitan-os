@@ -27,6 +27,7 @@ file_permissions=(
   ["/usr/local/bin/titan-hwm"]="0:0:755"
   ["/usr/local/bin/titan-hwm-waybar"]="0:0:755"
   ["/usr/local/bin/archtitan-session-guard"]="0:0:755"
+  ["/usr/local/bin/archtitan-initcpio-preset"]="0:0:755"
   ["/etc/systemd/system/titan-active.slice"]="0:0:644"
   ["/etc/systemd/system/titan-background.slice"]="0:0:644"
   ["/etc/systemd/system/titan-frozen.slice"]="0:0:644"

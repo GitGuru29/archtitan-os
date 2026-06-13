@@ -1,22 +1,43 @@
 #!/usr/bin/env bash
-STATE=/tmp/titan_hwm_state
-[ ! -f "$STATE" ] && echo '{"text":"HWM","tooltip":"Titan HWM not running","class":"inactive"}' && exit 0
+# titan-hwm-waybar — Waybar JSON output for the Titan HWM module
+# Reads /tmp/titan_hwm_state written by the daemon every transition.
+# Returns: { "text", "class", "tooltip" } for Waybar custom module.
 
-profile=$(grep '^profile=' "$STATE" | cut -d= -f2)
-mem=$(grep '^mem_available_pct=' "$STATE" | cut -d= -f2)
-action=$(grep '^last_action=' "$STATE" | cut -d= -f2)
-freed=$(grep '^freed_mb=' "$STATE" | cut -d= -f2)
-temp=$(grep '^cpu_temp_c=' "$STATE" | cut -d= -f2)
+STATE="/tmp/titan_hwm_state"
+
+if [[ ! -f "$STATE" ]]; then
+    echo '{"text":"⚙ HWM","class":"inactive","tooltip":"Titan HWM not running"}'
+    exit 0
+fi
+
+profile=$(grep "^profile="         "$STATE" 2>/dev/null | cut -d= -f2)
+mem_pct=$(grep "^mem_available_pct=" "$STATE" 2>/dev/null | cut -d= -f2)
+action=$(grep  "^last_action="     "$STATE" 2>/dev/null | cut -d= -f2)
+freed=$(grep   "^freed_mb="        "$STATE" 2>/dev/null | cut -d= -f2)
+temp=$(grep    "^cpu_temp_c="      "$STATE" 2>/dev/null | cut -d= -f2)
+psi=$(grep     "^psi_some_avg10="  "$STATE" 2>/dev/null | cut -d= -f2)
+
+# Sanitize numerics — strip anything that's not a digit or decimal point
+psi_clean="${psi//[^0-9.]/}"
+mem_pct="${mem_pct//[^0-9.]/}"
+freed="${freed//[^0-9.]/}"
+temp="${temp//[^0-9.]/}"
+
+# Trim to 1 decimal for PSI display
+psi_display=$(printf "%.1f" "${psi_clean:-0}" 2>/dev/null || echo "0.0")
 
 case "$profile" in
-  "Web Dev")     icon="🌐" ; css_class="web" ;;
-  "Android Dev") icon="🤖" ; css_class="android" ;;
-  "System Dev")  icon="⚙️"  ; css_class="system" ;;
-  "Casual")      icon="🪑" ; css_class="casual" ;;
-  *)             icon="💤" ; css_class="neutral" ;;
+    "Web Dev")     icon="🌐"; css_class="web"     ;;
+    "Android Dev") icon="🤖"; css_class="android" ;;
+    "System Dev")  icon="⚙️";  css_class="system"  ;;
+    "Casual")      icon="🪑"; css_class="casual"  ;;
+    "Neutral")     icon="💤"; css_class="neutral" ;;
+    *)             icon="⚙";  css_class="inactive";;
 esac
 
-text="$icon $profile"
-tooltip="RAM: ${mem}% free | Action: $action | Freed: ${freed}MB | CPU: ${temp}°C"
+text="${icon} ${profile:-Unknown}"
 
-echo "{\"text\":\"$text\",\"tooltip\":\"$tooltip\",\"class\":\"$css_class\"}"
+tooltip="Profile: ${profile:-Unknown}\\nRAM Free: ${mem_pct:-0}%\\nPSI: ${psi_display}%\\nAction: ${action:-none}\\nFreed: ${freed:-0}MB\\nCPU Temp: ${temp:-0}°C"
+
+printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' \
+    "$text" "$css_class" "$tooltip"
