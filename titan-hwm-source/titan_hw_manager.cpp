@@ -1426,6 +1426,17 @@ public:
         std::string sock=HyprlandIPC::find_sock(".socket2.sock");
         if (sock.empty()) { std::this_thread::sleep_for(std::chrono::seconds(5)); return; }
 
+        // Fix Waybar "not running" issue: initialize state immediately upon connecting
+        MemInfo m=read_meminfo(); int t_c=read_max_temp_mc()/1000;
+        PSI psi=read_memory_psi();
+        write_state("Neutral", m.pct(), "started", 0, t_c, psi.some_avg10, false, false);
+
+        std::string sock_cmd = HyprlandIPC::find_sock(".socket.sock");
+        auto visible = query_visible_workspaces(sock_cmd);
+        if (!visible.empty()) {
+            schedule("","",-1,*visible.begin(),true);
+        }
+
         cli_thd       = std::thread(&TitanHardwareManager::run_cli_server,    this);
         guard_thd     = std::thread(&TitanHardwareManager::run_process_guard,  this);
         hotreload_thd = std::thread(&TitanHardwareManager::run_config_hotreload, this);
