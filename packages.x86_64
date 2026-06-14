@@ -58,12 +58,14 @@ wireless-regdb
 wireless_tools
 wpa_supplicant
 xdg-utils
+xdg-user-dirs
 xfsprogs
 hyprland
 waybar
 kitty
 chromium
-wofi
+rofi-wayland
+rofi-emoji
 polkit-kde-agent
 base-devel
 git
