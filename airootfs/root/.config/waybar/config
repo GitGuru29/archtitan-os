@@ -20,6 +20,8 @@
     "modules-right": [
         "custom/install",
         "custom/titan-hwm",
+        "cpu",
+        "memory",
         "clock",
         "tray",
         "backlight",
@@ -168,5 +170,15 @@
         "icon-size": 14,
         "spacing": 6,
         "show-passive-items": true
+    },
+
+    "cpu": {
+        "format": "  {usage}% ",
+        "tooltip": true
+    },
+
+    "memory": {
+        "format": "  {}% ",
+        "tooltip-format": "RAM: {used:0.1f} GB / {total:0.1f} GB\nSwap: {swapUsed:0.1f} GB / {swapTotal:0.1f} GB"
     }
 }
