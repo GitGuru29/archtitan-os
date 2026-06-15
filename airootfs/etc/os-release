@@ -1,0 +1,11 @@
+NAME="ArchTitan OS"
+PRETTY_NAME="ArchTitan OS"
+ID=archtitan
+ID_LIKE=arch
+BUILD_ID=rolling
+ANSI_COLOR="38;2;125;207;255"
+HOME_URL="https://github.com/GitGuru29/archtitan-os"
+DOCUMENTATION_URL="https://github.com/GitGuru29/archtitan-os/wiki"
+SUPPORT_URL="https://github.com/GitGuru29/archtitan-os/issues"
+BUG_REPORT_URL="https://github.com/GitGuru29/archtitan-os/issues"
+LOGO=archlinux-logo
