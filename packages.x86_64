@@ -53,7 +53,7 @@ sudo
 systemd-resolvconf
 tcpdump
 usbutils
-virtualbox-guest-utils-nox
+virtualbox-guest-utils
 wireless-regdb
 wireless_tools
 wpa_supplicant
