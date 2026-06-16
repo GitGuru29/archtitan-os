@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=TitanFetch
+Comment=ArchTitan System Information
+Exec=titanfetch --gui
+Icon=titanfetch
+Terminal=false
+Type=Application
+Categories=System;Monitor;
+Keywords=system;info;fetch;hardware;cpu;gpu;memory;
+StartupNotify=false
+StartupWMClass=titanfetch
