@@ -13,11 +13,11 @@ screen_ratio = Window.GetWidth() / Window.GetHeight();
 logo_ratio = logo.image.GetWidth() / logo.image.GetHeight();
 
 if (screen_ratio > logo_ratio) {
-    // Scale to height to ensure it fits
-    scale_factor = Window.GetHeight() / logo.image.GetHeight();
+    // Scale to height to ensure it fits (and then shrink to 35% for a nice logo size)
+    scale_factor = (Window.GetHeight() / logo.image.GetHeight()) * 0.35;
 } else {
     // Scale to width
-    scale_factor = Window.GetWidth() / logo.image.GetWidth();
+    scale_factor = (Window.GetWidth() / logo.image.GetWidth()) * 0.35;
 }
 
 new_width = logo.image.GetWidth() * scale_factor;

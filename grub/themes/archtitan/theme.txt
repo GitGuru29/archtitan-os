@@ -1,52 +1,67 @@
-# ArchTitan OS GRUB Theme
-title-text: ""
-desktop-image: "splash.png"
+# ─────────────────────────────────────────────────────────
+# ArchTitan OS — 3D GRUB Theme
+# Background: 1024x576 3D cinematic splash
+# Menu zone: dark center column (35%–65% horizontally)
+# ─────────────────────────────────────────────────────────
+
+title-text:              ""
+desktop-image:           "splash.png"
 desktop-image-scale-method: "crop"
-desktop-color: "#1A1B26"
-terminal-font: "Unifont Regular 16"
+desktop-color:           "#00000A"
+terminal-font:           "Unifont Regular 16"
 
-# Title Label removed since logo provides the name
-
-# Boot Menu
+# ── Boot Menu ─────────────────────────────────────────────
 + boot_menu {
-    left = 35%
-    top = 30%
-    width = 30%
-    height = 45%
-    item_color = "#E0E0E0"
-    selected_item_color = "#00E5FF"
-    item_height = 36
-    item_padding = 10
-    item_spacing = 6
-    item_align = "center"
+    left                 = 33%
+    top                  = 28%
+    width                = 34%
+    height               = 44%
+
+    item_color           = "#A9B1D6"
+    selected_item_color  = "#00D4FF"
+
+    item_height          = 38
+    item_padding         = 14
+    item_spacing         = 4
+    item_font            = "Unifont Regular 16"
+    selected_item_font   = "Unifont Regular 16"
+
+    item_align           = "center"
+
+    # Glowing cyan selection bar
     selected_item_pixmap_style = "select_*.png"
-    icon_width = 0
-    icon_height = 0
-    scrollbar = false
+
+    # Semi-transparent dark frame around the whole menu
+    menu_pixmap_style    = "menu_*.png"
+
+    icon_width           = 0
+    icon_height          = 0
+    scrollbar            = false
 }
 
-# Countdown Progress Bar
+# ── Countdown progress bar ────────────────────────────────
 + progress_bar {
-    id = "__timeout__"
-    left = 35%
-    top = 80%
-    width = 30%
-    height = 14
-    bg_color = "#000000"
-    fg_color = "#00E5FF"
-    border_color = "#005C8A"
-    text_color = "#E0E0E0"
-    text = "@TIMEOUT_NOTIFICATION_LONG@"
+    id           = "__timeout__"
+    left         = 33%
+    top          = 76%
+    width        = 34%
+    height       = 10
+    bg_color     = "#05050F"
+    fg_color     = "#00D4FF"
+    border_color = "#003D55"
+    text_color   = "#00D4FF"
+    text         = "@TIMEOUT_NOTIFICATION_LONG@"
+    font         = "Unifont Regular 12"
 }
 
-# Bottom hint label
+# ── Bottom hint label ─────────────────────────────────────
 + label {
-    left = 35%
-    top = 86%
-    width = 30%
-    height = 24
-    text = "Press 'e' to edit boot options"
-    color = "#00E5FF"
-    font = "Unifont Regular 12"
-    align = "center"
+    left   = 33%
+    top    = 90%
+    width  = 34%
+    height = 22
+    text   = "Press 'e' to edit boot options"
+    color  = "#335566"
+    font   = "Unifont Regular 12"
+    align  = "center"
 }
