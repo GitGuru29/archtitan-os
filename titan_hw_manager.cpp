@@ -916,11 +916,16 @@ class TitanHardwareManager {
         // Legacy fast path for non-IDE binaries
         FusionResult r;
         if (w.find("studio")!=std::string::npos||w=="emulator") r.type=WorkloadType::ANDROID_DEV;
-        else if (w=="alacritty"||w=="kitty"||w=="clion"||w=="neovim") r.type=WorkloadType::SYSTEM_DEV;
+        // Terminals are NEUTRAL by default — they only become SYSTEM_DEV when
+        // the fusion classifier detects a dev tool (LSP, compiler, debugger)
+        // running as a child. Opening a bare terminal must never trigger a
+        // profile switch — that would classify every user as a system developer.
+        else if (w=="clion") r.type=WorkloadType::SYSTEM_DEV;
         else if (w=="telegram-desktop"||w=="discord"||w=="slack"||
                  w=="thunderbird"||w=="element"||w=="geary"||
                  w=="nautilus"||w=="dolphin"||w=="thunar") r.type=WorkloadType::CASUAL;
         else if (w=="figma"||w=="firefox-developer-edition") r.type=WorkloadType::WEB_DEV;
+        // kitty / alacritty / generic terminals → NEUTRAL until fusion sees dev children
         else r.type=WorkloadType::NEUTRAL;
         r.confidence = 1.0f; // direct match = full confidence
         return r;

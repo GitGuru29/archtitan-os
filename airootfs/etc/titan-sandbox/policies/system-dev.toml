@@ -17,6 +17,9 @@ ro_paths = [
     "/etc/resolv.conf",
     "/etc/passwd", "/etc/group",
     "/etc/localtime",
+    "/etc/fonts",
+    # Wayland display — required for any GUI app including terminals
+    "/run/user",
     "/proc/self",
 ]
 
@@ -26,8 +29,8 @@ ro_paths = [
 enabled = false
 
 [devices]
-# Only the bare minimum — no DRI/GPU access for build tools
-allowed = []
+# GPU render node needed for terminal GPU rendering (kitty uses GPU)
+allowed = ["/dev/dri/renderD128"]
 
 [syscalls]
 # "low" tier: allows socket syscalls (for Unix IPC) + ptrace (for gdb)

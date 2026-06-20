@@ -114,22 +114,21 @@ if [[ ! -x "$SANDBOXD" ]]; then
     exec "$CMD" "$@"
 fi
 
-# Launch through the sandbox engine — capture BOX_PID= output before exec
+# Launch through the sandbox engine
 REGISTRY_DIR="/run/titan-sandbox"
 mkdir -p "$REGISTRY_DIR"
 
-# Run sandboxd in background briefly to capture BOX_PID, then re-exec properly.
-# titan-sandboxd prints SANDBOX_PID=<n> to stdout before exec'ing the child.
-# We wrap it: start sandboxd, grab its SANDBOX_PID output, write registry, then
-# the child is already running inside the box.
-exec "$SANDBOXD" \
-    "$POLICY" \
-    "$CMD" \
-    "$@" \
-    > >(while IFS= read -r line; do
-            if [[ "$line" == SANDBOX_PID=* ]]; then
-                BOX_PID="${line#SANDBOX_PID=}"
-                echo "ORIGINAL_PID=${HOOK_PID} BOX_PID=${BOX_PID} BINARY=${BINARY}" >> "${REGISTRY_DIR}/registry"
-            fi
-            echo "$line"
-        done)
+# Run sandboxd — it forks the child into namespaces then waits for it.
+# Capture SANDBOX_PID= from its stdout and write to the registry so THM
+# can map original PID → box PID for cgroup assignment.
+# We do NOT use exec here — process substitution (>(...)) with exec is
+# dangerous in a Wayland/Hyprland context and leaves dangling FDs.
+"$SANDBOXD" "$POLICY" "$CMD" "$@" 2>>"$LOG" | \
+while IFS= read -r line; do
+    if [[ "$line" == SANDBOX_PID=* ]]; then
+        BOX_PID="${line#SANDBOX_PID=}"
+        echo "ORIGINAL_PID=${HOOK_PID} BOX_PID=${BOX_PID} BINARY=${BINARY}" \
+             >> "${REGISTRY_DIR}/registry"
+        echo "[$(date -Iseconds)] SANDBOX_PID=$BOX_PID for ORIGINAL_PID=$HOOK_PID" >> "$LOG"
+    fi
+done
