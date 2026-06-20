@@ -1,0 +1,30 @@
+# general-gui.toml — File managers, settings apps, misc GUI tools
+# Risk: medium — no network, no special devices.
+
+[identity]
+name = "general-gui"
+description = "General GUI applications (file managers, settings, misc)"
+
+[filesystem]
+rw_paths = ["{APP_PRIVATE_DIR}", "/tmp"]
+ro_paths = [
+    "/usr", "/lib", "/lib64",
+    "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d",
+    "/etc/fonts",
+    "/etc/passwd", "/etc/group", "/etc/localtime",
+    "/etc/xdg",
+    "/proc/self",
+]
+
+[network]
+enabled = false
+
+[devices]
+# Minimal GPU access for rendering the UI
+allowed = ["/dev/dri/renderD128"]
+
+[syscalls]
+risk_tier = "medium"
+
+[capabilities]
+allowed = []

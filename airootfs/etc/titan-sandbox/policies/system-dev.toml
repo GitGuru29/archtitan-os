@@ -1,0 +1,38 @@
+# system-dev.toml — C/C++/Rust system development tools
+# Risk: low — compilers, linkers, debuggers. Needs broad fs access but no net.
+
+[identity]
+name = "system-dev"
+description = "C/C++/Rust system development tools (clang, cargo, gdb, cmake)"
+
+[filesystem]
+# Project directory gets full read-write access
+rw_paths = ["{PROJECT_DIR}", "/tmp"]
+# Core system libraries and toolchain — read-only
+ro_paths = [
+    "/usr", "/lib", "/lib64",
+    "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d",
+    "/etc/alternatives",
+    "/etc/ssl/certs",
+    "/etc/resolv.conf",
+    "/etc/passwd", "/etc/group",
+    "/etc/localtime",
+    "/proc/self",
+]
+
+[network]
+# Compilers and build tools don't need network access.
+# cargo fetch / npm install must run OUTSIDE the box first.
+enabled = false
+
+[devices]
+# Only the bare minimum — no DRI/GPU access for build tools
+allowed = []
+
+[syscalls]
+# "low" tier: allows socket syscalls (for Unix IPC) + ptrace (for gdb)
+risk_tier = "low"
+
+[capabilities]
+# Zero real capabilities needed. Compilers are normal user processes.
+allowed = []

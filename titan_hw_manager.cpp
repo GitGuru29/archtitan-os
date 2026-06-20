@@ -25,6 +25,15 @@
 #include <map>
 #include <functional>
 
+// ── Titan Sandbox integration ─────────────────────────────────────────────────
+// thm_sandbox_integration.h provides:
+//   - resolve_policy()        : WorkloadType → policy file path
+//   - SandboxLauncher         : launch helper (used by exec-hook, not here)
+//   - POLICY_DIR constexpr    : policy install dir (defined in the header)
+// THM's role: read the sandbox registry written by titan-exec-hook to map
+// original PIDs → box PIDs, then use box PIDs for cgroup tier assignment.
+#include "sandbox/thm_sandbox_integration.h"
+
 namespace fs = std::filesystem;
 using ms_clock = std::chrono::steady_clock;
 using time_point = std::chrono::time_point<ms_clock>;
@@ -856,6 +865,13 @@ class TitanHardwareManager {
     std::unordered_map<int,WorkspaceState> workspace_states;
     int active_workspace_id = 1;
 
+    // ── Sandbox PID registry ──────────────────────────────────────────────────
+    // Tracks every PID that has already been processed by the sandbox layer.
+    // A PID absent from this set = new launch → route through titan-sandboxd.
+    // A PID present = existing process that just gained focus → skip sandbox.
+    std::mutex sandbox_mtx;
+    std::unordered_set<pid_t> sandboxed_pids;
+
     // Rogue DM guard list
     const std::unordered_set<std::string> rogue_dms{
         "gdm","gdm3","lightdm","lxdm","xdm","slim","ly","greetd","emptty","lemurs",
@@ -1218,6 +1234,57 @@ class TitanHardwareManager {
                 // Window focus — run fusion classifier (Signal 1+2+3)
                 MemoryGraph g; g.build();
                 FusionResult fr = classify_window(wc, ev_title, ev_pid, g.graph);
+
+                // ── Sandbox registry lookup ───────────────────────────────────
+                // titan-exec-hook sandboxes processes BEFORE they launch and
+                // writes: ORIGINAL_PID=<n> BOX_PID=<m> to /run/titan-sandbox/registry
+                // THM reads that file to get the box_pid for cgroup assignment.
+                // We never call launch_classified() here — the process is already
+                // running by the time activewindowv2 fires; namespaces are set at
+                // fork time and cannot be applied retroactively.
+                pid_t effective_pid = ev_pid;
+                if (ev_pid > 0) {
+                    bool already_seen;
+                    { std::lock_guard<std::mutex> slk(sandbox_mtx);
+                      already_seen = sandboxed_pids.count(ev_pid) > 0;
+                      sandboxed_pids.insert(ev_pid); }
+                    if (!already_seen) {
+                        // Look up this PID in the registry written by titan-exec-hook
+                        std::ifstream reg("/run/titan-sandbox/registry");
+                        std::string line;
+                        while (std::getline(reg, line)) {
+                            // Format: ORIGINAL_PID=<n> BOX_PID=<m> BINARY=<name>
+                            auto op = line.find("ORIGINAL_PID=");
+                            auto bp = line.find(" BOX_PID=");
+                            if (op == std::string::npos || bp == std::string::npos) continue;
+                            pid_t orig = 0, box = 0;
+                            try {
+                                orig = std::stoi(line.substr(op + 13, bp - op - 13));
+                                auto rest = line.substr(bp + 9);
+                                box  = std::stoi(rest.substr(0, rest.find(' ')));
+                            } catch (...) { continue; }
+                            if (orig == ev_pid && box > 0) {
+                                effective_pid = box;
+                                CgroupManager::move_pid(box, "titan-active.slice");
+                                set_oom(box, cfg.oom_protect);
+                                { std::lock_guard<std::mutex> slk(sandbox_mtx);
+                                  sandboxed_pids.insert(box); }
+                                std::cout << "[Sandbox] PID=" << ev_pid
+                                          << " → box_pid=" << box
+                                          << " (cgroup: titan-active.slice)\n";
+                                break;
+                            }
+                        }
+                        // If not in registry: process launched without exec-hook
+                        // (e.g. from terminal, not a keybind). Log and continue —
+                        // THM still manages it via cgroup tier, just un-sandboxed.
+                        if (effective_pid == ev_pid)
+                            std::cout << "[Sandbox] PID=" << ev_pid
+                                      << " (" << wc << ") not in registry — unsandboxed\n";
+                    }
+                }
+                // ─────────────────────────────────────────────────────────────
+
                 std::cout<<"[Fusion] Result: "<<wt_label(fr.type)
                          <<" conf="<<fr.confidence
                          <<" lsp="<<fr.has_lsp

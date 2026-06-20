@@ -32,4 +32,13 @@ file_permissions=(
   ["/etc/systemd/system/titan-active.slice"]="0:0:644"
   ["/etc/systemd/system/titan-background.slice"]="0:0:644"
   ["/etc/systemd/system/titan-frozen.slice"]="0:0:644"
+  # Sandbox system
+  ["/usr/local/bin/titan-sandboxd"]="0:0:755"
+  ["/usr/local/bin/titan-exec-hook"]="0:0:755"
+  ["/etc/systemd/system/titan-sandboxd.service"]="0:0:644"
+  ["/etc/titan-sandbox"]="0:0:755"
+  ["/etc/titan-sandbox/policies"]="0:0:755"
+  ["/var/log/titan-sandbox"]="0:0:755"
+  ["/var/titan-sandbox"]="0:0:755"
+  ["/var/titan-sandbox/apps"]="0:0:755"
 )

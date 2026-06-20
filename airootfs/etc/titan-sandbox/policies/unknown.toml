@@ -1,0 +1,31 @@
+# unknown.toml — Default-deny for unrecognized applications
+# Risk: strict — most restrictive profile. No network. App-private dir only.
+
+[identity]
+name = "unknown"
+description = "Default sandbox for unclassified applications (most restrictive)"
+
+[filesystem]
+# Gets ONLY its own isolated private folder — nothing from the host is visible
+rw_paths = ["{APP_PRIVATE_DIR}", "/tmp"]
+ro_paths = [
+    "/usr/lib",
+    "/usr/lib64",
+    "/lib",
+    "/lib64",
+    "/etc/ld.so.cache",
+]
+
+[network]
+enabled = false
+
+[devices]
+# No device access at all
+allowed = []
+
+[syscalls]
+# Strict: smallest possible syscall surface
+risk_tier = "strict"
+
+[capabilities]
+allowed = []
