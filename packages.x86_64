@@ -132,6 +132,8 @@ tree
 jq
 httpie
 strace
+libseccomp
+libcap
 sddm
 sddm-kcm
 playerctl

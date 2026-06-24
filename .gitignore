@@ -16,3 +16,35 @@ packages/
 .DS_Store
 iso-repack/
 custom-repo/
+
+# ─── Titan Sandbox System (commit when FYP starts officially) ─────────────────
+# Core engine + integration header
+sandbox/titan-sandboxd.cpp
+sandbox/thm_sandbox_integration.h
+sandbox/CMakeLists.txt
+
+# Policy files
+sandbox/policies/
+
+# Hyprland exec hook
+sandbox/scripts/hyprland-exec-hook.sh
+
+# Test suite
+sandbox/titan-service-tests/
+
+# CMake build artifacts
+sandbox/build/
+
+# Compiled binary (if built in-tree)
+sandbox/titan-sandboxd
+
+# Runtime artifacts
+sandbox/nspawn-roots/
+sandbox/logs/
+sandbox/snapshots/
+sandbox/containers/
+sandbox/configs/
+sandbox/tests/
+
+# Catch-all safety net — anything else added under sandbox/
+sandbox/
