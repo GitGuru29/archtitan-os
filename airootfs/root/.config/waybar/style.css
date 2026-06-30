@@ -190,7 +190,6 @@ window#waybar.hidden {
     background: rgba(247, 118, 142, 0.12);
     border-color: rgba(247, 118, 142, 0.3);
     box-shadow: 0 0 8px rgba(247, 118, 142, 0.2);
-    animation: blink-critical 1s step-start infinite;
 }
 
 #battery.charging,
@@ -335,11 +334,6 @@ window#waybar.hidden {
     box-shadow: 0 0 18px rgba(0, 212, 255, 0.5);
 }
 
-/* ── Animations ───────────────────────────────────────────── */
-@keyframes blink-critical {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.4; }
-}
 
 /* ── Tooltip ──────────────────────────────────────────────── */
 tooltip {
