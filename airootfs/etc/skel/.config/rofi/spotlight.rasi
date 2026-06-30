@@ -1,31 +1,23 @@
 /* ============================================================
  * ArchTitan OS — Spotlight Search Theme for Rofi
  * Inspired by macOS Spotlight: centered, frosted-glass, minimal
- * All colors use argb: hex (0xAARRGGBB) — universally supported
  * ============================================================ */
 
 * {
-    /* Color palette — argb:AARRGGBB format */
-    /* bg-dark     rgba(18, 18, 28, 0.88)  → AA=E0 */
+    /* All colors in #AARRGGBB (argb) format — rofi native */
     bg-dark:        #E012121C;
-    /* bg-selected rgba(122,162,247, 0.25) → AA=40 */
     bg-selected:    #407AA2F7;
-    /* bg-hover    rgba(122,162,247, 0.12) → AA=1F */
     bg-hover:       #1F7AA2F7;
-    /* border-col  rgba(122,162,247, 0.45) → AA=73 */
     border-accent:  #737AA2F7;
-    /* border-subtle rgba(255,255,255,0.08)→ AA=14 */
     border-subtle:  #14FFFFFF;
-    /* text colors — fully opaque */
     text-primary:   #DCDCEB;
     text-secondary: #96A0BE;
     text-accent:    #7AA2F7;
     text-dim:       #646991;
     scrollbar-clr:  #597AA2F7;
 
-    /* Rofi resets */
     background-color:   transparent;
-    text-color:         @text-primary;
+    text-color:         #DCDCEB;
     font:               "Inter 12";
     border:             0px solid;
     margin:             0px;
@@ -39,9 +31,9 @@ window {
     anchor:             center;
     width:              640px;
     border-radius:      18px;
-    background-color:   @bg-dark;
+    background-color:   #E012121C;
     border:             1px solid;
-    border-color:       @border-accent;
+    border-color:       #737AA2F7;
 }
 
 /* ── Main layout ────────────────────────────────────────────── */
@@ -59,12 +51,12 @@ inputbar {
     spacing:            12px;
     children:           [ prompt, entry ];
     border:             0px 0px 1px 0px solid;
-    border-color:       @border-subtle;
+    border-color:       #14FFFFFF;
 }
 
 prompt {
     background-color:   transparent;
-    text-color:         @text-accent;
+    text-color:         #7AA2F7;
     font:               "Inter Bold 13";
     padding:            2px 0px 0px 6px;
     vertical-align:     0.5;
@@ -72,8 +64,8 @@ prompt {
 
 entry {
     background-color:   transparent;
-    text-color:         @text-primary;
-    placeholder-color:  @text-dim;
+    text-color:         #DCDCEB;
+    placeholder-color:  #646991;
     placeholder:        "Search apps, files, commands…";
     font:               "Inter 14";
     padding:            0px;
@@ -88,7 +80,7 @@ message {
 }
 
 textbox {
-    text-color:         @text-secondary;
+    text-color:         #96A0BE;
     font:               "Inter 11";
     background-color:   transparent;
 }
@@ -126,29 +118,34 @@ element-icon {
 
 element-text {
     background-color:   transparent;
-    text-color:         @text-primary;
+    text-color:         #DCDCEB;
     font:               "Inter 12";
     vertical-align:     0.5;
     cursor:             inherit;
-    highlight:          bold @text-accent;
+    /* highlight only accepts literal keywords + literal colors — no @vars */
+    highlight:          bold #7AA2F7;
 }
 
-/* Selected */
-element selected {
-    background-color:   @bg-selected;
+/* Selected row */
+element.selected.normal,
+element.selected.urgent,
+element.selected.active {
+    background-color:   #407AA2F7;
     border:             1px solid;
-    border-color:       @border-accent;
+    border-color:       #737AA2F7;
 }
 
-element selected > element-text {
-    text-color:         @text-primary;
+element.selected.normal > element-text,
+element.selected.urgent > element-text,
+element.selected.active > element-text {
+    text-color:         #DCDCEB;
 }
 
 /* ── Scrollbar ──────────────────────────────────────────────── */
 scrollbar {
     width:              4px;
     handle-width:       4px;
-    handle-color:       @scrollbar-clr;
+    handle-color:       #597AA2F7;
     background-color:   transparent;
     border:             0px solid;
     margin:             4px 4px 4px 0px;
@@ -159,21 +156,21 @@ scrollbar {
 mode-switcher {
     background-color:   transparent;
     border:             1px 0px 0px 0px solid;
-    border-color:       @border-subtle;
+    border-color:       #14FFFFFF;
     padding:            8px 12px;
     spacing:            6px;
 }
 
 button {
     background-color:   transparent;
-    text-color:         @text-dim;
+    text-color:         #646991;
     font:               "Inter 10";
     padding:            4px 10px;
     border-radius:      6px;
     cursor:             pointer;
 }
 
-button selected {
-    background-color:   @bg-hover;
-    text-color:         @text-accent;
+button.selected {
+    background-color:   #1F7AA2F7;
+    text-color:         #7AA2F7;
 }
