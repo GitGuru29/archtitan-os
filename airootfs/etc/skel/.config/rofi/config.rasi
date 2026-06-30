@@ -1,0 +1,23 @@
+/* ArchTitan OS — Rofi Main Configuration */
+configuration {
+    modi:                "drun,run,window";
+    show-icons:          true;
+    icon-theme:          "Papirus-Dark";
+    drun-display-format: "{name}";
+    display-drun:        " Apps";
+    display-run:         " Run";
+    display-window:      " Windows";
+    terminal:            "kitty";
+    font:                "Inter 13";
+
+    /* Case-insensitive fuzzy search */
+    case-sensitive:      false;
+    matching:            "fuzzy";
+
+    /* Behaviour */
+    cycle:               false;
+    normalize-match:     true;
+    steal-focus:         false;
+}
+
+@theme "~/.config/rofi/spotlight.rasi"
