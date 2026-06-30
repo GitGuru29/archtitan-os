@@ -1,0 +1,176 @@
+/* ============================================================
+ * ArchTitan OS — Spotlight Search Theme for Rofi
+ * Tested against rofi 2.0.0 rasi parser
+ * ============================================================ */
+
+* {
+    /* Colors: #AARRGGBB argb format */
+    bg-dark:        #E012121C;
+    bg-selected:    #407AA2F7;
+    bg-hover:       #1F7AA2F7;
+    border-accent:  #737AA2F7;
+    border-subtle:  #14FFFFFF;
+    text-primary:   #DCDCEB;
+    text-secondary: #96A0BE;
+    text-accent:    #7AA2F7;
+    text-dim:       #646991;
+    scrollbar-clr:  #597AA2F7;
+
+    background-color:   transparent;
+    text-color:         #DCDCEB;
+    font:               "Inter 12";
+    border:             0px;
+    margin:             0px;
+    padding:            0px;
+    spacing:            0px;
+}
+
+/* ── Root window ───────────────────────────────────────────── */
+window {
+    location:           center;
+    anchor:             center;
+    width:              640px;
+    border-radius:      18px;
+    background-color:   #E012121C;
+    border:             1px;
+    border-color:       #737AA2F7;
+}
+
+/* ── Main layout ────────────────────────────────────────────── */
+mainbox {
+    background-color:   transparent;
+    children:           [ inputbar, message, listview ];
+    padding:            0px;
+    spacing:            0px;
+}
+
+/* ── Search bar ─────────────────────────────────────────────── */
+inputbar {
+    background-color:   transparent;
+    padding:            22px 20px 18px 20px;
+    spacing:            12px;
+    children:           [ prompt, entry ];
+    border:             0px 0px 1px 0px;
+    border-color:       #14FFFFFF;
+}
+
+prompt {
+    background-color:   transparent;
+    text-color:         #7AA2F7;
+    font:               "Inter Bold 13";
+    padding:            2px 0px 0px 6px;
+    vertical-align:     0.5;
+}
+
+entry {
+    background-color:   transparent;
+    text-color:         #DCDCEB;
+    placeholder-color:  #646991;
+    placeholder:        "Search apps, files, commands…";
+    font:               "Inter 14";
+    padding:            0px;
+    cursor:             text;
+    vertical-align:     0.5;
+}
+
+/* ── Message ────────────────────────────────────────────────── */
+message {
+    background-color:   transparent;
+    padding:            8px 24px 0px 24px;
+}
+
+textbox {
+    text-color:         #96A0BE;
+    font:               "Inter 11";
+    background-color:   transparent;
+}
+
+/* ── Results list ───────────────────────────────────────────── */
+listview {
+    background-color:   transparent;
+    padding:            10px 8px 10px 8px;
+    spacing:            2px;
+    lines:              8;
+    columns:            1;
+    scrollbar:          true;
+    fixed-height:       false;
+    dynamic:            true;
+    cycle:              false;
+}
+
+/* ── Result row ─────────────────────────────────────────────── */
+element {
+    background-color:   transparent;
+    padding:            10px 16px;
+    border-radius:      10px;
+    spacing:            12px;
+    orientation:        horizontal;
+    children:           [ element-icon, element-text ];
+    cursor:             pointer;
+}
+
+element-icon {
+    size:               28px;
+    background-color:   transparent;
+    vertical-align:     0.5;
+    cursor:             pointer;
+}
+
+element-text {
+    background-color:   transparent;
+    text-color:         #DCDCEB;
+    font:               "Inter 12";
+    vertical-align:     0.5;
+    cursor:             pointer;
+    /* NOTE: highlight only accepts literal keywords + literal hex — no @vars, no > child combinator */
+    highlight:          bold #7AA2F7;
+}
+
+/* Selected row — use descendant selectors (space), NOT child combinator (>) */
+element.selected.normal,
+element.selected.urgent,
+element.selected.active {
+    background-color:   #407AA2F7;
+    border:             1px;
+    border-color:       #737AA2F7;
+}
+
+element.selected.normal element-text,
+element.selected.urgent element-text,
+element.selected.active element-text {
+    text-color:         #DCDCEB;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+scrollbar {
+    width:              4px;
+    handle-width:       4px;
+    handle-color:       #597AA2F7;
+    background-color:   transparent;
+    border:             0px;
+    margin:             4px 4px 4px 0px;
+    border-radius:      4px;
+}
+
+/* ── Mode switcher ──────────────────────────────────────────── */
+mode-switcher {
+    background-color:   transparent;
+    border:             1px 0px 0px 0px;
+    border-color:       #14FFFFFF;
+    padding:            8px 12px;
+    spacing:            6px;
+}
+
+button {
+    background-color:   transparent;
+    text-color:         #646991;
+    font:               "Inter 10";
+    padding:            4px 10px;
+    border-radius:      6px;
+    cursor:             pointer;
+}
+
+button.selected {
+    background-color:   #1F7AA2F7;
+    text-color:         #7AA2F7;
+}

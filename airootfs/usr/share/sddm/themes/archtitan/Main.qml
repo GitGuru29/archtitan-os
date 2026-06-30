@@ -1,6 +1,6 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtGraphicalEffects 1.15
+import QtQuick 6.0
+import QtQuick.Controls 6.0
+import Qt5Compat.GraphicalEffects
 import SddmComponents 2.0
 
 Rectangle {
@@ -239,8 +239,13 @@ Rectangle {
                     Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
                 }
 
-                onHoveredChanged: btnBg.scale = hovered ? 1.02 : 1.0
-                onPressedChanged: btnBg.scale = pressed ? 0.95 : (hovered ? 1.02 : 1.0)
+                // Qt6: onPressedChanged / onHoveredChanged removed — use onPressed/onReleased instead
+                onPressed:  btnBg.scale = 0.95
+                onReleased: btnBg.scale = loginButton.hovered ? 1.02 : 1.0
+                onCanceled: btnBg.scale = 1.0
+                HoverHandler {
+                    onHoveredChanged: btnBg.scale = hovered ? 1.02 : 1.0
+                }
                 onClicked: sddm.login(usernameField.text, passwordField.text, sessionModel.lastIndex)
             }
         }
