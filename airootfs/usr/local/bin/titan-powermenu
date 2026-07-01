@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# titan-powermenu — Rofi-based power menu for ArchTitan OS
+# Options: Lock, Sleep, Logout, Reboot, Shutdown
+
+LOCK="󰌾  Lock"
+SLEEP="󰒲  Sleep"
+LOGOUT="󰍃  Logout"
+REBOOT="󰑓  Reboot"
+SHUTDOWN="󰐥  Shutdown"
+
+CHOSEN=$(printf '%s\n' "$LOCK" "$SLEEP" "$LOGOUT" "$REBOOT" "$SHUTDOWN" | rofi \
+    -dmenu \
+    -i \
+    -p "  Power" \
+    -theme-str '
+        window {
+            width: 220px;
+            border-radius: 14px;
+            background-color: rgba(10, 11, 20, 0.92);
+            border: 2px solid rgba(247, 118, 142, 0.35);
+            location: northeast;
+            anchor: northeast;
+            x-offset: -14px;
+            y-offset: 52px;
+        }
+        mainbox {
+            padding: 8px;
+        }
+        inputbar {
+            background-color: transparent;
+            border: none;
+            padding: 6px 10px;
+            children: [prompt];
+        }
+        prompt {
+            background-color: transparent;
+            text-color: #F7768E;
+            font: "JetBrainsMono Nerd Font 11";
+            font-weight: bold;
+        }
+        listview {
+            background-color: transparent;
+            lines: 5;
+            padding: 4px 0;
+            spacing: 2px;
+        }
+        element {
+            padding: 8px 14px;
+            border-radius: 8px;
+            background-color: transparent;
+            text-color: #A9B1D6;
+            font: "JetBrainsMono Nerd Font 11";
+        }
+        element selected {
+            background-color: rgba(247, 118, 142, 0.18);
+            text-color: #F7768E;
+        }
+        element-text {
+            background-color: transparent;
+            text-color: inherit;
+        }
+    ')
+
+case "$CHOSEN" in
+    "$LOCK")
+        # On live ISO, lock is disabled — skip silently
+        if [ -d /run/archiso ]; then exit 0; fi
+        loginctl lock-session
+        ;;
+    "$SLEEP")
+        systemctl suspend
+        ;;
+    "$LOGOUT")
+        hyprctl dispatch exit 0
+        ;;
+    "$REBOOT")
+        systemctl reboot
+        ;;
+    "$SHUTDOWN")
+        systemctl poweroff
+        ;;
+esac

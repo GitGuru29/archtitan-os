@@ -133,7 +133,8 @@ window#waybar.hidden {
 #memory,
 #clock,
 #tray,
-#custom-titan-hwm {
+#custom-titan-hwm,
+#custom-power {
     padding: 3px 10px;
     margin: 5px 2px;
     border-radius: 10px;
@@ -154,6 +155,20 @@ window#waybar.hidden {
     border-color: rgba(122, 162, 247, 0.25);
     color: #C0CAF5;
     box-shadow: 0 0 10px rgba(122, 162, 247, 0.15);
+}
+
+/* ── Power Menu ───────────────────────────────────────────── */
+#custom-power {
+    color: #F7768E;
+    font-size: 14px;
+    padding: 3px 14px;
+}
+
+#custom-power:hover {
+    background: rgba(247, 118, 142, 0.15);
+    border-color: rgba(247, 118, 142, 0.3);
+    color: #FF9EAA;
+    box-shadow: 0 0 10px rgba(247, 118, 142, 0.2);
 }
 
 /* ── Clock — highlighted pill ─────────────────────────────── */
