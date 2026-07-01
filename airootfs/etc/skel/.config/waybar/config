@@ -185,6 +185,6 @@
     "custom/power": {
         "format": "⏻ ",
         "tooltip": false,
-        "on-click": "wlogout"
+        "on-click": "titan-powermenu"
     }
 }

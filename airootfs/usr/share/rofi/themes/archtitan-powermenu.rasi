@@ -1,0 +1,55 @@
+* {
+    bg-base:      #0A0B14A6; /* Deep dark translucent background */
+    bg-element:   #15182880; /* Glass effect for buttons */
+    bg-hover:     #7AA2F733; /* Soft blue glow on hover */
+    border-color: #3B4261;
+    text-normal:  #A9B1D6;
+    text-accent:  #7AA2F7;
+    
+    background-color: transparent;
+    text-color:       @text-normal;
+    font:             "JetBrainsMono Nerd Font 24";
+}
+
+window {
+    fullscreen: true;
+    background-color: @bg-base;
+    padding: 30% 15%; /* Centers the grid vertically */
+}
+
+mainbox {
+    background-color: transparent;
+    children: [ listview ];
+}
+
+listview {
+    background-color: transparent;
+    layout: horizontal;
+    spacing: 40px;
+    lines: 5;
+    align: center;
+}
+
+element {
+    background-color: @bg-element;
+    padding: 60px 40px;
+    border-radius: 20px;
+    border: 2px solid;
+    border-color: @border-color;
+    orientation: vertical;
+    cursor: pointer;
+}
+
+element-text {
+    background-color: transparent;
+    text-color: inherit;
+    horizontal-align: 0.5;
+    vertical-align: 0.5;
+    cursor: inherit;
+}
+
+element selected {
+    background-color: @bg-hover;
+    border-color: @text-accent;
+    text-color: @text-accent;
+}
