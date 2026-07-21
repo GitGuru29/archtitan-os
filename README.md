@@ -170,5 +170,19 @@ If testing inside VirtualBox, you **must** configure the following settings befo
 
 ---
 
+## 📖 Documentation & Wiki
+
+For comprehensive information on configuring and using ArchTitan OS, please refer to the project's [Wiki](wiki/Home.md). 
+
+The Wiki includes in-depth guides on:
+- [System Architecture](wiki/Architecture.md)
+- [Building the ISO](wiki/Building-the-ISO.md)
+- [Titan Hardware Manager (THM)](wiki/Titan-Hardware-Manager.md)
+- [Titan Sandbox](wiki/Titan-Sandbox.md)
+- [TitanFetch](wiki/TitanFetch.md)
+- [Developer Guide](wiki/Developer-Guide.md)
+
+---
+
 ## 📜 License
 This project is open-source and available under the MIT License. Arch Linux and other included software are subject to their respective licenses.
