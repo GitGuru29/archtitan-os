@@ -1,4 +1,6 @@
 # mkinitcpio preset file for the 'linux' package on archiso
+# Used by mkarchiso to build the live ISO initramfs with archiso hooks.
+# The installed system gets a standard preset via Calamares shellprocess.
 
 PRESETS=('archiso')
 

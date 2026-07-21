@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# archtitan-initcpio-preset
+# Creates the standard mkinitcpio linux.preset on the installed system.
+# Called by Calamares shellprocess module before initcpio runs.
+#
+# KEY FIX: Uses the kernel VERSION string (e.g. 6.12.0-arch1-1) not a path.
+# In the squashfs-based install, /boot/vmlinuz-linux may not exist because
+# archiso keeps the kernel on the ISO filesystem, not in the squashfs /boot/.
+# mkinitcpio can find the kernel via /usr/lib/modules/<kver>/vmlinuz instead.
+
+set -e
+
+# Detect the installed kernel version from /usr/lib/modules/
+KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v extramodules | sort -V | tail -1)
+
+if [ -z "$KVER" ]; then
+    echo "ERROR: No kernel version found in /usr/lib/modules/" >&2
+    exit 1
+fi
+
+echo "==> Detected kernel version: $KVER"
+
+# Ensure /boot/vmlinuz-linux exists — copy from /usr/lib/modules if missing
+if [ ! -f /boot/vmlinuz-linux ]; then
+    if [ -f "/usr/lib/modules/${KVER}/vmlinuz" ]; then
+        echo "==> Copying kernel to /boot/vmlinuz-linux"
+        mkdir -p /boot
+        cp "/usr/lib/modules/${KVER}/vmlinuz" /boot/vmlinuz-linux
+    else
+        echo "ERROR: Kernel vmlinuz not found at /usr/lib/modules/${KVER}/vmlinuz" >&2
+        exit 1
+    fi
+fi
+
+mkdir -p /etc/mkinitcpio.d
+
+cat > /etc/mkinitcpio.d/linux.preset << PRESET
+# mkinitcpio preset — ArchTitan installed system
+PRESETS=('default' 'fallback')
+
+ALL_config="/etc/mkinitcpio.conf"
+ALL_kver="${KVER}"
+
+default_image="/boot/initramfs-linux.img"
+
+fallback_image="/boot/initramfs-linux-fallback.img"
+fallback_options="-S autodetect"
+PRESET
+
+echo "==> Created /etc/mkinitcpio.d/linux.preset (kver: ${KVER})"

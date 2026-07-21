@@ -1,0 +1,35 @@
+# android-dev.toml — Android Studio, Gradle, ADB, emulator
+# Risk: medium — emulator needs /dev/kvm, ADB needs USB device access.
+
+[identity]
+name = "android-dev"
+description = "Android development (Gradle, ADB, emulator, Android Studio)"
+
+[filesystem]
+rw_paths = ["{PROJECT_DIR}", "/tmp"]
+ro_paths = [
+    "/usr", "/lib", "/lib64",
+    "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d",
+    "/etc/ssl/certs",
+    "/etc/resolv.conf",
+    "/etc/passwd", "/etc/group",
+    "/etc/localtime",
+    "/etc/nsswitch.conf",
+    "/proc/self",
+]
+
+[network]
+# Gradle downloads dependencies; ADB communicates with devices over TCP
+enabled = true
+
+[devices]
+# /dev/kvm needed for hardware-accelerated emulator
+# /dev/bus/usb needed for ADB physical device access
+allowed = ["/dev/kvm", "/dev/bus/usb"]
+
+[syscalls]
+risk_tier = "medium"
+
+[capabilities]
+# CAP_SYS_PTRACE needed by the emulator for some operations
+allowed = ["cap_sys_ptrace"]

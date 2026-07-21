@@ -1,0 +1,32 @@
+[
+{
+  "directory": "/home/msfvenom/custom-os-build/titanfetch-src/build",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_WIDGETS_LIB -I/home/msfvenom/custom-os-build/titanfetch-src/build/titanfetch_autogen/include -isystem /usr/include/qt6/QtCore -isystem /usr/include/qt6 -isystem /usr/lib/qt6/mkspecs/linux-g++ -isystem /usr/include/qt6/QtGui -isystem /usr/include/qt6/QtWidgets -std=gnu++17 -mno-direct-extern-access -o CMakeFiles/titanfetch.dir/titanfetch_autogen/mocs_compilation.cpp.o -c /home/msfvenom/custom-os-build/titanfetch-src/build/titanfetch_autogen/mocs_compilation.cpp",
+  "file": "/home/msfvenom/custom-os-build/titanfetch-src/build/titanfetch_autogen/mocs_compilation.cpp",
+  "output": "CMakeFiles/titanfetch.dir/titanfetch_autogen/mocs_compilation.cpp.o"
+},
+{
+  "directory": "/home/msfvenom/custom-os-build/titanfetch-src/build",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_WIDGETS_LIB -I/home/msfvenom/custom-os-build/titanfetch-src/build/titanfetch_autogen/include -isystem /usr/include/qt6/QtCore -isystem /usr/include/qt6 -isystem /usr/lib/qt6/mkspecs/linux-g++ -isystem /usr/include/qt6/QtGui -isystem /usr/include/qt6/QtWidgets -std=gnu++17 -mno-direct-extern-access -o CMakeFiles/titanfetch.dir/main.cpp.o -c /home/msfvenom/custom-os-build/titanfetch-src/main.cpp",
+  "file": "/home/msfvenom/custom-os-build/titanfetch-src/main.cpp",
+  "output": "CMakeFiles/titanfetch.dir/main.cpp.o"
+},
+{
+  "directory": "/home/msfvenom/custom-os-build/titanfetch-src/build",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_WIDGETS_LIB -I/home/msfvenom/custom-os-build/titanfetch-src/build/titanfetch_autogen/include -isystem /usr/include/qt6/QtCore -isystem /usr/include/qt6 -isystem /usr/lib/qt6/mkspecs/linux-g++ -isystem /usr/include/qt6/QtGui -isystem /usr/include/qt6/QtWidgets -std=gnu++17 -mno-direct-extern-access -o CMakeFiles/titanfetch.dir/cli.cpp.o -c /home/msfvenom/custom-os-build/titanfetch-src/cli.cpp",
+  "file": "/home/msfvenom/custom-os-build/titanfetch-src/cli.cpp",
+  "output": "CMakeFiles/titanfetch.dir/cli.cpp.o"
+},
+{
+  "directory": "/home/msfvenom/custom-os-build/titanfetch-src/build",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_WIDGETS_LIB -I/home/msfvenom/custom-os-build/titanfetch-src/build/titanfetch_autogen/include -isystem /usr/include/qt6/QtCore -isystem /usr/include/qt6 -isystem /usr/lib/qt6/mkspecs/linux-g++ -isystem /usr/include/qt6/QtGui -isystem /usr/include/qt6/QtWidgets -std=gnu++17 -mno-direct-extern-access -o CMakeFiles/titanfetch.dir/gui.cpp.o -c /home/msfvenom/custom-os-build/titanfetch-src/gui.cpp",
+  "file": "/home/msfvenom/custom-os-build/titanfetch-src/gui.cpp",
+  "output": "CMakeFiles/titanfetch.dir/gui.cpp.o"
+},
+{
+  "directory": "/home/msfvenom/custom-os-build/titanfetch-src/build",
+  "command": "/usr/bin/c++ -DQT_CORE_LIB -DQT_GUI_LIB -DQT_NO_DEBUG -DQT_WIDGETS_LIB -I/home/msfvenom/custom-os-build/titanfetch-src/build/titanfetch_autogen/include -isystem /usr/include/qt6/QtCore -isystem /usr/include/qt6 -isystem /usr/lib/qt6/mkspecs/linux-g++ -isystem /usr/include/qt6/QtGui -isystem /usr/include/qt6/QtWidgets -std=gnu++17 -mno-direct-extern-access -o CMakeFiles/titanfetch.dir/sysinfo.cpp.o -c /home/msfvenom/custom-os-build/titanfetch-src/sysinfo.cpp",
+  "file": "/home/msfvenom/custom-os-build/titanfetch-src/sysinfo.cpp",
+  "output": "CMakeFiles/titanfetch.dir/sysinfo.cpp.o"
+}
+]

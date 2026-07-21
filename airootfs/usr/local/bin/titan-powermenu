@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# titan-powermenu — Fullscreen Rofi power menu for ArchTitan OS
+# Mimics the aesthetic of wlogout natively using rofi-wayland
+
+LOCK="󰌾\nLock"
+SLEEP="󰒲\nSleep"
+LOGOUT="󰍃\nLogout"
+REBOOT="󰑓\nReboot"
+SHUTDOWN="󰐥\nShutdown"
+
+THEME="/usr/share/rofi/themes/archtitan-powermenu.rasi"
+if [ ! -f "$THEME" ]; then
+    THEME="$HOME/.config/rofi/archtitan-powermenu.rasi"
+fi
+
+CHOSEN=$(printf '%b\n' "$LOCK" "$SLEEP" "$LOGOUT" "$REBOOT" "$SHUTDOWN" | rofi \
+    -dmenu \
+    -i \
+    -theme "$THEME")
+
+case "$CHOSEN" in
+    *"Lock"*)
+        if [ -d /run/archiso ]; then exit 0; fi
+        loginctl lock-session
+        ;;
+    *"Sleep"*)
+        systemctl suspend
+        ;;
+    *"Logout"*)
+        hyprctl dispatch exit 0
+        ;;
+    *"Reboot"*)
+        systemctl reboot
+        ;;
+    *"Shutdown"*)
+        systemctl poweroff
+        ;;
+esac

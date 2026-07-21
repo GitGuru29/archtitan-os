@@ -1,0 +1,35 @@
+# media.toml — MPV, VLC, Spotify, audio/video players
+# Risk: medium — GPU for video decode, audio device access.
+
+[identity]
+name = "media"
+description = "Media players (mpv, vlc, spotify) — audio + GPU decode"
+
+[filesystem]
+rw_paths = ["{APP_PRIVATE_DIR}", "/tmp"]
+ro_paths = [
+    "/usr", "/lib", "/lib64",
+    "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d",
+    "/etc/fonts",
+    "/etc/ssl/certs",
+    "/etc/resolv.conf", "/etc/nsswitch.conf",
+    "/etc/passwd", "/etc/group", "/etc/localtime",
+    "/proc/self",
+    # Media files are accessed via explicit bind-mounts set at launch time
+    # (titan-sandboxd sets TITAN_SANDBOX_APP_DIR to the user's media folder)
+]
+
+[network]
+# Streaming apps (Spotify) need network
+enabled = true
+
+[devices]
+# Sound: /dev/snd for ALSA fallback (PipeWire runs on host and proxies via socket)
+# GPU: for hardware video decode
+allowed = ["/dev/snd", "/dev/dri", "/dev/dri/card0", "/dev/dri/renderD128"]
+
+[syscalls]
+risk_tier = "medium"
+
+[capabilities]
+allowed = []

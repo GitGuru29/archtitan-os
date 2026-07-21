@@ -14,7 +14,7 @@ Target = greetd
 Target = slim
 
 # --- X11 Server (ArchTitan is Wayland-only) ---
-Target = xorg-server
+# Target = xorg-server removed because SDDM depends on it
 
 # --- GNOME Shell & Session ---
 Target = gnome-shell

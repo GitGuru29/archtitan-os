@@ -1,0 +1,32 @@
+# browser.toml — Chromium, Firefox, web browsers
+# Risk: medium — GPU access needed for hardware acceleration.
+
+[identity]
+name = "browser"
+description = "Web browsers (chromium, firefox) — network + GPU"
+
+[filesystem]
+rw_paths = ["{APP_PRIVATE_DIR}", "/tmp"]
+ro_paths = [
+    "/usr", "/lib", "/lib64",
+    "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d",
+    "/etc/ssl/certs", "/etc/ca-certificates",
+    "/etc/resolv.conf", "/etc/nsswitch.conf",
+    "/etc/fonts",
+    "/etc/passwd", "/etc/group", "/etc/localtime",
+    "/proc/self",
+]
+
+[network]
+enabled = true
+
+[devices]
+# DRI for GPU acceleration; dri/renderD128 is the typical render node
+allowed = ["/dev/dri", "/dev/dri/card0", "/dev/dri/renderD128"]
+
+[syscalls]
+risk_tier = "medium"
+
+[capabilities]
+# Browsers use user namespaces internally for their own sandboxing
+allowed = []

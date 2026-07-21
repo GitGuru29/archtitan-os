@@ -1,0 +1,9 @@
+[Unit]
+Description=Titan HWM — Frozen Slice (cgroup freeze)
+Before=slices.target
+
+[Slice]
+# Frozen processes — minimal resources, cgroup.freeze=1 set dynamically by HWM
+CPUWeight=1
+MemoryHigh=128M
+IOWeight=1

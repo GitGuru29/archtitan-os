@@ -1,0 +1,1031 @@
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+TitanArch
+A Developer-Focused Custom Linux Distribution
+Built on Arch Linux
+
+Final Year Project Report
+Architecture, Design, and Implementation
+
+1. Introduction
+Modern software development demands computing environments that are performant,
+minimal, and purpose-built for development workflows. General-purpose operating
+systems such as Windows 11, macOS, and even mainstream Linux distributions carry
+significant overhead from background services, telemetry, and features irrelevant to
+developers — all of which translate into wasted CPU cycles, memory pressure, and
+context-switching friction.
+
+TitanArch is a custom Arch Linux-based distribution built from the ground up as a
+developer-first operating system. Unlike distros that patch or configure an existing
+environment, TitanArch is constructed using archiso with deliberate component
+selection at every layer — from the base system through the compositor, system
+services, and companion tooling. The result is an OS that is lightweight by design,
+intelligent in resource allocation, and equipped with developer-centric utilities that do not
+exist in any other distribution out of the box.
+
+The project encompasses a full custom ISO that boots successfully on real hardware and
+virtual machines, a TUI installer written in Bash with full ANSI rendering, a context-aware
+performance analyzer and resource allocator, an AI-driven project analyzer, an automated
+hybrid GPU switching mechanism, the Neon Monitor hardware dashboard, and
+TitanShare — a cross-platform peer-to-peer file transfer system comprising a C++ Linux
+daemon and a native Android application.
+
+2. Problem Statement
+Page 1 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+Developers working on Linux face a recurring set of friction points that are largely
+unsolved by existing distributions:
+
+•
+
+•
+
+•
+
+•
+
+•
+
+High idle resource consumption from GNOME, KDE, and comparable desktop
+environments — often consuming 800MB–1.5GB RAM at idle before a single
+development tool is launched.
+No built-in workflow-awareness: the OS treats a compile job the same as watching a
+video. CPU governor, I/O scheduler, and memory pressure parameters are static
+regardless of what the developer is actually doing.
+Hybrid GPU setups (Intel iGPU + NVIDIA/AMD dGPU) require manual configuration,
+third-party tools, or proprietary utilities. There is no seamless user-space switching
+without driver-level hacks.
+Cross-device file transfer between Linux and Android remains fragmented — MTP is
+unreliable, KDE Connect is heavy, and cloud-sync tools introduce latency and privacy
+concerns for local-only workflows.
+Arch Linux's renowned minimalism comes at the cost of a steep setup barrier. There is
+no streamlined path from ISO to productive developer environment without hours of
+manual configuration.
+
+TitanArch is designed to close these gaps with purpose-built solutions at the OS level rather
+than patching them with external tools.
+
+3. Objectives
+•
+•
+•
+•
+•
+•
+•
+•
+•
+
+Design and build a bootable, installable Arch-based Linux distribution using archiso.
+Implement a full TUI installer in Bash with ANSI rendering that guides users from live ISO
+to configured system.
+Develop a context-based performance analyzer that monitors active workloads and
+adjusts CPU governor, I/O scheduler, and system parameters dynamically.
+Build a resource allocator that enforces performance profiles (development,
+performance, battery) through system service integration.
+Implement an AI-driven project analyzer that introspects development project structures
+and provides contextual tooling recommendations.
+Create an automated hybrid GPU switcher that manages iGPU/dGPU routing at userspace level without requiring manual xrandr or PRIME configuration.
+Deliver Neon Monitor — a real-time hardware monitoring dashboard surfacing CPU,
+GPU, memory, thermals, and I/O metrics.
+Build TitanShare — a local-network peer-to-peer file transfer system with a native C++
+Linux daemon (mDNS discovery) and a Kotlin/Jetpack Compose Android application.
+Establish a BTRFS-based system snapshot and rollback mechanism for safe system
+updates.
+
+4. Analysis of Existing Systems
+The following survey evaluates how existing operating systems address developer
+workflow requirements, and identifies gaps that motivate TitanArch.
+
+Page 2 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+4.1 Windows 11
+•
+•
+•
+•
+
+Strong hardware compatibility and driver ecosystem.
+Background services (Windows Update, Defender, telemetry) consume significant CPU
+and RAM resources even on developer machines.
+Linux development workflows require WSL2, adding a virtualization layer and filesystem
+translation overhead.
+No native package management comparable to pacman; developer toolchains require
+manual setup or third-party managers.
+
+4.2 macOS
+•
+•
+•
+•
+
+Unix-based, stable, and well-suited for development with Homebrew and native
+toolchains.
+Tightly controlled hardware ecosystem — no support for custom hardware configurations
+or hybrid GPU management beyond Apple Silicon.
+No user-level access to kernel parameters, CPU governors, or I/O schedulers.
+System Integrity Protection restricts low-level system customization that many developer
+workflows require.
+
+4.3 Ubuntu / GNOME-based Linux Distributions
+•
+•
+•
+•
+
+Accessible and well-documented, making them popular for developers entering Linux.
+GNOME desktop environment introduces significant idle RAM usage (800MB+) and
+background service overhead.
+Snap packages introduce startup latency and sandboxing constraints that conflict with
+some development tools.
+No built-in workload adaptation — CPU governor defaults to 'powersave' or 'schedutil'
+without any awareness of compile jobs or IDE load.
+
+4.4 Arch Linux (Vanilla)
+•
+•
+•
+•
+
+Minimal base with full user control — closest to TitanArch's foundation.
+No installer, no default desktop, no developer tooling out of the box — every component
+requires manual selection and configuration.
+Provides the ideal base for TitanArch but is not itself a practical daily-driver without
+significant setup investment.
+No built-in GPU management, performance profiling, hardware monitoring, or crossdevice communication.
+
+4.5 Comparative Summary
+
+Page 3 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+Feature
+
+Windows 11
+
+macOS
+
+Ubuntu
+
+Arch Linux
+
+TitanArch
+
+Idle RAM
+usage
+
+High
+
+Medium
+
+High
+
+Low
+
+Very Low
+
+Workloadaware CPU
+management
+
+No
+
+No
+
+No
+
+No
+
+Yes
+
+Hybrid GPU
+auto-switching
+
+Partial
+
+N/A
+
+No
+
+Manual
+
+Yes
+(automated)
+
+Built-in
+developer TUI
+installer
+
+N/A
+
+N/A
+
+GUI only
+
+None
+
+Yes
+
+Local P2P file
+transfer
+(Linux+Android
+)
+
+No
+
+No
+
+No
+
+No
+
+Yes
+(TitanShare)
+
+AI-driven
+project
+analyzer
+
+No
+
+No
+
+No
+
+No
+
+Yes
+
+System
+snapshot &
+rollback
+
+Limited
+
+Time Machine
+
+No
+
+Manual
+
+Yes (BTRFS)
+
+Hardware
+monitoring
+dashboard
+
+Third-party
+
+Third-party
+
+Third-party
+
+Third-party
+
+Yes (Neon
+Monitor)
+
+Android screen
+mirroring
+(native)
+
+No
+
+No
+
+No
+
+No
+
+Yes
+(TitanMirror)
+
+5. Research Gap Analysis
+5.1 No Developer-Optimized Linux Distribution Exists
+Existing Linux distributions target either general desktop users (Ubuntu, Fedora) or
+maximum minimalism (Arch, Gentoo). No distribution combines Arch's minimal base with
+purpose-built developer workflow tooling, automated hardware management, and crossdevice communication at the OS level.
+
+5.2 Static Resource Management in Linux
+Linux kernel schedulers and CPU governors operate without application-context
+awareness. Developer workloads — compile jobs, IDE sessions, containerized testing —
+have distinct resource profiles that no current distribution dynamically recognizes or
+responds to. TitanArch's context-based performance analyzer fills this gap.
+
+Page 4 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+5.3 Hybrid GPU Management Remains Unsolved on Linux
+Intel/NVIDIA and Intel/AMD hybrid GPU setups on Linux require manual PRIME
+configuration, proprietary utilities (NVIDIA optimus-manager), or complex xrandr
+scripting. TitanArch's GPU switcher automates this at the user-space level, providing
+seamless switching without driver modification.
+
+5.4 Local Android-Linux File Transfer Has No First-Party Solution
+MTP, KDE Connect, and cloud sync tools all have limitations for developers needing fast,
+offline, peer-to-peer file transfer between Linux and Android. TitanArch addresses this
+with TitanShare — a purpose-built system using mDNS device discovery, a C++ daemon
+on Linux, and a native Kotlin/Jetpack Compose Android application.
+
+5.5 No AI-Assisted Developer Environment at OS Level
+AI-assisted development tools exist as editor plugins (GitHub Copilot, Cursor) but none
+are integrated at the OS/environment level to analyze project structure and recommend
+tooling configuration. TitanArch's AI-driven project analyzer operates at the system level,
+independent of any specific editor.
+
+5.6 No Native Android Screen Mirroring on Linux
+Existing Android screen mirroring solutions on Linux (scrcpy, ADB-based tools) require
+USB debugging, manual ADB setup, or rely on X11-only rendering. No solution integrates
+natively with a Wayland compositor, reuses existing device pairing infrastructure, or
+operates without ADB dependency. TitanMirror addresses this by building on
+TitanShare's mDNS pairing and delivering a Wayland-native streaming client.
+
+6. Proposed System: TitanArch
+TitanArch is a complete, bootable, installable Linux distribution built on Arch Linux using
+archiso. It is not a configuration layer over an existing distro — it is a purpose-built OS
+whose component selection, system services, and companion applications are all
+designed around developer workflow requirements.
+
+The system ships with a Hyprland-based Wayland compositor environment, a full suite of
+custom system services written in C++ and Python, a TUI installer in Bash, and
+
+Page 5 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+companion applications: Neon Monitor (hardware dashboard), TitanShare (cross-platform
+file transfer), and TitanMirror (Android screen mirroring). An AI-driven project analyzer
+and automated GPU switcher complete the developer tooling layer.
+
+7. System Architecture
+7.1 Architecture Overview
+TitanArch is structured into four horizontal layers, each with clearly scoped
+responsibilities:
+
+Layer
+
+Components
+
+Technology
+
+Base System Layer
+
+Arch Linux core, pacman,
+custom package selection,
+BTRFS filesystem
+
+archiso, Bash
+
+Desktop Environment Layer
+
+Hyprland compositor, Waybar,
+custom keybindings, theme
+configuration
+
+Wayland, Hyprland, C
+
+System Services Layer
+
+Performance analyzer, resource
+allocator, GPU switcher, Neon
+Monitor
+
+C++, Python, systemd
+
+Application Layer
+
+TUI installer, TitanShare (Linux
+daemon + Android app), AI
+project analyzer
+
+Bash, C++, Kotlin
+
+7.2 Base System Layer
+The ISO is built using archiso with a minimal, curated package selection. Non-essential
+services are disabled at build time. The filesystem uses BTRFS with subvolume layout
+enabling snapshot-based rollback. Boot configuration targets both UEFI and legacy BIOS
+systems.
+
+7.3 Desktop Environment Layer
+Hyprland is selected as the compositor for its Wayland-native design, low GPU overhead,
+and scriptable configuration. The desktop environment is configured for keyboard-driven
+workflows with tiling window management, custom Waybar status bar integration, and
+minimal visual overhead.
+
+Page 6 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+7.4 System Services Layer
+All core system intelligence lives in this layer as systemd-managed services. The
+context-based performance analyzer continuously monitors running processes, detects
+active workload types (compilation, IDE, gaming, idle), and signals the resource allocator
+to adjust CPU governor, I/O scheduler priorities, and memory management parameters
+accordingly.
+
+The GPU switcher service monitors application launch events and routing preferences,
+switching between integrated and discrete GPU execution paths using user-space DRM
+and environment variable management — without modifying driver internals.
+
+7.5 Application Layer
+The TUI installer provides a full guided installation experience from the live ISO
+environment using Bash with ANSI escape sequences for rendering. TitanShare
+comprises a C++ Linux daemon that handles mDNS device advertisement and discovery,
+secure file transfer sessions, and pairing management — paired with a Kotlin/Jetpack
+Compose Android application for cross-platform transfers.
+
+8. Implemented Features
+8.1 Custom TUI Installer
+The TitanArch installer is a fully custom terminal user interface written in Bash using
+ANSI escape sequences for UI rendering. It provides:
+•
+•
+•
+•
+•
+
+Disk detection and partition layout selection (auto and manual modes)
+Filesystem selection with BTRFS as default (enabling snapshot support)
+Network configuration, locale/timezone setup, and user account creation
+Package selection customization for developer toolchain profiles
+Boot loader installation supporting both UEFI (systemd-boot) and legacy BIOS (GRUB)
+
+The installer operates entirely in the terminal without requiring a GUI environment, making it
+suitable for minimal ISOs and headless initial setups.
+
+8.2 Context-Based Performance Analyzer
+The performance analyzer is a system service that monitors running processes and
+classifies the active workload context. Recognized workload classes include:
+•
+•
+•
+
+Compile mode: detected via compiler process signatures (gcc, clang, rustc, make, cargo)
+IDE/editor mode: detected via editor process presence (nvim, code, jetbrains processes)
+Gaming mode: detected via GPU utilization thresholds and known game process
+patterns
+
+Page 7 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+•
+
+Idle mode: baseline when no classified workload is detected
+
+On workload transition, the analyzer signals the resource allocator service to apply the
+corresponding performance profile. Classification logic is implemented in C++ for minimal
+overhead.
+
+8.3 Resource Allocator and Profile Management
+The resource allocator receives workload signals from the performance analyzer and
+applies the corresponding system configuration:
+
+Profile
+
+CPU Governor
+
+I/O Scheduler
+
+Memory
+Overcommit
+
+Use Case
+
+Development
+
+schedutil
+
+mq-deadline
+
+Standard
+
+IDE, coding, light
+compilation
+
+Performance
+
+performance
+
+none (direct)
+
+Aggressive
+
+Heavy compile
+jobs, VMs, CI
+
+Gaming
+
+performance
+
+bfq
+
+Standard
+
+GPU-heavy
+workloads
+
+Battery
+
+powersave
+
+bfq
+
+Conservative
+
+Mobile/laptop lowpower use
+
+Profile switching is exposed via a CLI utility and triggered automatically by the
+performance analyzer, or manually by the user.
+
+8.4 AI-Driven Project Analyzer
+The AI project analyzer is a developer tool that introspects a given project directory and
+generates contextual environment recommendations. It analyzes:
+•
+•
+•
+•
+
+Project language and framework detection (Cargo.toml, package.json, build.gradle,
+CMakeLists.txt, pyproject.toml, etc.)
+Dependency files and lock files to identify toolchain version requirements
+Build system configuration to recommend compiler flags, environment variables, and IDE
+settings
+Project complexity metrics to suggest resource profile recommendations
+
+The analyzer outputs structured recommendations that can be applied directly to the current
+shell session or saved as project-local TitanArch configuration.
+
+8.5 Automated Hybrid GPU Switcher
+
+Page 8 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+The GPU switcher manages hybrid GPU configurations (Intel iGPU + NVIDIA/AMD dGPU)
+at user-space level. It provides:
+•
+•
+•
+•
+
+Automatic detection of available GPUs via DRM device enumeration
+Per-application GPU routing through environment variable injection (DRI_PRIME,
+__NV_PRIME_RENDER_OFFLOAD, __GLX_VENDOR_LIBRARY_NAME)
+A switchable system-wide default for iGPU-first (battery) or dGPU-first (performance)
+operation
+Hot-switching without session restart for supported compositor configurations
+
+The switcher integrates with the resource allocator — Gaming profile automatically routes to
+dGPU; Battery profile routes to iGPU — without any manual user intervention.
+
+8.6 Neon Monitor
+Neon Monitor is TitanArch's real-time hardware monitoring dashboard. It provides a live
+view of:
+•
+•
+•
+•
+•
+
+CPU utilization per-core and overall, with frequency and governor state
+GPU utilization and VRAM usage (Intel and NVIDIA/AMD via respective kernel
+interfaces)
+RAM and swap usage with pressure indicators
+Thermal readings for CPU, GPU, and NVMe devices
+Disk I/O throughput and network interface statistics
+
+Neon Monitor is implemented as a lightweight terminal dashboard using C++ with direct sysfs/
+procfs reads, avoiding the overhead of intermediary monitoring daemons.
+
+8.7 TitanShare — Cross-Platform Local File Transfer
+TitanShare solves the Linux-to-Android local file transfer problem with a purpose-built
+two-component system:
+
+8.7.1 Linux Daemon (titanshare-daemon)
+•
+•
+•
+•
+•
+
+Written in C++ as a systemd user service
+mDNS-based device advertisement and discovery on the local network (no configuration
+required)
+Secure file transfer protocol with device pairing and session management
+Exposes a Unix socket IPC interface for CLI and future GUI clients
+Handles multi-file transfers, progress reporting, and transfer resumption
+
+8.7.2 Android Application
+•
+•
+•
+•
+
+Native Android app built with Kotlin and Jetpack Compose
+mDNS-based device discovery matching the daemon's advertisement
+Material Design 3 UI with file picker, transfer progress, and device management screens
+Supports sending and receiving files to/from TitanArch Linux systems
+
+Page 9 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+TitanShare operates entirely over the local network — no cloud services, no account
+registration, no internet dependency.
+
+8.8 TitanMirror — Android Screen Mirroring
+TitanMirror enables real-time Android screen mirroring directly to the TitanArch desktop
+over the local network. It allows developers to view and interact with their Android device
+from within their TitanArch workspace without any physical connection or cloud
+dependency.
+
+TitanMirror leverages the Android MediaProjection API on the device side to capture the
+screen and stream it over the local network to a native Wayland-rendered client on
+TitanArch. Device discovery reuses TitanShare's existing mDNS pairing infrastructure —
+a previously paired TitanShare device can initiate a mirror session with no additional
+setup.
+
+8.8.1 Android Component
+•
+•
+•
+•
+
+Background service using Android MediaProjection API for screen capture
+H.264 video encoding via MediaCodec for efficient low-latency streaming
+TCP stream server advertising availability via mDNS alongside TitanShare
+Touch/input event receiver for optional remote interaction support
+
+8.8.2 Linux Client (titanmirror)
+•
+•
+•
+•
+
+C++ Wayland-native client rendering the incoming stream as a floating window
+Hardware-accelerated H.264 decode via VA-API (Intel) or NVDEC (NVIDIA)
+Integrates with Hyprland as a standard Wayland surface — supports tiling, floating, and
+picture-in-picture modes
+Launched via Waybar shortcut or CLI; device selection from TitanShare paired device list
+
+TitanMirror operates entirely over the local network with no internet requirement, no third-party
+services, and no ADB dependency — making it a natural extension of the TitanArch crossdevice ecosystem alongside TitanShare.
+
+8.9 BTRFS Snapshot and System Recovery(Future implementation)
+TitanArch uses BTRFS as its default root filesystem with a subvolume layout designed
+for snapshot-based rollback:
+•
+•
+•
+
+@ subvolume for root filesystem
+@home subvolume for user data
+@snapshots subvolume for system snapshots
+
+Page 10 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+Pre-update snapshots are created automatically before pacman transactions via a pacman
+hook. Recovery is available from the bootloader menu, allowing the user to boot into a previous
+snapshot without data loss.
+
+9. Development Methodology
+9.1 Approach
+TitanArch follows a component-driven incremental development methodology. Each
+subsystem (installer, performance services, GPU switcher, TitanShare, Neon Monitor) is
+developed as an independently testable module with defined interfaces to adjacent
+components. Integration is performed incrementally with validation at each milestone.
+
+9.2 Technology Stack
+
+Component
+
+Technology
+
+Rationale
+
+OS build system
+
+archiso (Bash)
+
+Official Arch ISO construction
+tooling
+
+TUI installer
+
+Bash + ANSI escape sequences
+
+No runtime dependency; ships in
+base ISO
+
+System services
+
+C++20
+
+Performance-critical; direct
+syscall/sysfs access
+
+AI project analyzer
+
+Python
+
+Rich library ecosystem for file/
+AST analysis
+
+GPU switcher
+
+C++ + DRM/KMS APIs
+
+Kernel-level GPU enumeration
+without driver modification
+
+Neon Monitor
+
+C++ + sysfs/procfs
+
+Zero-overhead hardware reads
+
+TitanShare daemon
+
+C++, mDNS, Unix sockets
+
+High-throughput local transfer;
+no runtime overhead
+
+TitanShare Android app
+
+Kotlin + Jetpack Compose
+
+Native Android UI; modern
+declarative framework
+
+TitanMirror Android component
+
+Kotlin + MediaProjection +
+MediaCodec
+
+OS-level screen capture and
+H.264 encoding
+
+TitanMirror Linux client
+
+C++ + Wayland + VA-API/
+NVDEC
+
+Native Wayland rendering with
+hardware decode
+
+Desktop environment
+
+Hyprland + Wayland
+
+Minimal compositor with scripting
+support
+
+Testing environment
+
+QEMU + KVM, VirtualBox
+
+VM-based ISO and service
+validation
+
+Page 11 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+9.3 Testing Strategy
+•
+•
+•
+•
+•
+•
+
+ISO boot validation: testing boot sequence on QEMU with UEFI and BIOS configurations,
+and bare metal hardware.
+Installer testing: full installation flow in QEMU with virtual disks to validate disk detection,
+partitioning, and bootloader installation without risking hardware.
+Service-level unit testing: each system service tested in isolation with mock workload
+signals before integration.
+Performance benchmarking: idle RAM, boot time, and compile-time benchmarks
+compared against vanilla Arch and Ubuntu baselines.
+TitanShare integration testing: file transfer validation across device types and file sizes
+on LAN.
+Stability testing: extended uptime testing under simulated developer workload patterns.
+
+10. Team Responsibilities
+
+Role
+
+Systems / OS Developer
+
+UI/UX Developer
+
+Network / Backend Developer
+
+QA / Testing Engineer
+
+Owner
+
+Responsibilities
+
+Siluna Dangalla
+
+archiso build pipeline, TUI
+installer, performance analyzer,
+resource allocator, GPU switcher,
+Neon Monitor, TitanShare Linux
+daemon, BTRFS snapshot
+integration, AI project analyzer
+
+Kaveesha
+
+Hyprland desktop environment
+configuration, installer UX
+design, Waybar theme,
+TitanShare Android app UI
+(Jetpack Compose)
+
+Team Member 3
+
+TitanShare mDNS protocol
+design, local network transfer
+protocol, profile switching
+support
+
+Team Member 4
+
+VM-based system testing,
+stability validation, integration
+testing, benchmark
+documentation
+
+11. Evaluation Metrics
+
+Page 12 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+System evaluation covers the following dimensions:
+
+Metric
+
+Measurement Method
+
+Target
+
+Idle RAM usage
+
+free -m after boot, no apps open
+
+< 1GB
+
+Boot time
+
+systemd-analyze blame
+
+< 10 seconds to usable desktop
+
+Compile benchmark
+
+Linux kernel make -j$(nproc)
+timing vs Ubuntu baseline
+
+>= parity or improvement
+
+GPU switching latency
+
+Time from trigger to DRI_PRIME
+effective
+
+< 2 seconds
+
+TitanShare transfer speed
+
+Large file transfer throughput on
+LAN
+
+>= 50 MB/s on 1Gbps
+
+Profile switch latency
+
+Time for governor/scheduler
+change to take effect
+
+< 500ms
+
+Neon Monitor CPU overhead
+
+top/perf measurement of monitor
+process
+
+< 0.5% CPU at idle
+
+System stability
+
+Uptime under simulated
+workload (24h)
+
+No crashes or service failures
+
+12. Current Limitations
+•
+
+•
+•
+
+•
+•
+
+GPU switching operates at user-space level via environment variable injection and DRM
+enumeration. Kernel-level GPU scheduling (as in Windows WDDM) is out of scope for
+this implementation.
+TitanShare cross-device features require both devices to be on the same local network.
+WAN transfer and relay-based fallback are planned for future development.
+The AI project analyzer currently uses heuristic-based file analysis. Integration with a
+locally-hosted LLM backend (e.g., Ollama) for deeper inference is targeted as a post-FYP
+enhancement.
+Cloud synchronization and remote access features are not included in the current
+implementation scope.
+The Android application currently targets TitanArch Linux as the peer device; iOS support
+is not planned.
+
+13. Future Enhancements
+•
+
+•
+
+LLM-backed AI project analyzer: integration with locally-hosted Ollama models
+(Qwen2.5-coder, DeepSeek-R1) for natural language project analysis and automated
+environment provisioning.
+Kernel-level GPU scheduling: deeper integration with DRM/KMS scheduler APIs for
+submillisecond GPU context switching.
+
+Page 13 of 14
+
+TitanArch — Developer-Focused Linux Distribution | Final Year Project Report
+
+•
+•
+•
+•
+
+TitanShare WAN support: relay-based architecture for transfers across networks,
+maintaining the no-cloud-account design principle.
+Extended cross-device ecosystem: TitanArch-to-TitanArch sync, clipboard sharing, and
+notification mirroring.
+TitanArch package repository: curated AUR-compatible repository of developer tools preconfigured for TitanArch service integration.
+Remote development mode: SSH-native workspace management with automatic
+environment provisioning on connection.
+
+14. Conclusion
+TitanArch represents a holistic approach to the developer operating system problem.
+Rather than configuring or theming an existing distribution, it constructs a complete
+system from the Arch Linux base upward — with every component selected,
+implemented, and integrated for developer workflow efficiency.
+
+The project delivers a bootable, installable ISO with a TUI installer, a context-aware
+performance management layer, automated hybrid GPU switching, a real-time hardware
+monitoring dashboard, an AI-driven project analyzer, a cross-platform peer-to-peer file
+transfer system spanning Linux and Android, and TitanMirror — a native Wayland
+Android screen mirroring client. Each component addresses a concrete gap identified in
+the research and competitive analysis.
+
+TitanArch demonstrates that a small, focused team can produce a complete, opinionated,
+and technically sophisticated Linux distribution targeting a specific domain — and that
+the resulting system has genuine advantages over general-purpose alternatives for its
+intended user base.
+
+References
+•
+•
+•
+•
+•
+•
+•
+•
+•
+•
+
+Arch Linux Documentation — https://wiki.archlinux.org
+archiso Project Documentation — https://gitlab.archlinux.org/archlinux/archiso
+Linux Kernel Documentation — https://www.kernel.org/doc/html/latest/
+BTRFS Filesystem Documentation — https://btrfs.readthedocs.io
+Wayland Protocol Documentation — https://wayland.freedesktop.org/docs/html/
+Hyprland Project Documentation — https://wiki.hyprland.org
+DRM/KMS Kernel Documentation — https://dri.freedesktop.org/docs/drm/
+mDNS / DNS-SD RFC 6762, RFC 6763 — https://datatracker.ietf.org/doc/html/rfc6762
+Jetpack Compose Documentation — https://developer.android.com/jetpack/compose
+systemd Documentation — https://systemd.io
+
+Page 14 of 14
+
+

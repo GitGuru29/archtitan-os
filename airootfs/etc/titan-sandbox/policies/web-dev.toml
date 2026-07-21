@@ -1,0 +1,32 @@
+# web-dev.toml — Node.js, TypeScript, web bundlers
+# Risk: low — but needs network access for package registries.
+
+[identity]
+name = "web-dev"
+description = "Web development tools (node, vite, webpack, bun, eslint)"
+
+[filesystem]
+rw_paths = ["{PROJECT_DIR}", "/tmp"]
+ro_paths = [
+    "/usr", "/lib", "/lib64",
+    "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d",
+    "/etc/ssl/certs",
+    "/etc/resolv.conf",
+    "/etc/passwd", "/etc/group",
+    "/etc/localtime",
+    "/etc/nsswitch.conf",
+    "/proc/self",
+]
+
+[network]
+# Web dev tools need npm/yarn registry access
+enabled = true
+
+[devices]
+allowed = []
+
+[syscalls]
+risk_tier = "low"
+
+[capabilities]
+allowed = []

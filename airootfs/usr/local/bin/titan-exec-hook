@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+# hyprland-exec-hook.sh — Intercept all app launches from Hyprland/rofi/wofi
+# and route them through titan-sandboxd before exec.
+#
+# INSTALL:
+#   Copy to /usr/local/bin/titan-exec-hook
+#   In hyprland.conf, replace all `exec` dispatch calls with this wrapper:
+#     bind = $mod, D, exec, titan-exec-hook rofi -show drun
+#   For .desktop launches, set in /etc/xdg/autostart or environment:
+#     export TITAN_EXEC_HOOK=1
+#
+# HOW IT WORKS:
+#   1. Receives the command the user intends to launch
+#   2. Looks up the app binary in the policy map
+#   3. Calls titan-sandboxd with the correct policy
+#   4. titan-sandboxd forks into namespaces, then exec's the real app
+#
+# USAGE: titan-exec-hook <command> [args...]
+#        titan-exec-hook --query <binary>    (print resolved policy, don't exec)
+
+set -euo pipefail
+
+POLICY_DIR="/etc/titan-sandbox/policies"
+SANDBOXD="/usr/local/bin/titan-sandboxd"
+LOG="/var/log/titan-sandbox/exec.log"
+mkdir -p "$(dirname "$LOG")" 2>/dev/null || true
+
+# ─── Policy Resolution ────────────────────────────────────────────────────────
+# Maps binary name → policy file. Mirrors thm_sandbox_integration.h APP_POLICY_MAP.
+
+declare -A APP_POLICY=(
+    # Browsers
+    [chromium]="browser.toml"
+    [firefox]="browser.toml"
+    [brave]="browser.toml"
+    [firefox-developer-edition]="browser.toml"
+    # Media
+    [mpv]="media.toml"
+    [vlc]="media.toml"
+    [spotify]="media.toml"
+    # Comms
+    [telegram-desktop]="general-gui.toml"
+    [discord]="general-gui.toml"
+    [slack]="general-gui.toml"
+    [element-desktop]="general-gui.toml"
+    [thunderbird]="general-gui.toml"
+    # File managers
+    [nautilus]="general-gui.toml"
+    [dolphin]="general-gui.toml"
+    [thunar]="general-gui.toml"
+    [ranger]="general-gui.toml"
+    # Dev tools
+    [code]="system-dev.toml"
+    [cursor]="system-dev.toml"
+    [zed]="system-dev.toml"
+    [nvim]="system-dev.toml"
+    [kitty]="system-dev.toml"
+    [alacritty]="system-dev.toml"
+    # Rofi/wofi launcher — general-gui (it's not a dev tool)
+    [rofi]="general-gui.toml"
+    [wofi]="general-gui.toml"
+)
+
+resolve_policy() {
+    local binary
+    binary="$(basename "$1")"
+    local policy="${APP_POLICY[$binary]:-unknown.toml}"
+    echo "${POLICY_DIR}/${policy}"
+}
+
+# ─── Main ─────────────────────────────────────────────────────────────────────
+
+if [[ $# -eq 0 ]]; then
+    echo "Usage: titan-exec-hook <command> [args...]" >&2
+    exit 1
+fi
+
+# --query mode: just print the policy and exit
+if [[ "$1" == "--query" ]]; then
+    shift
+    binary="$(basename "${1:-unknown}")"
+    policy="$(resolve_policy "$binary")"
+    echo "Binary:  $binary"
+    echo "Policy:  $policy"
+    echo "Exists:  $(test -f "$policy" && echo yes || echo NO — using unknown.toml)"
+    exit 0
+fi
+
+CMD="$1"
+shift
+BINARY="$(basename "$CMD")"
+POLICY="$(resolve_policy "$BINARY")"
+
+# Fall back to unknown.toml if the resolved file doesn't exist
+if [[ ! -f "$POLICY" ]]; then
+    echo "[titan-exec-hook] WARNING: $POLICY not found — using unknown.toml" >&2
+    POLICY="${POLICY_DIR}/unknown.toml"
+fi
+
+# Set up per-app private directory (created if absent)
+APP_PRIVATE_DIR="/var/titan-sandbox/apps/${BINARY}"
+mkdir -p "$APP_PRIVATE_DIR" 2>/dev/null || true
+
+# Project dir = caller's cwd
+PROJECT_DIR="${PWD}"
+
+# Log the launch attempt
+HOOK_PID=$$
+echo "[$(date -Iseconds)] EXEC binary=$BINARY policy=$(basename "$POLICY") cwd=$PROJECT_DIR pid=$HOOK_PID" >> "$LOG" 2>/dev/null || true
+
+# Check sandboxd is available
+if [[ ! -x "$SANDBOXD" ]]; then
+    echo "[titan-exec-hook] WARNING: titan-sandboxd not found at $SANDBOXD — running unsandboxed" >&2
+    exec "$CMD" "$@"
+fi
+
+# Launch through the sandbox engine
+REGISTRY_DIR="/run/titan-sandbox"
+mkdir -p "$REGISTRY_DIR" 2>/dev/null || true
+
+# Run sandboxd — it forks the child into namespaces then waits for it.
+# Capture SANDBOX_PID= from its stdout and write to the registry so THM
+# can map original PID → box PID for cgroup assignment.
+# We do NOT use exec here — process substitution (>(...)) with exec is
+# dangerous in a Wayland/Hyprland context and leaves dangling FDs.
+"$SANDBOXD" "$POLICY" "$CMD" "$@" 2>>"$LOG" | \
+while IFS= read -r line; do
+    if [[ "$line" == SANDBOX_PID=* ]]; then
+        BOX_PID="${line#SANDBOX_PID=}"
+        echo "ORIGINAL_PID=${HOOK_PID} BOX_PID=${BOX_PID} BINARY=${BINARY}" \
+             >> "${REGISTRY_DIR}/registry" 2>/dev/null || true
+        echo "[$(date -Iseconds)] SANDBOX_PID=$BOX_PID for ORIGINAL_PID=$HOOK_PID" >> "$LOG" 2>/dev/null || true
+    fi
+done

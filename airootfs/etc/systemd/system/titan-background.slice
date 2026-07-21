@@ -1,0 +1,9 @@
+[Unit]
+Description=Titan HWM — Background Slice (Deprioritized)
+Before=slices.target
+
+[Slice]
+# Background processes — low CPU, kernel reclaims pages above MemoryHigh
+CPUWeight=20
+MemoryHigh=512M
+IOWeight=10

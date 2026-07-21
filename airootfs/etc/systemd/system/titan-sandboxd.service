@@ -1,0 +1,46 @@
+[Unit]
+Description=Titan Sandbox Daemon (titan-sandboxd)
+Documentation=https://archtitan.local/docs/sandbox
+# sandboxd is a short-lived per-launch helper invoked by THM and titan-exec-hook.
+# This service is a oneshot template — it is NOT meant to run permanently.
+# The binary is called directly by THM/exec-hook; this unit exists for:
+#   1. Verifying the binary is installed and functional at boot
+#   2. Ensuring /var/titan-sandbox/ and /var/log/titan-sandbox/ exist
+#   3. Ensuring /etc/titan-sandbox/policies/ is present
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+# Create required runtime directories
+ExecStartPre=/usr/bin/mkdir -p /var/titan-sandbox/apps
+ExecStartPre=/usr/bin/chmod 1777 /var/titan-sandbox/apps
+ExecStartPre=/usr/bin/mkdir -p /var/log/titan-sandbox
+ExecStartPre=/usr/bin/chmod 1777 /var/log/titan-sandbox
+ExecStartPre=/usr/bin/mkdir -p /run/titan-sandbox
+ExecStartPre=/usr/bin/chmod 1777 /run/titan-sandbox
+
+# Verify the binary and a known policy exist
+ExecStart=/bin/bash -c '\
+    if [ ! -x /usr/local/bin/titan-sandboxd ]; then \
+        echo "[titan-sandboxd] WARNING: binary not found at /usr/local/bin/titan-sandboxd"; \
+        exit 0; \
+    fi; \
+    if [ ! -d /etc/titan-sandbox/policies ]; then \
+        echo "[titan-sandboxd] WARNING: policies dir missing at /etc/titan-sandbox/policies"; \
+        exit 0; \
+    fi; \
+    /usr/local/bin/titan-sandboxd /etc/titan-sandbox/policies/unknown.toml --verify && \
+    echo "[titan-sandboxd] OK — policies verified, sandbox ready"'
+
+# titan-sandboxd calls pivot_root and sets up mount namespaces — needs these caps
+AmbientCapabilities=CAP_SYS_ADMIN CAP_SETUID CAP_SETGID CAP_NET_ADMIN CAP_SYS_PTRACE
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_SETUID CAP_SETGID CAP_NET_ADMIN CAP_SYS_PTRACE
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=titan-sandboxd
+
+[Install]
+WantedBy=multi-user.target

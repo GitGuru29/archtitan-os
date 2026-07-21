@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
-import QtGraphicalEffects 1.15
+import Qt5Compat.GraphicalEffects
 import SddmComponents 2.0
 
 Rectangle {
@@ -43,6 +43,7 @@ Rectangle {
         spacing: 4
 
         Text {
+            id: clockTime
             anchors.horizontalCenter: parent.horizontalCenter
             text: Qt.formatTime(new Date(), "HH:mm")
             font.pointSize: 64
@@ -52,6 +53,7 @@ Rectangle {
         }
 
         Text {
+            id: clockDate
             anchors.horizontalCenter: parent.horizontalCenter
             text: Qt.formatDate(new Date(), "dddd, MMMM d yyyy")
             font.pointSize: 14
@@ -63,33 +65,44 @@ Rectangle {
 
     // Timer for clock updates
     Timer {
-        interval: 30000
+        interval: 10000
         running: true
         repeat: true
-        onTriggered: { }
+        onTriggered: {
+            clockTime.text = Qt.formatTime(new Date(), "HH:mm")
+            clockDate.text = Qt.formatDate(new Date(), "dddd, MMMM d yyyy")
+        }
     }
 
-    // Login Card (Glassmorphic)
+    // Floating Animation for the Card
+    SequentialAnimation {
+        running: true
+        loops: Animation.Infinite
+        NumberAnimation { target: loginCard; property: "anchors.verticalCenterOffset"; to: -5; duration: 2000; easing.type: Easing.InOutQuad }
+        NumberAnimation { target: loginCard; property: "anchors.verticalCenterOffset"; to: 5; duration: 2000; easing.type: Easing.InOutQuad }
+    }
+
+    // Login Card (Ultra Glassmorphic)
     Rectangle {
         id: loginCard
         anchors.centerIn: parent
-        width: 380
-        height: 380
-        radius: 20
-        color: "#24283B"
-        opacity: 0.85
+        width: 420
+        height: 440
+        radius: 24
+        color: "#151828"
+        opacity: 0.75
         border.width: 1
-        border.color: "#414868"
+        border.color: "#3B4261"
 
-        // Glow effect behind card
+        // Animated Glow effect behind card
         layer.enabled: true
         layer.effect: DropShadow {
             transparentBorder: true
             horizontalOffset: 0
-            verticalOffset: 4
-            radius: 24
-            samples: 49
-            color: "#407AA2F7"
+            verticalOffset: 10
+            radius: 35
+            samples: 71
+            color: "#607AA2F7"
         }
 
         Column {
@@ -97,23 +110,42 @@ Rectangle {
             spacing: 20
             width: parent.width - 60
 
-            // Logo
+            // Logo with rotation hover effect
             Image {
+                id: brandLogo
                 anchors.horizontalCenter: parent.horizontalCenter
                 source: "logo.png"
-                width: 80
-                height: 80
+                width: 100
+                height: 100
                 fillMode: Image.PreserveAspectFit
+                
+                Behavior on scale { NumberAnimation { duration: 300; easing.type: Easing.OutBack } }
+                MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    onEntered: brandLogo.scale = 1.1
+                    onExited: brandLogo.scale = 1.0
+                }
             }
 
-            // Welcome text
+            // Welcome text with gradient appearance
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: "Welcome to ArchTitan"
-                color: "#C0CAF5"
-                font.pointSize: 14
-                font.weight: Font.DemiBold
+                text: "ARCHTITAN OS"
+                color: "#FFFFFF"
+                font.pointSize: 18
+                font.weight: Font.Bold
+                font.letterSpacing: 2
                 font.family: "JetBrainsMono Nerd Font"
+                
+                layer.enabled: true
+                layer.effect: DropShadow {
+                    horizontalOffset: 0
+                    verticalOffset: 0
+                    radius: 10
+                    samples: 21
+                    color: "#7AA2F7"
+                }
             }
 
             // Username Field
@@ -166,33 +198,54 @@ Rectangle {
                 Keys.onReturnPressed: sddm.login(usernameField.text, passwordField.text, sessionModel.lastIndex)
             }
 
-            // Login Button
+            // Login Button (Premium Gradient)
             Button {
                 id: loginButton
                 width: parent.width
-                height: 44
-                text: "Login"
-                font.pointSize: 12
-                font.weight: Font.DemiBold
+                height: 48
+                font.pointSize: 13
+                font.weight: Font.Bold
                 font.family: "JetBrainsMono Nerd Font"
 
                 contentItem: Text {
-                    text: loginButton.text
+                    text: "INITIALIZE SESSION"
                     font: loginButton.font
-                    color: "#1A1B26"
+                    color: "#FFFFFF"
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
+                    font.letterSpacing: 1
                 }
 
                 background: Rectangle {
-                    radius: 10
-                    color: loginButton.pressed ? "#5D7CE0" : (loginButton.hovered ? "#8BAFFA" : "#7AA2F7")
-
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
+                    id: btnBg
+                    radius: 12
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0.0; color: loginButton.pressed ? "#3D59A1" : (loginButton.hovered ? "#7AA2F7" : "#2AC3DE") }
+                        GradientStop { position: 1.0; color: loginButton.pressed ? "#2AC3DE" : (loginButton.hovered ? "#BB9AF7" : "#7AA2F7") }
                     }
+                    
+                    // Button glow
+                    layer.enabled: loginButton.hovered
+                    layer.effect: DropShadow {
+                        transparentBorder: true
+                        horizontalOffset: 0
+                        verticalOffset: 2
+                        radius: 15
+                        samples: 31
+                        color: "#807AA2F7"
+                    }
+
+                    Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
                 }
 
+                // Qt6: onPressedChanged / onHoveredChanged removed — use onPressed/onReleased instead
+                onPressed:  btnBg.scale = 0.95
+                onReleased: btnBg.scale = loginButton.hovered ? 1.02 : 1.0
+                onCanceled: btnBg.scale = 1.0
+                HoverHandler {
+                    onHoveredChanged: btnBg.scale = hovered ? 1.02 : 1.0
+                }
                 onClicked: sddm.login(usernameField.text, passwordField.text, sessionModel.lastIndex)
             }
         }

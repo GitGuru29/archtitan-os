@@ -1,0 +1,24 @@
+[Unit]
+Description=ArchTitan Live ISO — system-level idle/sleep inhibitor
+# Only active on live ISO media (ConditionPathExists checks for archiso marker)
+ConditionPathExists=/run/archiso
+After=systemd-logind.service
+Wants=systemd-logind.service
+
+[Service]
+Type=simple
+# Block idle and sleep at the system level via logind inhibitor lock.
+# This runs as root OUTSIDE the user session, so it survives SDDM restarts
+# and Hyprland compositor crashes. The Calamares installer can't be killed
+# by a session timeout while this lock is held.
+ExecStart=/usr/bin/systemd-inhibit \
+    --what=idle:sleep:handle-lid-switch:handle-power-key:handle-suspend-key \
+    --who=ArchTitanLiveISO \
+    --why="Live installer session active — do not suspend" \
+    --mode=block \
+    /usr/bin/sleep infinity
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
