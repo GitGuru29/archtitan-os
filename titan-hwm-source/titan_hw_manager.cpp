@@ -753,21 +753,45 @@ static void cg_escalate_to_frozen(
     CgroupManager::freeze("titan-frozen.slice", true);
     std::cout<<"[Cgroup] Escalated to frozen slice\n";
 }
+// Cooldown timer for thaw operations (TC-2.5 fix: prevents freeze/thaw oscillation flapping)
+static std::atomic<time_point::rep> g_last_thaw_ms{0};
+
 static void cg_thaw_from_frozen(
     const std::unordered_set<std::string>& targets,
     const std::unordered_map<pid_t,ProcessNode>& g)
 {
+    // Record thaw timestamp for cooldown hysteresis
+    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        ms_clock::now().time_since_epoch()).count();
+    g_last_thaw_ms.store(now_ms);
+
     CgroupManager::freeze("titan-frozen.slice", false);
-    for (const auto& [pid,n] : g) {
-        if (!targets.count(n.name) || AUDIO_WHITELIST.count(n.name)) continue;
+
+    // TC-2.3 fix: read authoritative cgroup membership from cgroup.procs to thaw all
+    // processes, including newly forked children that weren't in frozen_registry.
+    std::vector<pid_t> procs_in_cg;
+    std::ifstream procs_f("/sys/fs/cgroup/titan-frozen.slice/cgroup.procs");
+    pid_t p;
+    while (procs_f >> p) procs_in_cg.push_back(p);
+
+    // Combine map targets with procs_in_cg
+    std::unordered_set<pid_t> to_thaw_pids;
+    for (pid_t cpid : procs_in_cg) to_thaw_pids.insert(cpid);
+    for (const auto& [pid, n] : g) {
+        if (targets.count(n.name) && !AUDIO_WHITELIST.count(n.name))
+            to_thaw_pids.insert(pid);
+    }
+
+    for (pid_t pid : to_thaw_pids) {
+        auto nit = g.find(pid);
+        if (nit != g.end() && AUDIO_WHITELIST.count(nit->second.name)) continue;
         CgroupManager::move_pid(pid, "titan-background.slice");
-        // §5.2.5: clear from frozen registry and send SIGCONT
-        if (registry_is_frozen(pid)) {
+        if (registry_is_frozen(pid) || true) {
             ::kill(pid, SIGCONT);
             registry_thaw(pid);
         }
     }
-    std::cout<<"[Cgroup] Thawed from frozen slice\n";
+    std::cout<<"[Cgroup] Thawed " << to_thaw_pids.size() << " processes from frozen slice\n";
 }
 
 // ==========================================
@@ -817,24 +841,51 @@ public:
             std::cout<<"[Cgroup] Activated "<<n.name<<"\n";
         }
     }
+    // TC-2.2 fix: recursive tree emergency kill. Collects target processes AND all their
+    // descendant child PIDs to ensure no orphaned processes or zombie children leak resources.
     static long emergency_kill(const std::unordered_set<std::string>& targets, const std::unordered_map<pid_t,ProcessNode>& g, int grace_ms=500, const Config* cfg=nullptr) {
         std::vector<const ProcessNode*> hits;
+        std::unordered_set<std::string> lsp, bd;
+        if (cfg) {
+            lsp.insert(cfg->lsp_binaries.begin(), cfg->lsp_binaries.end());
+            bd.insert(cfg->build_daemons.begin(), cfg->build_daemons.end());
+        }
+
         for (const auto& [pid,n]:g) {
             if (!targets.count(n.name)||AUDIO_WHITELIST.count(n.name)) continue;
-            if (cfg) {
-                std::unordered_set<std::string> lsp(cfg->lsp_binaries.begin(),cfg->lsp_binaries.end());
-                std::unordered_set<std::string> bd(cfg->build_daemons.begin(),cfg->build_daemons.end());
-                if (lsp.count(n.name)||bd.count(n.name)) continue; // never kill LSP/build
-            }
+            if (cfg && (lsp.count(n.name)||bd.count(n.name))) continue; // never kill LSP/build
             hits.push_back(&n);
         }
         std::sort(hits.begin(),hits.end(),[](auto a,auto b){return a->rss_kb>b->rss_kb;});
         long freed=0;
-        for (auto* n:hits) {
-            std::cout<<"[Pruner] EMERGENCY KILL "<<n->name<<" ("<<n->rss_kb/1024<<"MB)\n";
-            kill(n->pid,SIGTERM); std::this_thread::sleep_for(std::chrono::milliseconds(grace_ms));
-            if (kill(n->pid,0)==0) kill(n->pid,SIGKILL);
-            freed+=n->rss_kb;
+
+        for (auto* n : hits) {
+            // Collect all descendant PIDs for recursive kill
+            std::vector<pid_t> family = {n->pid};
+            std::function<void(pid_t, int)> collect = [&](pid_t p, int depth) {
+                if (depth <= 0) return;
+                auto it = g.find(p);
+                if (it == g.end()) return;
+                for (pid_t child : it->second.children) {
+                    family.push_back(child);
+                    collect(child, depth - 1);
+                }
+            };
+            collect(n->pid, 4);
+
+            std::cout<<"[Pruner] EMERGENCY TREE KILL "<<n->name<<" (PID "<<n->pid<<", "<<family.size()<<" processes, "<<n->rss_kb/1024<<"MB)\n";
+
+            // Phase 1: Send SIGTERM to entire process tree
+            for (pid_t fpid : family) ::kill(fpid, SIGTERM);
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(grace_ms));
+
+            // Phase 2: Send SIGKILL to surviving PIDs
+            for (pid_t fpid : family) {
+                if (::kill(fpid, 0) == 0) ::kill(fpid, SIGKILL);
+                auto fit = g.find(fpid);
+                if (fit != g.end()) freed += fit->second.rss_kb;
+            }
         }
         return freed;
     }
@@ -846,13 +897,31 @@ public:
         PSI psi=read_memory_psi();
         std::cout<<"[PSI] some_avg10="<<psi.some_avg10<<"% full_avg10="<<psi.full_avg10<<"%\n";
         bool protect = multi_ctx && cfg && cfg->lsp_protection;
+
+        // TC-2.5 fix: check thaw cooldown timer (3000ms). If a thaw occurred recently,
+        // suppress cgroup freeze to prevent rapid freeze/thaw flapping.
+        auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            ms_clock::now().time_since_epoch()).count();
+        bool in_thaw_cooldown = (now_ms - g_last_thaw_ms.load() < 3000);
+
         // Healthy: ram ok AND psi low — just deprioritize, no freeze
         if (ram_pct>=freeze_t && psi.some_avg10<5.0f)  { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
         // Medium pressure: ram tightening — deprioritize + throttle memory.high
         if (ram_pct>=kill_t   && psi.some_avg10<20.0f) { deprioritize(targets,g,oom_expose,protect,cfg); throttle_memory(available_kb); return 0; }
-        // High PSI but not yet critical — only freeze if ram is also actually low
-        // §5.2.2: pass cfg into freeze so LSP/build daemons are never frozen in MULTI_CONTEXT
-        if (psi.some_avg10<40.0f && ram_pct<freeze_t)  { std::cout<<"[Pruner] HIGH — cgroup freeze\n"; freeze_targets(targets,g,cfg); return 0; }
+
+        // High PSI: if in thaw cooldown, fallback to memory throttling instead of instant re-freeze
+        if (psi.some_avg10<40.0f && ram_pct<freeze_t)  {
+            if (in_thaw_cooldown) {
+                std::cout<<"[Pruner] HIGH PSI during thaw cooldown — throttling memory to prevent oscillation\n";
+                deprioritize(targets,g,oom_expose,protect,cfg);
+                throttle_memory(available_kb);
+                return 0;
+            }
+            std::cout<<"[Pruner] HIGH — cgroup freeze\n";
+            freeze_targets(targets,g,cfg);
+            return 0;
+        }
+
         // Healthy ram + mid PSI (e.g. burst I/O) — just deprioritize, don't freeze
         if (psi.some_avg10<40.0f) { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
         std::cout<<"[Pruner] CRITICAL PSI ("<<psi.some_avg10<<"%) — emergency kill\n";
