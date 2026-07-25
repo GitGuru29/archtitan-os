@@ -895,8 +895,24 @@ public:
                        long available_kb, int oom_expose=300, int grace_ms=500,
                        bool multi_ctx=false, const Config* cfg=nullptr) {
         PSI psi=read_memory_psi();
-        std::cout<<"[PSI] some_avg10="<<psi.some_avg10<<"% full_avg10="<<psi.full_avg10<<"%\n";
+        std::cout<<"[PSI] valid="<<(psi.valid?"yes":"no")<<" some_avg10="<<psi.some_avg10<<"% full_avg10="<<psi.full_avg10<<"%\n";
         bool protect = multi_ctx && cfg && cfg->lsp_protection;
+
+        // TC-3.2 fix: if PSI is missing/unsupported (psi.valid == false), fall back to raw RAM %
+        if (!psi.valid) {
+            std::cout<<"[PSI] PSI unavailable — falling back to RAM percentage mode\n";
+            if (ram_pct < kill_t) return emergency_kill(targets, g, grace_ms, cfg);
+            if (ram_pct < freeze_t) { freeze_targets(targets, g, cfg); return 0; }
+            deprioritize(targets, g, oom_expose, protect, cfg);
+            return 0;
+        }
+
+        // TC-3.1 fix: fast-path override for sudden memory spikes (ram_pct < 15%).
+        // Prevents 10-second rolling average lag (some_avg10) from delaying Stage 3 kill during rapid RAM drops.
+        if (ram_pct < 15.0f) {
+            std::cout<<"[Pruner] FAST-PATH CRITICAL RAM SPIKE ("<<ram_pct<<"%) — bypassing rolling avg lag\n";
+            return emergency_kill(targets, g, grace_ms, cfg);
+        }
 
         // TC-2.5 fix: check thaw cooldown timer (3000ms). If a thaw occurred recently,
         // suppress cgroup freeze to prevent rapid freeze/thaw flapping.
@@ -905,12 +921,12 @@ public:
         bool in_thaw_cooldown = (now_ms - g_last_thaw_ms.load() < 3000);
 
         // Healthy: ram ok AND psi low — just deprioritize, no freeze
-        if (ram_pct>=freeze_t && psi.some_avg10<5.0f)  { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
+        if (ram_pct>=freeze_t && psi.some_avg10<5.0f && psi.full_avg10<5.0f) { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
         // Medium pressure: ram tightening — deprioritize + throttle memory.high
-        if (ram_pct>=kill_t   && psi.some_avg10<20.0f) { deprioritize(targets,g,oom_expose,protect,cfg); throttle_memory(available_kb); return 0; }
+        if (ram_pct>=kill_t   && psi.some_avg10<20.0f && psi.full_avg10<15.0f) { deprioritize(targets,g,oom_expose,protect,cfg); throttle_memory(available_kb); return 0; }
 
-        // High PSI: if in thaw cooldown, fallback to memory throttling instead of instant re-freeze
-        if (psi.some_avg10<40.0f && ram_pct<freeze_t)  {
+        // High PSI (or TC-3.3 full_avg10 >= 15% ZRAM saturation): fallback to memory throttling if in thaw cooldown
+        if ((psi.some_avg10<40.0f && ram_pct<freeze_t) || psi.full_avg10>=15.0f) {
             if (in_thaw_cooldown) {
                 std::cout<<"[Pruner] HIGH PSI during thaw cooldown — throttling memory to prevent oscillation\n";
                 deprioritize(targets,g,oom_expose,protect,cfg);
@@ -1369,8 +1385,13 @@ class TitanHardwareManager {
         // preventing zombie accumulation on rapid workspace switches
         std::thread old_thd = std::move(debounce_thd);
         if (old_thd.joinable()) old_thd.detach();
-        debounce_thd=std::thread([this,gen](){
-            std::this_thread::sleep_for(std::chrono::milliseconds(cfg.debounce_ms));
+
+        // TC-3.4 fix: use fast 150ms debounce for workspace switches (is_ws == true)
+        // while maintaining standard debounce_ms (800ms) for window focus/classifier events.
+        int delay_ms = is_ws ? 150 : cfg.debounce_ms;
+
+        debounce_thd=std::thread([this,gen,delay_ms](){
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
             if (debounce_gen.load()!=gen||!have_pending.load()) return;
             std::string wc,ev_title; pid_t ev_pid; int ev_ws; bool ev_is_ws;
             { std::lock_guard<std::mutex> lk(mtx); if(!have_pending.load())return;
