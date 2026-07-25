@@ -315,7 +315,37 @@ struct FusionResult {
     bool has_lsp       = false;   // LSP server child running
     bool has_build     = false;   // build daemon child running
     float confidence   = 0.0f;
+    // TC-1.1 fix: expose full S1 score map so classify() merges all votes,
+    // not just the highest-scoring type. Prevents silent enum-order tie-breaking.
+    std::map<WorkloadType, float> score_map;
 };
+
+// TC-1.3 fix: returns true when window title contains an unambiguous, high-specificity
+// file extension or project marker. Used to boost Signal 2 weight to 0.5 so the
+// focused pane's file type correctly overrides process-tree bias in multi-LSP scenarios.
+static bool title_has_specific_ext(const std::string& title) {
+    static const std::vector<std::string> specific = {
+        ".ts",".tsx",".jsx",".vue",".svelte",
+        ".rs",".cpp",".cc",".cxx",".c",".h",
+        "build.gradle","AndroidManifest","Cargo.toml","CMakeLists"
+    };
+    for (const auto& s : specific)
+        if (title.find(s) != std::string::npos) return true;
+    return false;
+}
+
+// TC-1.5 fix: strips common variant suffixes from IDE binary names so
+// "zed-preview", "code-nightly" etc. still route through the known_ides
+// fusion path instead of silently falling to NEUTRAL.
+static std::string strip_ide_suffix(const std::string& name) {
+    static const std::vector<std::string> sfxs =
+        {"-nightly","-preview","-dev","-bin","-stable","-git","-insiders"};
+    for (const auto& sfx : sfxs)
+        if (name.size() > sfx.size() &&
+            name.compare(name.size()-sfx.size(), sfx.size(), sfx)==0)
+            return name.substr(0, name.size()-sfx.size());
+    return name;
+}
 
 class FusionClassifier {
 public:
@@ -368,6 +398,9 @@ public:
                 [](auto& a, auto& b){ return a.second < b.second; });
             r.type = best->first; r.confidence = best->second;
         }
+        // TC-1.1 fix: store full score map so classify() can seed the unified
+        // vote accumulator with all accumulated S1 votes, not just the winner.
+        r.score_map = scores;
         return r;
     }
 
@@ -405,6 +438,15 @@ public:
     static std::optional<WorkloadType> from_cwd(pid_t pid) {
         std::string cwd = read_cwd(pid); if (cwd.empty()) return std::nullopt;
         fs::path p(cwd);
+        // TC-1.4 fix: check host-namespace reachability before statting.
+        // Container/overlay paths may exist in the process's mount namespace but
+        // not on the host — fail loudly so the miss is diagnosable.
+        std::error_code ec;
+        if (!fs::exists(p, ec) || ec) {
+            std::cout << "[S3] cwd " << cwd
+                      << " unreachable from host ns (container/overlay?) — S3 skipped\n";
+            return std::nullopt;
+        }
         if (fs::exists(p/"build.gradle")||fs::exists(p/"app"/"src")) return WorkloadType::ANDROID_DEV;
         if (fs::exists(p/"package.json")&&fs::exists(p/"node_modules")) return WorkloadType::WEB_DEV;
         if (fs::exists(p/"CMakeLists.txt")||fs::exists(p/"Cargo.toml")) return WorkloadType::SYSTEM_DEV;
@@ -423,15 +465,21 @@ public:
         // Signal 1 — builds FusionResult with its own scores map + metadata
         FusionResult r = from_children(pid, graph, cfg);
 
-        // Build a unified score accumulator: start with Signal 1's result
+        // TC-1.1 fix: seed from full S1 score map, not just the top winner.
+        // Preserves all accumulated votes (e.g. SYSTEM_DEV=0.6 AND ANDROID_DEV=0.6)
+        // so Signal 2/3 correctly resolve the tie instead of std::map key order.
         std::map<WorkloadType, float> vote;
-        if (r.type != WorkloadType::NEUTRAL)
-            vote[r.type] += r.confidence;   // seed from S1 accumulated score
+        for (auto& [t, s] : r.score_map)
+            if (t != WorkloadType::NEUTRAL) vote[t] += s;
 
-        // Signal 2 — medium confidence: 0.3 vote regardless of S1 agreement
+        // TC-1.3 fix: boost Signal 2 weight to 0.5 when the focused window title
+        // contains an unambiguous file extension or project marker. The user's active
+        // pane is the strongest intent signal and must win over process-tree presence
+        // in mixed-LSP (e.g. cargo + tsserver) scenarios.
         auto t2 = from_title(title);
+        float s2_weight = title_has_specific_ext(title) ? 0.5f : 0.3f;
         if (t2 && *t2 != WorkloadType::NEUTRAL)
-            vote[*t2] += 0.3f;
+            vote[*t2] += s2_weight;
 
         // Signal 3 — tiebreaker: 0.2 vote regardless of S1/S2 agreement
         auto t3 = from_cwd(pid);
@@ -467,6 +515,10 @@ struct WindowContext {
     bool         has_active_lsp = false;
     bool         has_build_daemon= false;
     bool         ai_modifier    = false;
+    // TC-1.1 residual fix: carry full fusion score_map from the IDE's FusionResult.
+    // Allows build_composite() to detect multi-type presence inside a single window
+    // (e.g. a split-screen IDE with Rust + Gradle panes sharing one Hyprland PID).
+    std::map<WorkloadType, float> score_map;
 };
 
 // Composite profile for an entire workspace (all visible windows)
@@ -547,9 +599,29 @@ static WorkspaceProfile build_composite(const std::vector<WindowContext>& window
     }
     wp.dominant  = dom;
     wp.secondary = sec;
-    // multi_context = 2+ non-neutral, non-casual types present at meaningful weight
+
+    // multi_context detection: 2+ non-neutral types at meaningful weight across windows.
     int meaningful = 0;
     for (auto& [t,s] : scores) if (s > 0.2f && t!=WorkloadType::NEUTRAL && t!=WorkloadType::CASUAL) ++meaningful;
+
+    // TC-1.1 residual fix: a split-screen IDE is ONE Hyprland window sharing ONE PID.
+    // build_composite() will only ever see a single inferred_type for that window, so
+    // the window-level meaningful count can never reach 2. We solve this by scanning
+    // each window's score_map (populated from the FusionResult) for internal type
+    // disagreement — if a single window scored 2+ non-neutral types above 0.2, it is
+    // itself a polyglot context and must trigger daemon protection.
+    for (const auto& w : windows) {
+        if (meaningful >= 2) break;  // already confirmed
+        int inner = 0;
+        for (const auto& [t, s] : w.score_map)
+            if (s > 0.2f && t != WorkloadType::NEUTRAL && t != WorkloadType::CASUAL) ++inner;
+        if (inner >= 2) {
+            std::cout << "[Composite] Single-window polyglot detected (split-screen IDE) "
+                      << "— forcing multi_context protection\n";
+            meaningful = 2;  // force the flag
+        }
+    }
+
     wp.multi_context = (meaningful >= 2);
     return wp;
 }
@@ -891,9 +963,14 @@ class TitanHardwareManager {
         std::string w = wm_class;
         std::transform(w.begin(),w.end(),w.begin(),::tolower);
 
-        // Known IDEs → full 3-signal fusion classifier (P1)
-        if (is_known_ide(w)) {
-            std::cout<<"[Fusion] IDE detected: "<<w<<" — running 3-signal fusion\n";
+        // TC-1.5 fix: try bare name first, then strip variant suffixes (-nightly, -preview,
+        // -dev etc.) so "zed-preview" / "code-insiders" still route through full fusion.
+        std::string w_base = strip_ide_suffix(w);
+        if (is_known_ide(w) || is_known_ide(w_base)) {
+            if (w != w_base)
+                std::cout<<"[Fusion] IDE variant '"<<w<<"' matched as '"<<w_base<<"' — fusion enabled\n";
+            else
+                std::cout<<"[Fusion] IDE detected: "<<w<<" — running 3-signal fusion\n";
             return FusionClassifier::classify(pid, title, graph, cfg);
         }
 
@@ -905,7 +982,13 @@ class TitanHardwareManager {
                  w=="thunderbird"||w=="element"||w=="geary"||
                  w=="nautilus"||w=="dolphin"||w=="thunar") r.type=WorkloadType::CASUAL;
         else if (w=="figma"||w=="firefox-developer-edition") r.type=WorkloadType::WEB_DEV;
-        else r.type=WorkloadType::NEUTRAL;
+        else {
+            // TC-1.5 fix: log unknown binaries explicitly so misclassification is
+            // diagnosable. Silence here was the original failure mode.
+            std::cout<<"[Fusion] Unknown binary '"<<w<<"' not in known_ides. "
+                       "Add to known_ides in config to enable fusion classification.\n";
+            r.type=WorkloadType::NEUTRAL;
+        }
         r.confidence = 1.0f; // direct match = full confidence
         return r;
     }
@@ -1071,6 +1154,25 @@ class TitanHardwareManager {
                         }
                     }
                 }
+            }
+        }
+
+        // TC-1.2 fix: orphan OOM reset — any LSP/build daemon that is no longer
+        // reachable from any workspace's process tree has lost its owner. Reset its
+        // oom_score_adj to 0 (neutral). Without this, orphaned daemons retain -200
+        // protection indefinitely, permanently biasing the kernel OOM killer.
+        std::unordered_set<pid_t> all_ws_pids;
+        for (auto& [ws_id, ws_pids] : ws_pids_map)
+            for (pid_t p : ws_pids) all_ws_pids.insert(p);
+
+        std::unordered_set<std::string> lsp_set_orphan(cfg.lsp_binaries.begin(), cfg.lsp_binaries.end());
+        std::unordered_set<std::string> bd_set_orphan(cfg.build_daemons.begin(),  cfg.build_daemons.end());
+        for (const auto& [pid, n] : graph) {
+            if ((lsp_set_orphan.count(n.name) || bd_set_orphan.count(n.name))
+                && !all_ws_pids.count(pid)) {
+                set_oom(pid, 0);
+                std::cout<<"[Orphan] Cleared stale OOM protection for unowned daemon: "
+                         <<n.name<<" (pid "<<pid<<")\n";
             }
         }
     }
@@ -1251,6 +1353,9 @@ class TitanHardwareManager {
                         wctx.has_build_daemon= wfr.has_build;
                         wctx.ai_modifier     = wfr.ai_modifier;
                         wctx.is_focused      = (wpid == ev_pid);  // focused = resource hint only
+                        // TC-1.1 residual fix: propagate full score_map so build_composite()
+                        // can detect within-window polyglot (split-screen single IDE PID).
+                        wctx.score_map       = wfr.score_map;
                         ws_windows.push_back(wctx);
                     }
                 }
@@ -1260,6 +1365,7 @@ class TitanHardwareManager {
                     wctx.pid=ev_pid; wctx.wm_class=wc; wctx.inferred_type=fr.type;
                     wctx.has_active_lsp=fr.has_lsp; wctx.has_build_daemon=fr.has_build;
                     wctx.ai_modifier=fr.ai_modifier; wctx.is_focused=true;
+                    wctx.score_map=fr.score_map;  // TC-1.1 residual: propagate in fallback too
                     ws_windows.push_back(wctx);
                 }
 

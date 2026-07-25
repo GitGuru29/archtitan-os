@@ -86,6 +86,10 @@ THM creates and manages three cgroup v2 sub-trees under `/sys/fs/cgroup/`:
    - Managed during high PSI pressure (>50% memory pressure stall).
    - Suspends non-essential background processes using cgroup `cgroup.freeze = 1`.
 
+### Architectural Comparison to `oomd`
+
+THM adopts the proven pressure-response pattern pioneered by Meta's `oomd` (and subsequently `systemd-oomd`)—specifically the use of kernel PSI metrics to trigger cgroup-level throttling and kills before traditional kernel OOM lockups occur. However, while `oomd` evaluates memory statistics in isolation on headless servers, THM's core novelty is layering **workspace and compositor awareness** on top of this PSI escalation ladder. By integrating with Hyprland IPC and analyzing GUI context, THM intelligently routes processes into `active`, `background`, or `frozen` slices based on user focus. This allows THM to enforce cross-workspace exemptions (like shielding compile daemons while browsing) that a pure memory-stat-driven daemon fundamentally cannot achieve.
+
 ---
 
 ## Audio Whitelist Protection
