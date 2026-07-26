@@ -160,10 +160,22 @@ static std::unordered_set<int> csv_int(const std::string& s) {
     return r;
 }
 
+static std::string get_config_path() {
+    std::string sys_path = "/etc/titan-hwm/config";
+    if (fs::exists(sys_path)) return sys_path;
+    const char* h = getenv("HOME");
+    if (h) {
+        std::string user_path = std::string(h) + "/.config/titan-hwm/config";
+        if (fs::exists(user_path)) return user_path;
+    }
+    return sys_path;
+}
+
 static Config load_config() {
     Config c;
-    const char* h = getenv("HOME"); if (!h) return c;
-    std::ifstream f(std::string(h)+"/.config/titan-hwm/config");
+    std::string path = get_config_path();
+    std::ifstream f(path);
+    if (!f) return c;
     std::string line;
     while (std::getline(f, line)) {
         auto cm = line.find('#'); if (cm!=std::string::npos) line=line.substr(0,cm);
@@ -207,28 +219,33 @@ static Config load_config() {
 }
 
 static void write_default_config() {
-    const char* h = getenv("HOME"); if (!h) return;
-    std::string path = std::string(h)+"/.config/titan-hwm/config";
+    std::string path = "/etc/titan-hwm/config";
     if (fs::exists(path)) return;
-    fs::create_directories(fs::path(path).parent_path());
-    std::ofstream f(path);
-    f << "# Titan Hardware Manager Config v2\n"
-      << "debounce_ms = 800\nram_freeze_pct = 50\nram_kill_pct = 25\n"
-      << "thermal_hot_temp = 80\noom_protect_score = -200\noom_expose_score = 300\n"
-      << "sigterm_grace_ms = 500\ncasual_workspaces = [1]\nweb_workspaces = [2]\n"
-      << "android_workspaces = [3]\nsystem_workspaces = [4, 5]\n"
-      << "web_extra_tools = []\nandroid_extra_tools = []\nsystem_extra_tools = []\n"
-      << "\n[classifier]\n"
-      << "lsp_binaries = [\"clangd\",\"ccls\",\"rust-analyzer\",\"tsserver\",\"eslint_d\"]\n"
-      << "build_daemons = [\"gradle\",\"cargo\",\"webpack\",\"vite\",\"java\",\"cmake\"]\n"
-      << "ai_inference = [\"ollama\",\"llama-server\",\"python3\"]\n"
-      << "known_ides = [\"code\",\"cursor\",\"zed\",\"windsurf\",\"antigravity\",\"fleet\",\"idea\",\"android-studio\"]\n"
-      << "\n[workspace_tiers]\n"
-      << "active_ceiling = 0.70\nactive_reserve = 0.40\nprotected_reserve = 0.20\n"
-      << "age_soft_decay_min = 5\nage_hard_decay_min = 15\n"
-      << "\n[multi_context]\nlsp_protection = true\naggressive_swap = false\n"
-      << "daemon_idle_cpu_pct = 0.5\ndaemon_idle_sample_ms = 30\n";
-    std::cout << "[HWM] Default config written to " << path << "\n";
+    try {
+        fs::create_directories(fs::path(path).parent_path());
+        std::ofstream f(path);
+        if (f) {
+            f << "# Titan Hardware Manager Config v2 (System Root-Owned)\n"
+              << "debounce_ms = 800\nram_freeze_pct = 50\nram_kill_pct = 25\n"
+              << "thermal_hot_temp = 80\noom_protect_score = -200\noom_expose_score = 300\n"
+              << "sigterm_grace_ms = 500\ncasual_workspaces = [1]\nweb_workspaces = [2]\n"
+              << "android_workspaces = [3]\nsystem_workspaces = [4, 5]\n"
+              << "web_extra_tools = []\nandroid_extra_tools = []\nsystem_extra_tools = []\n"
+              << "\n[classifier]\n"
+              << "lsp_binaries = [\"clangd\",\"ccls\",\"rust-analyzer\",\"tsserver\",\"eslint_d\"]\n"
+              << "build_daemons = [\"gradle\",\"cargo\",\"webpack\",\"vite\",\"java\",\"cmake\"]\n"
+              << "ai_inference = [\"ollama\",\"llama-server\",\"python3\"]\n"
+              << "known_ides = [\"code\",\"cursor\",\"zed\",\"windsurf\",\"antigravity\",\"fleet\",\"idea\",\"android-studio\"]\n"
+              << "\n[workspace_tiers]\n"
+              << "active_ceiling = 0.70\nactive_reserve = 0.40\nprotected_reserve = 0.20\n"
+              << "age_soft_decay_min = 5\nage_hard_decay_min = 15\n"
+              << "\n[multi_context]\nlsp_protection = true\naggressive_swap = false\n"
+              << "daemon_idle_cpu_pct = 0.5\ndaemon_idle_sample_ms = 30\n";
+            std::cout << "[HWM] Default system config written to " << path << "\n";
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "[HWM] Failed writing system config to " << path << ": " << e.what() << "\n";
+    }
 }
 
 // ==========================================
@@ -351,11 +368,30 @@ public:
     }
 };
 
-// §5.2.1 — Recursive child walk: collects all descendant cmdlines up to depth limit
-static void walk_children_recursive(
+// ISSUE-11 FIX: Verify that executable target path via /proc/<pid>/exe is not executing out of a world-writable directory (/tmp, /var/tmp, /dev/shm).
+// Prevents unprivileged processes from self-elevating via process name spoofing.
+static bool is_valid_executable_path(pid_t pid) {
+    char exe_buf[PATH_MAX];
+    std::string link = "/proc/" + std::to_string(pid) + "/exe";
+    ssize_t len = readlink(link.c_str(), exe_buf, sizeof(exe_buf) - 1);
+    if (len <= 0) return true; // readlink failed or process exited; default to true so valid processes aren't penalized
+    exe_buf[len] = '\0';
+    std::string exe(exe_buf);
+
+    if (exe.rfind("/tmp/", 0) == 0 || exe == "/tmp" ||
+        exe.rfind("/var/tmp/", 0) == 0 || exe == "/var/tmp" ||
+        exe.rfind("/dev/shm/", 0) == 0 || exe == "/dev/shm") {
+        std::cerr << "[Security] Spoofed executable rejected for PID " << pid << ": " << exe << "\n";
+        return false;
+    }
+    return true;
+}
+
+// Helper: walk descendant processes and collect (pid, cmdline) pairs
+static void walk_child_procs_recursive(
     pid_t pid,
     const std::unordered_map<pid_t,ProcessNode>& graph,
-    std::vector<std::string>& out,
+    std::vector<std::pair<pid_t, std::string>>& out,
     int depth = 3)
 {
     if (depth <= 0) return;
@@ -363,8 +399,21 @@ static void walk_children_recursive(
     if (it == graph.end()) return;
     for (pid_t child : it->second.children) {
         std::string cmd = read_cmdline(child);
-        if (!cmd.empty()) out.push_back(cmd);
-        walk_children_recursive(child, graph, out, depth-1);
+        if (!cmd.empty()) out.push_back({child, cmd});
+        walk_child_procs_recursive(child, graph, out, depth-1);
+    }
+}
+
+static void walk_children_recursive(
+    pid_t pid,
+    const std::unordered_map<pid_t,ProcessNode>& graph,
+    std::vector<std::string>& out,
+    int depth = 3)
+{
+    std::vector<std::pair<pid_t, std::string>> procs;
+    walk_child_procs_recursive(pid, graph, procs, depth);
+    for (const auto& p : procs) {
+        out.push_back(p.second);
     }
 }
 
@@ -425,11 +474,14 @@ public:
         std::map<WorkloadType,float> scores;
 
         // §5.2.1 — Use recursive walk (depth 3) to catch grandchild LSP servers
-        std::vector<std::string> all_cmds;
-        walk_children_recursive(pid, graph, all_cmds, 3);
+        std::vector<std::pair<pid_t, std::string>> all_child_procs;
+        walk_child_procs_recursive(pid, graph, all_child_procs, 3);
 
-        for (const std::string& cmd : all_cmds) {
+        for (const auto& [cpid, cmd] : all_child_procs) {
             if (cmd.empty()) continue;
+
+            // ISSUE-11 FIX: Verify child binary path to prevent unprivileged self-elevation via spoofed process names
+            if (!is_valid_executable_path(cpid)) continue;
 
             // AI modifier — set flag and continue (doesn't override profile)
             if (ai_set.count(cmd)) { r.ai_modifier = true; continue; }
@@ -500,6 +552,13 @@ public:
     // Signal 3: stat working directory for project marker files
     static std::optional<WorkloadType> from_cwd(pid_t pid) {
         std::string cwd = read_cwd(pid); if (cwd.empty()) return std::nullopt;
+        // ISSUE-11 FIX: Reject CWD project markers located in world-writable paths to prevent self-elevation spoofing
+        if (cwd.rfind("/tmp/", 0) == 0 || cwd == "/tmp" ||
+            cwd.rfind("/var/tmp/", 0) == 0 || cwd == "/var/tmp" ||
+            cwd.rfind("/dev/shm/", 0) == 0 || cwd == "/dev/shm") {
+            std::cout << "[S3] Ignored CWD in world-writable path: " << cwd << "\n";
+            return std::nullopt;
+        }
         fs::path p(cwd);
         // TC-1.4 fix: check host-namespace reachability before statting.
         // Container/overlay paths may exist in the process's mount namespace but
@@ -1313,9 +1372,10 @@ class TitanHardwareManager {
             auto pit = ws_pids_map.find(id);
             if (pit != ws_pids_map.end()) {
                 for (pid_t wpid : pit->second) {
-                    std::vector<std::string> cmds;
-                    walk_children_recursive(wpid, graph, cmds, 3);
-                    for (const auto& cmd : cmds) {
+                    std::vector<std::pair<pid_t, std::string>> child_procs;
+                    walk_child_procs_recursive(wpid, graph, child_procs, 3);
+                    for (const auto& [cpid, cmd] : child_procs) {
+                        if (!is_valid_executable_path(cpid)) continue;
                         if (lsp_set.count(cmd) || bd_set.count(cmd)) {
                             // Only protect if the daemon is actively consuming CPU.
                             if (!daemon_is_idle(wpid,
@@ -1761,19 +1821,19 @@ public:
     }
 
     // §5.2.7 — inotify config hot-reload thread
-    // Watches ~/.config/titan-hwm/config for IN_CLOSE_WRITE and reloads live
+    // ISSUE-12 FIX: Watch root-owned /etc/titan-hwm/config system config for IN_CLOSE_WRITE and reloads live
     void run_config_hotreload() {
-        const char* h = getenv("HOME"); if (!h) return;
-        std::string cfg_path = std::string(h) + "/.config/titan-hwm/config";
+        std::string cfg_path = "/etc/titan-hwm/config";
         int ifd = inotify_init1(IN_NONBLOCK);
         if (ifd < 0) { std::cerr<<"[HotReload] inotify_init1 failed\n"; return; }
         int wd = inotify_add_watch(ifd, cfg_path.c_str(), IN_CLOSE_WRITE | IN_MODIFY);
         if (wd < 0) {
-            // File may not exist yet — watch parent dir for creation
-            std::string dir = std::string(h) + "/.config/titan-hwm";
+            // Directory may not exist yet — watch parent dir for creation
+            std::string dir = "/etc/titan-hwm";
+            try { fs::create_directories(dir); } catch(...) {}
             wd = inotify_add_watch(ifd, dir.c_str(), IN_CREATE | IN_CLOSE_WRITE);
         }
-        std::cout<<"[HotReload] Watching config: "<<cfg_path<<"\n";
+        std::cout<<"[HotReload] Watching system config: "<<cfg_path<<"\n";
         char ev_buf[4096] __attribute__((aligned(__alignof__(struct inotify_event))));
         while (running.load()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
