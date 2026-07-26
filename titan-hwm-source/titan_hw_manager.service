@@ -14,5 +14,16 @@ RestartSec=3
 User=root
 Group=root
 
+# ISSUE-08 FIX: Grant OOM immunity at the systemd level.
+# THM sets oom_score_adj=-200 on protected daemons and +300 on background apps.
+# Without this, the kernel OOM killer would score THM at 0 (default) and kill
+# it before touching -200 protected processes during a memory crisis — exactly
+# when THM is needed most. -1000 is the kernel hard-minimum: OOM unkillable.
+OOMScoreAdjust=-1000
+
+# Redirect logs to the systemd journal for crash-recovery auditability.
+StandardOutput=journal
+StandardError=journal
+
 [Install]
 WantedBy=graphical-session.target
