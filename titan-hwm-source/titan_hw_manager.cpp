@@ -315,7 +315,37 @@ struct FusionResult {
     bool has_lsp       = false;   // LSP server child running
     bool has_build     = false;   // build daemon child running
     float confidence   = 0.0f;
+    // TC-1.1 fix: expose full S1 score map so classify() merges all votes,
+    // not just the highest-scoring type. Prevents silent enum-order tie-breaking.
+    std::map<WorkloadType, float> score_map;
 };
+
+// TC-1.3 fix: returns true when window title contains an unambiguous, high-specificity
+// file extension or project marker. Used to boost Signal 2 weight to 0.5 so the
+// focused pane's file type correctly overrides process-tree bias in multi-LSP scenarios.
+static bool title_has_specific_ext(const std::string& title) {
+    static const std::vector<std::string> specific = {
+        ".ts",".tsx",".jsx",".vue",".svelte",
+        ".rs",".cpp",".cc",".cxx",".c",".h",
+        "build.gradle","AndroidManifest","Cargo.toml","CMakeLists"
+    };
+    for (const auto& s : specific)
+        if (title.find(s) != std::string::npos) return true;
+    return false;
+}
+
+// TC-1.5 fix: strips common variant suffixes from IDE binary names so
+// "zed-preview", "code-nightly" etc. still route through the known_ides
+// fusion path instead of silently falling to NEUTRAL.
+static std::string strip_ide_suffix(const std::string& name) {
+    static const std::vector<std::string> sfxs =
+        {"-nightly","-preview","-dev","-bin","-stable","-git","-insiders"};
+    for (const auto& sfx : sfxs)
+        if (name.size() > sfx.size() &&
+            name.compare(name.size()-sfx.size(), sfx.size(), sfx)==0)
+            return name.substr(0, name.size()-sfx.size());
+    return name;
+}
 
 class FusionClassifier {
 public:
@@ -368,6 +398,9 @@ public:
                 [](auto& a, auto& b){ return a.second < b.second; });
             r.type = best->first; r.confidence = best->second;
         }
+        // TC-1.1 fix: store full score map so classify() can seed the unified
+        // vote accumulator with all accumulated S1 votes, not just the winner.
+        r.score_map = scores;
         return r;
     }
 
@@ -405,6 +438,15 @@ public:
     static std::optional<WorkloadType> from_cwd(pid_t pid) {
         std::string cwd = read_cwd(pid); if (cwd.empty()) return std::nullopt;
         fs::path p(cwd);
+        // TC-1.4 fix: check host-namespace reachability before statting.
+        // Container/overlay paths may exist in the process's mount namespace but
+        // not on the host — fail loudly so the miss is diagnosable.
+        std::error_code ec;
+        if (!fs::exists(p, ec) || ec) {
+            std::cout << "[S3] cwd " << cwd
+                      << " unreachable from host ns (container/overlay?) — S3 skipped\n";
+            return std::nullopt;
+        }
         if (fs::exists(p/"build.gradle")||fs::exists(p/"app"/"src")) return WorkloadType::ANDROID_DEV;
         if (fs::exists(p/"package.json")&&fs::exists(p/"node_modules")) return WorkloadType::WEB_DEV;
         if (fs::exists(p/"CMakeLists.txt")||fs::exists(p/"Cargo.toml")) return WorkloadType::SYSTEM_DEV;
@@ -423,15 +465,21 @@ public:
         // Signal 1 — builds FusionResult with its own scores map + metadata
         FusionResult r = from_children(pid, graph, cfg);
 
-        // Build a unified score accumulator: start with Signal 1's result
+        // TC-1.1 fix: seed from full S1 score map, not just the top winner.
+        // Preserves all accumulated votes (e.g. SYSTEM_DEV=0.6 AND ANDROID_DEV=0.6)
+        // so Signal 2/3 correctly resolve the tie instead of std::map key order.
         std::map<WorkloadType, float> vote;
-        if (r.type != WorkloadType::NEUTRAL)
-            vote[r.type] += r.confidence;   // seed from S1 accumulated score
+        for (auto& [t, s] : r.score_map)
+            if (t != WorkloadType::NEUTRAL) vote[t] += s;
 
-        // Signal 2 — medium confidence: 0.3 vote regardless of S1 agreement
+        // TC-1.3 fix: boost Signal 2 weight to 0.5 when the focused window title
+        // contains an unambiguous file extension or project marker. The user's active
+        // pane is the strongest intent signal and must win over process-tree presence
+        // in mixed-LSP (e.g. cargo + tsserver) scenarios.
         auto t2 = from_title(title);
+        float s2_weight = title_has_specific_ext(title) ? 0.5f : 0.3f;
         if (t2 && *t2 != WorkloadType::NEUTRAL)
-            vote[*t2] += 0.3f;
+            vote[*t2] += s2_weight;
 
         // Signal 3 — tiebreaker: 0.2 vote regardless of S1/S2 agreement
         auto t3 = from_cwd(pid);
@@ -467,6 +515,10 @@ struct WindowContext {
     bool         has_active_lsp = false;
     bool         has_build_daemon= false;
     bool         ai_modifier    = false;
+    // TC-1.1 residual fix: carry full fusion score_map from the IDE's FusionResult.
+    // Allows build_composite() to detect multi-type presence inside a single window
+    // (e.g. a split-screen IDE with Rust + Gradle panes sharing one Hyprland PID).
+    std::map<WorkloadType, float> score_map;
 };
 
 // Composite profile for an entire workspace (all visible windows)
@@ -547,9 +599,29 @@ static WorkspaceProfile build_composite(const std::vector<WindowContext>& window
     }
     wp.dominant  = dom;
     wp.secondary = sec;
-    // multi_context = 2+ non-neutral, non-casual types present at meaningful weight
+
+    // multi_context detection: 2+ non-neutral types at meaningful weight across windows.
     int meaningful = 0;
     for (auto& [t,s] : scores) if (s > 0.2f && t!=WorkloadType::NEUTRAL && t!=WorkloadType::CASUAL) ++meaningful;
+
+    // TC-1.1 residual fix: a split-screen IDE is ONE Hyprland window sharing ONE PID.
+    // build_composite() will only ever see a single inferred_type for that window, so
+    // the window-level meaningful count can never reach 2. We solve this by scanning
+    // each window's score_map (populated from the FusionResult) for internal type
+    // disagreement — if a single window scored 2+ non-neutral types above 0.2, it is
+    // itself a polyglot context and must trigger daemon protection.
+    for (const auto& w : windows) {
+        if (meaningful >= 2) break;  // already confirmed
+        int inner = 0;
+        for (const auto& [t, s] : w.score_map)
+            if (s > 0.2f && t != WorkloadType::NEUTRAL && t != WorkloadType::CASUAL) ++inner;
+        if (inner >= 2) {
+            std::cout << "[Composite] Single-window polyglot detected (split-screen IDE) "
+                      << "— forcing multi_context protection\n";
+            meaningful = 2;  // force the flag
+        }
+    }
+
     wp.multi_context = (meaningful >= 2);
     return wp;
 }
@@ -681,21 +753,45 @@ static void cg_escalate_to_frozen(
     CgroupManager::freeze("titan-frozen.slice", true);
     std::cout<<"[Cgroup] Escalated to frozen slice\n";
 }
+// Cooldown timer for thaw operations (TC-2.5 fix: prevents freeze/thaw oscillation flapping)
+static std::atomic<time_point::rep> g_last_thaw_ms{0};
+
 static void cg_thaw_from_frozen(
     const std::unordered_set<std::string>& targets,
     const std::unordered_map<pid_t,ProcessNode>& g)
 {
+    // Record thaw timestamp for cooldown hysteresis
+    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        ms_clock::now().time_since_epoch()).count();
+    g_last_thaw_ms.store(now_ms);
+
     CgroupManager::freeze("titan-frozen.slice", false);
-    for (const auto& [pid,n] : g) {
-        if (!targets.count(n.name) || AUDIO_WHITELIST.count(n.name)) continue;
+
+    // TC-2.3 fix: read authoritative cgroup membership from cgroup.procs to thaw all
+    // processes, including newly forked children that weren't in frozen_registry.
+    std::vector<pid_t> procs_in_cg;
+    std::ifstream procs_f("/sys/fs/cgroup/titan-frozen.slice/cgroup.procs");
+    pid_t p;
+    while (procs_f >> p) procs_in_cg.push_back(p);
+
+    // Combine map targets with procs_in_cg
+    std::unordered_set<pid_t> to_thaw_pids;
+    for (pid_t cpid : procs_in_cg) to_thaw_pids.insert(cpid);
+    for (const auto& [pid, n] : g) {
+        if (targets.count(n.name) && !AUDIO_WHITELIST.count(n.name))
+            to_thaw_pids.insert(pid);
+    }
+
+    for (pid_t pid : to_thaw_pids) {
+        auto nit = g.find(pid);
+        if (nit != g.end() && AUDIO_WHITELIST.count(nit->second.name)) continue;
         CgroupManager::move_pid(pid, "titan-background.slice");
-        // §5.2.5: clear from frozen registry and send SIGCONT
-        if (registry_is_frozen(pid)) {
+        if (registry_is_frozen(pid) || true) {
             ::kill(pid, SIGCONT);
             registry_thaw(pid);
         }
     }
-    std::cout<<"[Cgroup] Thawed from frozen slice\n";
+    std::cout<<"[Cgroup] Thawed " << to_thaw_pids.size() << " processes from frozen slice\n";
 }
 
 // ==========================================
@@ -745,24 +841,51 @@ public:
             std::cout<<"[Cgroup] Activated "<<n.name<<"\n";
         }
     }
+    // TC-2.2 fix: recursive tree emergency kill. Collects target processes AND all their
+    // descendant child PIDs to ensure no orphaned processes or zombie children leak resources.
     static long emergency_kill(const std::unordered_set<std::string>& targets, const std::unordered_map<pid_t,ProcessNode>& g, int grace_ms=500, const Config* cfg=nullptr) {
         std::vector<const ProcessNode*> hits;
+        std::unordered_set<std::string> lsp, bd;
+        if (cfg) {
+            lsp.insert(cfg->lsp_binaries.begin(), cfg->lsp_binaries.end());
+            bd.insert(cfg->build_daemons.begin(), cfg->build_daemons.end());
+        }
+
         for (const auto& [pid,n]:g) {
             if (!targets.count(n.name)||AUDIO_WHITELIST.count(n.name)) continue;
-            if (cfg) {
-                std::unordered_set<std::string> lsp(cfg->lsp_binaries.begin(),cfg->lsp_binaries.end());
-                std::unordered_set<std::string> bd(cfg->build_daemons.begin(),cfg->build_daemons.end());
-                if (lsp.count(n.name)||bd.count(n.name)) continue; // never kill LSP/build
-            }
+            if (cfg && (lsp.count(n.name)||bd.count(n.name))) continue; // never kill LSP/build
             hits.push_back(&n);
         }
         std::sort(hits.begin(),hits.end(),[](auto a,auto b){return a->rss_kb>b->rss_kb;});
         long freed=0;
-        for (auto* n:hits) {
-            std::cout<<"[Pruner] EMERGENCY KILL "<<n->name<<" ("<<n->rss_kb/1024<<"MB)\n";
-            kill(n->pid,SIGTERM); std::this_thread::sleep_for(std::chrono::milliseconds(grace_ms));
-            if (kill(n->pid,0)==0) kill(n->pid,SIGKILL);
-            freed+=n->rss_kb;
+
+        for (auto* n : hits) {
+            // Collect all descendant PIDs for recursive kill
+            std::vector<pid_t> family = {n->pid};
+            std::function<void(pid_t, int)> collect = [&](pid_t p, int depth) {
+                if (depth <= 0) return;
+                auto it = g.find(p);
+                if (it == g.end()) return;
+                for (pid_t child : it->second.children) {
+                    family.push_back(child);
+                    collect(child, depth - 1);
+                }
+            };
+            collect(n->pid, 4);
+
+            std::cout<<"[Pruner] EMERGENCY TREE KILL "<<n->name<<" (PID "<<n->pid<<", "<<family.size()<<" processes, "<<n->rss_kb/1024<<"MB)\n";
+
+            // Phase 1: Send SIGTERM to entire process tree
+            for (pid_t fpid : family) ::kill(fpid, SIGTERM);
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(grace_ms));
+
+            // Phase 2: Send SIGKILL to surviving PIDs
+            for (pid_t fpid : family) {
+                if (::kill(fpid, 0) == 0) ::kill(fpid, SIGKILL);
+                auto fit = g.find(fpid);
+                if (fit != g.end()) freed += fit->second.rss_kb;
+            }
         }
         return freed;
     }
@@ -772,15 +895,49 @@ public:
                        long available_kb, int oom_expose=300, int grace_ms=500,
                        bool multi_ctx=false, const Config* cfg=nullptr) {
         PSI psi=read_memory_psi();
-        std::cout<<"[PSI] some_avg10="<<psi.some_avg10<<"% full_avg10="<<psi.full_avg10<<"%\n";
+        std::cout<<"[PSI] valid="<<(psi.valid?"yes":"no")<<" some_avg10="<<psi.some_avg10<<"% full_avg10="<<psi.full_avg10<<"%\n";
         bool protect = multi_ctx && cfg && cfg->lsp_protection;
+
+        // TC-3.2 fix: if PSI is missing/unsupported (psi.valid == false), fall back to raw RAM %
+        if (!psi.valid) {
+            std::cout<<"[PSI] PSI unavailable — falling back to RAM percentage mode\n";
+            if (ram_pct < kill_t) return emergency_kill(targets, g, grace_ms, cfg);
+            if (ram_pct < freeze_t) { freeze_targets(targets, g, cfg); return 0; }
+            deprioritize(targets, g, oom_expose, protect, cfg);
+            return 0;
+        }
+
+        // TC-3.1 fix: fast-path override for sudden memory spikes (ram_pct < 15%).
+        // Prevents 10-second rolling average lag (some_avg10) from delaying Stage 3 kill during rapid RAM drops.
+        if (ram_pct < 15.0f) {
+            std::cout<<"[Pruner] FAST-PATH CRITICAL RAM SPIKE ("<<ram_pct<<"%) — bypassing rolling avg lag\n";
+            return emergency_kill(targets, g, grace_ms, cfg);
+        }
+
+        // TC-2.5 fix: check thaw cooldown timer (3000ms). If a thaw occurred recently,
+        // suppress cgroup freeze to prevent rapid freeze/thaw flapping.
+        auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            ms_clock::now().time_since_epoch()).count();
+        bool in_thaw_cooldown = (now_ms - g_last_thaw_ms.load() < 3000);
+
         // Healthy: ram ok AND psi low — just deprioritize, no freeze
-        if (ram_pct>=freeze_t && psi.some_avg10<5.0f)  { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
+        if (ram_pct>=freeze_t && psi.some_avg10<5.0f && psi.full_avg10<5.0f) { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
         // Medium pressure: ram tightening — deprioritize + throttle memory.high
-        if (ram_pct>=kill_t   && psi.some_avg10<20.0f) { deprioritize(targets,g,oom_expose,protect,cfg); throttle_memory(available_kb); return 0; }
-        // High PSI but not yet critical — only freeze if ram is also actually low
-        // §5.2.2: pass cfg into freeze so LSP/build daemons are never frozen in MULTI_CONTEXT
-        if (psi.some_avg10<40.0f && ram_pct<freeze_t)  { std::cout<<"[Pruner] HIGH — cgroup freeze\n"; freeze_targets(targets,g,cfg); return 0; }
+        if (ram_pct>=kill_t   && psi.some_avg10<20.0f && psi.full_avg10<15.0f) { deprioritize(targets,g,oom_expose,protect,cfg); throttle_memory(available_kb); return 0; }
+
+        // High PSI (or TC-3.3 full_avg10 >= 15% ZRAM saturation): fallback to memory throttling if in thaw cooldown
+        if ((psi.some_avg10<40.0f && ram_pct<freeze_t) || psi.full_avg10>=15.0f) {
+            if (in_thaw_cooldown) {
+                std::cout<<"[Pruner] HIGH PSI during thaw cooldown — throttling memory to prevent oscillation\n";
+                deprioritize(targets,g,oom_expose,protect,cfg);
+                throttle_memory(available_kb);
+                return 0;
+            }
+            std::cout<<"[Pruner] HIGH — cgroup freeze\n";
+            freeze_targets(targets,g,cfg);
+            return 0;
+        }
+
         // Healthy ram + mid PSI (e.g. burst I/O) — just deprioritize, don't freeze
         if (psi.some_avg10<40.0f) { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
         std::cout<<"[Pruner] CRITICAL PSI ("<<psi.some_avg10<<"%) — emergency kill\n";
@@ -891,9 +1048,14 @@ class TitanHardwareManager {
         std::string w = wm_class;
         std::transform(w.begin(),w.end(),w.begin(),::tolower);
 
-        // Known IDEs → full 3-signal fusion classifier (P1)
-        if (is_known_ide(w)) {
-            std::cout<<"[Fusion] IDE detected: "<<w<<" — running 3-signal fusion\n";
+        // TC-1.5 fix: try bare name first, then strip variant suffixes (-nightly, -preview,
+        // -dev etc.) so "zed-preview" / "code-insiders" still route through full fusion.
+        std::string w_base = strip_ide_suffix(w);
+        if (is_known_ide(w) || is_known_ide(w_base)) {
+            if (w != w_base)
+                std::cout<<"[Fusion] IDE variant '"<<w<<"' matched as '"<<w_base<<"' — fusion enabled\n";
+            else
+                std::cout<<"[Fusion] IDE detected: "<<w<<" — running 3-signal fusion\n";
             return FusionClassifier::classify(pid, title, graph, cfg);
         }
 
@@ -905,7 +1067,13 @@ class TitanHardwareManager {
                  w=="thunderbird"||w=="element"||w=="geary"||
                  w=="nautilus"||w=="dolphin"||w=="thunar") r.type=WorkloadType::CASUAL;
         else if (w=="figma"||w=="firefox-developer-edition") r.type=WorkloadType::WEB_DEV;
-        else r.type=WorkloadType::NEUTRAL;
+        else {
+            // TC-1.5 fix: log unknown binaries explicitly so misclassification is
+            // diagnosable. Silence here was the original failure mode.
+            std::cout<<"[Fusion] Unknown binary '"<<w<<"' not in known_ides. "
+                       "Add to known_ides in config to enable fusion classification.\n";
+            r.type=WorkloadType::NEUTRAL;
+        }
         r.confidence = 1.0f; // direct match = full confidence
         return r;
     }
@@ -1073,6 +1241,25 @@ class TitanHardwareManager {
                 }
             }
         }
+
+        // TC-1.2 fix: orphan OOM reset — any LSP/build daemon that is no longer
+        // reachable from any workspace's process tree has lost its owner. Reset its
+        // oom_score_adj to 0 (neutral). Without this, orphaned daemons retain -200
+        // protection indefinitely, permanently biasing the kernel OOM killer.
+        std::unordered_set<pid_t> all_ws_pids;
+        for (auto& [ws_id, ws_pids] : ws_pids_map)
+            for (pid_t p : ws_pids) all_ws_pids.insert(p);
+
+        std::unordered_set<std::string> lsp_set_orphan(cfg.lsp_binaries.begin(), cfg.lsp_binaries.end());
+        std::unordered_set<std::string> bd_set_orphan(cfg.build_daemons.begin(),  cfg.build_daemons.end());
+        for (const auto& [pid, n] : graph) {
+            if ((lsp_set_orphan.count(n.name) || bd_set_orphan.count(n.name))
+                && !all_ws_pids.count(pid)) {
+                set_oom(pid, 0);
+                std::cout<<"[Orphan] Cleared stale OOM protection for unowned daemon: "
+                         <<n.name<<" (pid "<<pid<<")\n";
+            }
+        }
     }
 
     // Core transition logic — now composite + AI-modifier aware
@@ -1198,8 +1385,13 @@ class TitanHardwareManager {
         // preventing zombie accumulation on rapid workspace switches
         std::thread old_thd = std::move(debounce_thd);
         if (old_thd.joinable()) old_thd.detach();
-        debounce_thd=std::thread([this,gen](){
-            std::this_thread::sleep_for(std::chrono::milliseconds(cfg.debounce_ms));
+
+        // TC-3.4 fix: use fast 150ms debounce for workspace switches (is_ws == true)
+        // while maintaining standard debounce_ms (800ms) for window focus/classifier events.
+        int delay_ms = is_ws ? 150 : cfg.debounce_ms;
+
+        debounce_thd=std::thread([this,gen,delay_ms](){
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
             if (debounce_gen.load()!=gen||!have_pending.load()) return;
             std::string wc,ev_title; pid_t ev_pid; int ev_ws; bool ev_is_ws;
             { std::lock_guard<std::mutex> lk(mtx); if(!have_pending.load())return;
@@ -1251,6 +1443,9 @@ class TitanHardwareManager {
                         wctx.has_build_daemon= wfr.has_build;
                         wctx.ai_modifier     = wfr.ai_modifier;
                         wctx.is_focused      = (wpid == ev_pid);  // focused = resource hint only
+                        // TC-1.1 residual fix: propagate full score_map so build_composite()
+                        // can detect within-window polyglot (split-screen single IDE PID).
+                        wctx.score_map       = wfr.score_map;
                         ws_windows.push_back(wctx);
                     }
                 }
@@ -1260,6 +1455,7 @@ class TitanHardwareManager {
                     wctx.pid=ev_pid; wctx.wm_class=wc; wctx.inferred_type=fr.type;
                     wctx.has_active_lsp=fr.has_lsp; wctx.has_build_daemon=fr.has_build;
                     wctx.ai_modifier=fr.ai_modifier; wctx.is_focused=true;
+                    wctx.score_map=fr.score_map;  // TC-1.1 residual: propagate in fallback too
                     ws_windows.push_back(wctx);
                 }
 
