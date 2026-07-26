@@ -1,18 +1,29 @@
 [Unit]
 Description=Titan Hardware Manager (ArchTitan Daemon)
-After=graphical.target
-Wants=graphical.target
+After=graphical-session.target
+PartOf=graphical-session.target
 
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/titan_hw_manager
-Restart=on-failure
-RestartSec=10
+Restart=always
+RestartSec=3
 
 # Needs root to read /proc system-wide, write /sys governors,
 # and send signals to processes owned by other users.
 User=root
 Group=root
 
+# ISSUE-08 FIX: Grant OOM immunity at the systemd level.
+# THM sets oom_score_adj=-200 on protected daemons and +300 on background apps.
+# Without this, the kernel OOM killer would score THM at 0 (default) and kill
+# it before touching -200 protected processes during a memory crisis — exactly
+# when THM is needed most. -1000 is the kernel hard-minimum: OOM unkillable.
+OOMScoreAdjust=-1000
+
+# Redirect logs to the systemd journal for crash-recovery auditability.
+StandardOutput=journal
+StandardError=journal
+
 [Install]
-WantedBy=graphical.target
+WantedBy=graphical-session.target
