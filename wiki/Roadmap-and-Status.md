@@ -4,25 +4,24 @@ This page tracks the current implementation state of **ArchTitan OS** components
 
 ---
 
-## Component Implementation Matrix
+## Component & Subsystem Implementation Matrix
 
-| Component | Category | Status | Implementation Details |
-| :--- | :--- | :--- | :--- |
-| **archiso ISO Builder** | Build Pipeline | 🟢 **Shipped** | Full UEFI bootable ISO profile with zstd compression and custom overlay |
-| **Hyprland Compositor** | Desktop Environment | 🟢 **Shipped** | Custom keybindings, overshot animations, Catppuccin Mocha styling |
-| **Titan Hardware Manager (`titan-hwm`)** | System Daemon | 🟢 **Shipped** | C++ daemon managing cgroup v2 slices, PSI memory pressure, and 5 workload profiles |
-| **THM CLI Tool (`titan-hwm`)** | CLI Tooling | 🟢 **Shipped** | UNIX socket client with manual profile switcher and live `metrics` dashboard |
-| **Titan Sandbox (`titan-sandboxd`)** | Isolation | 🟢 **Shipped (Core)** | Linux namespaces, seccomp-bpf filters, capability drops, and TOML policy loader |
-| **TitanFetch CLI** | System Info | 🟢 **Shipped** | Sub-millisecond C++ sysfs/procfs reader with custom ASCII logo |
-| **TitanFetch GUI** | System Info | 🟢 **Shipped** | Qt6 telemetry dashboard with live CPU/RAM/VRAM progress bars |
-| **Waybar Integration** | Desktop Panel | 🟢 **Shipped** | Polling module displaying active THM workload badge and hardware telemetry |
-| **Calamares Installer** | Installation | 🟢 **Shipped** | Calamares graphical installer integration launched via `Super+I` |
-| **QEMU Test Runner (`run-vm.sh`)** | Developer Utilities | 🟢 **Shipped** | Bash script for boot, persistent disk, and EFI validation |
-| **TitanShare P2P Transfer** | Cross-Device | 🟡 **In Development** | mDNS C++ Linux daemon & Kotlin/Jetpack Compose Android app (documented in FYP) |
-| **TitanMirror Screen Mirroring** | Cross-Device | 🟡 **In Development** | Wayland-native Android screen mirroring with MediaProjection & H.264 video encoding |
-| **Automated Hybrid GPU Switcher** | Performance | 🟡 **In Development** | Userspace DRM device offloading & automatic `DRI_PRIME` environment injection |
-| **AI Project Analyzer** | Developer Tooling | 🟡 **In Development** | Python-based repository introspection tool recommending build flags & env settings |
-| **BTRFS Auto-Snapshots** | Recovery | 🟡 **In Development** | Pacman pre-update hooks with GRUB bootloader snapshot rollback integration |
+| Subsystem / Component | Owner | Category | Status | Subsystem Location & Details |
+| :--- | :--- | :--- | :--- | :--- |
+| **archiso ISO Builder** | @GitGuru29 (Lead) | Build Pipeline | 🟢 **Shipped** | Full UEFI bootable ISO profile with zstd compression and custom overlay |
+| **Hyprland Compositor** | @GitGuru29 (Lead) | Desktop Environment | 🟢 **Shipped** | Custom keybindings, overshot animations, Catppuccin Mocha styling |
+| **Titan Hardware Manager (`titan-hwm`)** | @GitGuru29 (Lead) | System Daemon | 🟢 **Shipped** | C++ daemon managing cgroup v2 slices, PSI memory pressure (`subsystems/titan-hwm/`) |
+| **TitanFetch (CLI & GUI)** | @GitGuru29 (Lead) | System Info | 🟢 **Shipped** | Qt6 telemetry dashboard & C++ sysfs reader (`subsystems/titan-fetch/`) |
+| **Titan Sandbox (`titan-sandboxd`)** | @GitGuru29 (Lead) | Isolation | 🟢 **Shipped (Core)** | Linux namespaces, seccomp-bpf filters, capability drops (`subsystems/titan-sandbox/`) |
+| **Titan Settings** | @GitGuru29 (Lead) | System Control | 🟡 **In Development** | Unified GUI/CLI system configuration manager (`subsystems/titan-settings/`) |
+| **Auto GPU Switcher** | @GitGuru29 (Lead) | Performance | 🟡 **In Development** | Dynamic iGPU/dGPU offloading with THM thermal integration (`subsystems/auto-gpu-switcher/`) |
+| **TITAN AI** | Teammate | Intelligence | 🟡 **In Development** | Repository introspection & developer AI assistant subsystem (`subsystems/titan-ai/`) |
+| **TITAN Task Manager** | Teammate | Process Control | 🟡 **In Development** | Advanced task & process scheduling manager (`subsystems/titan-task-manager/`) |
+| **TITAN Share** | Teammate | Cross-Device | 🟡 **In Development** | Peer-to-peer file sharing daemon & Android client (`subsystems/titan-share/`) |
+| **TITAN Mirror** | Teammate | Cross-Device | 🟡 **In Development** | Wayland-native screen mirroring subsystem (`subsystems/titan-mirror/`) |
+| **Waybar Integration** | @GitGuru29 (Lead) | Desktop Panel | 🟢 **Shipped** | Polling module displaying active THM workload badge and telemetry |
+| **Calamares Installer** | @GitGuru29 (Lead) | Installation | 🟢 **Shipped** | Calamares graphical installer integration launched via `Super+I` |
+| **QEMU Test Runner (`run-vm.sh`)** | @GitGuru29 (Lead) | Developer Utilities | 🟢 **Shipped** | Bash script for boot, persistent disk, and EFI validation |
 
 ---
 

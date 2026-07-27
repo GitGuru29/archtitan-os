@@ -2,7 +2,7 @@
 
 Welcome to the ArchTitan OS documentation. This wiki covers everything from building the live ISO to configuring the custom daemons that make ArchTitan more than a themed Arch install.
 
-> **Project status:** Active development. Core desktop, ISO build pipeline, Titan Hardware Manager, Titan Sandbox, and TitanFetch are functional. Several planned features (TitanShare, hybrid GPU switching, AI project analyzer) are documented on the [Roadmap](Roadmap-and-Status) page and not yet shipped.
+> **Project status:** Active multi-member development. The repository is organized into standard `subsystems/` directories across 9 group subsystems (Titan Hardware Manager, TitanFetch, Titan Sandbox, Titan Settings, Auto GPU Switcher, TITAN AI, TITAN Task Manager, TITAN Share, TITAN Mirror). Core ISO build pipeline, THM, Sandbox, and TitanFetch are functional and shipped in the ISO.
 
 ---
 
