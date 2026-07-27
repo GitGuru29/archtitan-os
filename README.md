@@ -334,5 +334,6 @@ Full project documentation is available on the [GitHub Wiki](https://github.com/
 ---
 
 ## 📜 License
-This project is open-source and available under the MIT License. Arch Linux and other included software are subject to their respective licenses.
+
+This project is open-source and available under the **[Apache License 2.0](LICENSE)**. Arch Linux and other included software packages are subject to their respective upstream licenses.
 
