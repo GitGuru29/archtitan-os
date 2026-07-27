@@ -92,8 +92,8 @@ flowchart LR
     subgraph Inputs
         WS[Hyprland workspaces]
         PROC[Process tree / window titles]
-        PSI[/proc/pressure/memory]
-        TH[/sys/class/thermal]
+        PSI["/proc/pressure/memory"]
+        TH["/sys/class/thermal"]
     end
 
     subgraph THM["Titan Hardware Manager"]
