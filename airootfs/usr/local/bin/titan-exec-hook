@@ -114,6 +114,15 @@ if [[ ! -x "$SANDBOXD" ]]; then
     exec "$CMD" "$@"
 fi
 
+# On the live ISO, bypass sandboxd entirely.
+# pivot_root and mount namespaces are unreliable in the squashfs/overlayfs
+# environment — sandboxd silently fails, which kills all keybindings.
+# /run/archiso only exists on live mkarchiso media.
+if [[ -d /run/archiso ]]; then
+    echo "[titan-exec-hook] INFO: live ISO detected — running unsandboxed: $BINARY" >>/var/log/titan-sandbox/exec.log 2>/dev/null || true
+    exec "$CMD" "$@"
+fi
+
 # Launch through the sandbox engine
 REGISTRY_DIR="/run/titan-sandbox"
 mkdir -p "$REGISTRY_DIR" 2>/dev/null || true
