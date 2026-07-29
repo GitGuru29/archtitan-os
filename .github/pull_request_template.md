@@ -9,6 +9,7 @@
 - [ ] titan-task-manager
 - [ ] titan-share
 - [ ] titan-mirror
+- [ ] wiki (documentation)
 
 ---
 
