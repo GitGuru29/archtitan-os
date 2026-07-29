@@ -78,8 +78,11 @@ sequenceDiagram
 | `pacman.conf` | Mirror and repo configuration for the build |
 | `airootfs/` | Overlay copied onto the rootfs (configs, systemd units, binaries) |
 | `grub/` / `efiboot/` | Bootloader configuration |
-| `titan-hwm-source/` | Titan Hardware Manager source (compiled during build) |
-| `titanfetch-src/` | TitanFetch Qt6 application source |
+| `subsystems/` | Dedicated directories for all 9 group subsystems with standardized layouts |
+| `titan-hwm-source/` | Titan Hardware Manager C++ daemon source |
+| `titanfetch-src/` | TitanFetch C++/Qt6 application source |
+| `sandbox/` | Titan Sandbox C++ daemon & policy loader source |
+| `.github/` | GitHub Actions CI workflows, CODEOWNERS, and PR template |
 
 ---
 
@@ -92,8 +95,8 @@ flowchart LR
     subgraph Inputs
         WS[Hyprland workspaces]
         PROC[Process tree / window titles]
-        PSI[/proc/pressure/memory]
-        TH[/sys/class/thermal]
+        PSI["/proc/pressure/memory"]
+        TH["/sys/class/thermal"]
     end
 
     subgraph THM["Titan Hardware Manager"]

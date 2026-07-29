@@ -21,9 +21,9 @@ flowchart TD
     subgraph Inputs["Telemetry & Signals"]
         HYPR[Hyprland Window Focus]
         PROC[Process Tree / procfs]
-        PSI[/proc/pressure/memory]
-        THERM[/sys/class/thermal]
-        SOCK[/tmp/titan_hwm.sock IPC]
+        PSI["/proc/pressure/memory"]
+        THERM["/sys/class/thermal"]
+        SOCK["/tmp/titan_hwm.sock  IPC"]
     end
 
     subgraph Daemon["titan_hw_manager Daemon"]

@@ -1,0 +1,34 @@
+# Titan Hardware Manager Config v2 (System Root-Owned)
+debounce_ms = 800
+ram_freeze_pct = 50
+ram_kill_pct = 25
+thermal_hot_temp = 80
+oom_protect_score = -200
+oom_expose_score = 300
+sigterm_grace_ms = 500
+casual_workspaces = [1]
+web_workspaces = [2]
+android_workspaces = [3]
+system_workspaces = [4, 5]
+web_extra_tools = []
+android_extra_tools = []
+system_extra_tools = []
+
+[classifier]
+lsp_binaries = ["clangd","ccls","rust-analyzer","tsserver","eslint_d"]
+build_daemons = ["gradle","cargo","webpack","vite","java","cmake"]
+ai_inference = ["ollama","llama-server","python3"]
+known_ides = ["code","cursor","zed","windsurf","antigravity","fleet","idea","android-studio"]
+
+[workspace_tiers]
+active_ceiling = 0.70
+active_reserve = 0.40
+protected_reserve = 0.20
+age_soft_decay_min = 5
+age_hard_decay_min = 15
+
+[multi_context]
+lsp_protection = true
+aggressive_swap = false
+daemon_idle_cpu_pct = 0.5
+daemon_idle_sample_ms = 30

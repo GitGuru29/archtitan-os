@@ -1,0 +1,43 @@
+# CODEOWNERS — ArchTitan OS
+#
+# Format: <path pattern>  <@github-username>
+# The listed owner(s) are AUTOMATICALLY requested for review on any PR
+# that touches files matching that path.
+#
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ─── REPO OWNER ────────────────────────────────────────────────────────────────
+# GitGuru29 owns everything by default (fallback)
+*                               @GitGuru29
+
+# ─── OS CORE — PROTECTED (only GitGuru29 can approve changes) ──────────────────
+airootfs/                       @GitGuru29
+efiboot/                        @GitGuru29
+grub/                           @GitGuru29
+titan-hwm-source/               @GitGuru29
+titanfetch-src/                 @GitGuru29
+sandbox/                        @GitGuru29
+.github/                        @GitGuru29
+packages.x86_64                 @GitGuru29
+pacman.conf                     @GitGuru29
+profiledef.sh                   @GitGuru29
+install.sh                      @GitGuru29
+run-vm.sh                       @GitGuru29
+bootstrap_packages              @GitGuru29
+README.md                       @GitGuru29
+
+# ─── YOUR SUBSYSTEMS ───────────────────────────────────────────────────────────
+subsystems/titan-hwm/           @GitGuru29
+subsystems/titan-fetch/         @GitGuru29
+subsystems/titan-sandbox/       @GitGuru29
+subsystems/titan-settings/      @GitGuru29
+subsystems/auto-gpu-switcher/   @GitGuru29
+
+# ─── TEAMMATE SUBSYSTEMS ───────────────────────────────────────────────────────
+# Replace @teammate1 / @teammate2 / @teammate3 with their actual GitHub usernames.
+# Their PRs will auto-request review from both them AND you (owner fallback above).
+
+subsystems/titan-ai/            @teammate1
+subsystems/titan-task-manager/  @teammate1
+subsystems/titan-share/         @teammate2
+subsystems/titan-mirror/        @teammate3
