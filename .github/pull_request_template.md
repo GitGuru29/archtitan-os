@@ -15,14 +15,10 @@
 ## 📝 Summary of Changes
 
 #### What does this PR do?
-```
 <!-- Type a short description of your changes here -->
-```
 
 #### Files Changed
-```
 <!-- Briefly list the files you added or modified -->
-```
 
 ---
 
