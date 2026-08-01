@@ -14,37 +14,31 @@ void Cli::run()
     const SysData data = SysInfo::fetch();
     const auto &fields = data.fields;
 
-    // ArchTitan OS high-resolution ASCII logo matching exact user pattern
+    // 19-Line ArchTitan OS ASCII Logo (each line is 47 visible chars wide)
     const QStringList logo = {
-        QStringLiteral("\033[1;36m                  +                  \033[0m"),
-        QStringLiteral("\033[1;36m                 +++                 \033[0m"),
-        QStringLiteral("\033[1;36m                +++++                \033[0m"),
-        QStringLiteral("\033[1;36m               +++++++               \033[0m"),
-        QStringLiteral("\033[1;36m              +++++++++              \033[0m"),
-        QStringLiteral("\033[1;36m             +++++++++++             \033[0m"),
-        QStringLiteral("\033[1;36m            ++++++ ++++++            \033[0m"),
-        QStringLiteral("\033[1;36m           *+++++   +++++*           \033[0m"),
-        QStringLiteral("\033[1;36m          +++++       +++++          \033[0m"),
-        QStringLiteral("\033[1;36m         +++++*       ++++++         \033[0m"),
-        QStringLiteral("\033[1;36m        ++++++         ++++++        \033[0m"),
-        QStringLiteral("\033[1;36m       ++++++           ++++++       \033[0m"),
-        QStringLiteral("\033[1;36m      ++++++             ++++++      \033[0m"),
-        QStringLiteral("\033[1;36m     ++++++ \033[1;37m############\033[1;36m ++++++     \033[0m"),
-        QStringLiteral("\033[1;36m    *+++++ \033[1;37m##############\033[1;36m ++++++    \033[0m"),
-        QStringLiteral("\033[1;36m   *+++++ \033[1;37m################\033[1;36m +++++*   \033[0m"),
-        QStringLiteral("\033[1;36m  ++++++        \033[1;37m#####\033[1;36m        ++++++  \033[0m"),
-        QStringLiteral("\033[1;36m ++++++          \033[1;37m###\033[1;36m          ++++++ \033[0m"),
-        QStringLiteral("\033[1;36m+++++++          \033[1;37m###\033[1;36m          +++++++\033[0m"),
-        QStringLiteral("\033[1;36m+++++++++        \033[1;37m###\033[1;36m        +++++++++\033[0m"),
-        QStringLiteral("\033[1;36m+++++++++        \033[1;37m###\033[1;36m        +++++++++\033[0m"),
-        QStringLiteral("\033[1;36m ++++++++        \033[1;37m###\033[1;36m        ++++++++ \033[0m"),
-        QStringLiteral("\033[1;36m*++++++          \033[1;37m###\033[1;36m          +++++++*\033[0m"),
-        QStringLiteral("\033[1;36m++++*            \033[1;37m#\033[1;36m            *+++++*\033[0m"),
-        QStringLiteral("\033[1;36m+++              \033[1;37m#\033[1;36m              +++  \033[0m"),
-        QStringLiteral("\033[1;36m++               \033[1;37m#\033[1;36m               ++  \033[0m"),
+        QStringLiteral("\033[1;36m                          +                    \033[0m"),
+        QStringLiteral("\033[1;36m                         +++                   \033[0m"),
+        QStringLiteral("\033[1;36m                        +++++                  \033[0m"),
+        QStringLiteral("\033[1;36m                       +++++++                 \033[0m"),
+        QStringLiteral("\033[1;36m                      +++++++++                \033[0m"),
+        QStringLiteral("\033[1;36m                     ++++    ++++              \033[0m"),
+        QStringLiteral("\033[1;36m                    *++++    ++++*             \033[0m"),
+        QStringLiteral("\033[1;36m                   +++++      +++++            \033[0m"),
+        QStringLiteral("\033[1;36m                  +++++ ####### +++++          \033[0m"),
+        QStringLiteral("\033[1;36m                 *++++ ######### ++++*         \033[0m"),
+        QStringLiteral("\033[1;36m                +++++    #####    +++++        \033[0m"),
+        QStringLiteral("\033[1;36m               ++++       ###       ++++       \033[0m"),
+        QStringLiteral("\033[1;36m              ++++++      ###      ++++++      \033[0m"),
+        QStringLiteral("\033[1;36m             ++++++       ###       ++++++     \033[0m"),
+        QStringLiteral("\033[1;36m            ++++++        ###        ++++++    \033[0m"),
+        QStringLiteral("\033[1;36m           *++++           #           ++++*   \033[0m"),
+        QStringLiteral("\033[1;36m          +++              #              +++  \033[0m"),
+        QStringLiteral("\033[1;36m         ++                #                ++ \033[0m"),
+        QStringLiteral("\033[1;36m        +                  #                  +\033[0m")
     };
 
-    const QString pad(37, u' ');
+    // Fallback padding matches max logo visual width (47 characters)
+    const QString pad(47, u' ');
     const int totalRightLines = 2 + fields.size() + 2; // header(2) + fields + space + swatches
     const int maxLines = std::max(static_cast<int>(logo.size()), totalRightLines);
 
