@@ -57,4 +57,5 @@ sandbox/
 titan-hwm-source/titan_hw_manager
 titan-hwm-source/titan-hwm
 titan-hwm-source/test_thm_suite
-
+titan-hwm
+titan_hw_manager
