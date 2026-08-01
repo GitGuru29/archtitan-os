@@ -38,7 +38,7 @@ file_permissions=(
   ["/etc/systemd/system/titan-sandboxd.service"]="0:0:644"
   ["/etc/titan-sandbox"]="0:0:755"
   ["/etc/titan-sandbox/policies"]="0:0:755"
-  ["/var/log/titan-sandbox"]="0:0:755"
-  ["/var/titan-sandbox"]="0:0:755"
-  ["/var/titan-sandbox/apps"]="0:0:755"
+  ["/var/log/titan-sandbox"]="0:0:1777"
+  ["/var/titan-sandbox"]="0:0:1777"
+  ["/var/titan-sandbox/apps"]="0:0:1777"
 )

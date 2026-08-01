@@ -23,7 +23,7 @@ set -euo pipefail
 POLICY_DIR="/etc/titan-sandbox/policies"
 SANDBOXD="/usr/local/bin/titan-sandboxd"
 LOG="/var/log/titan-sandbox/exec.log"
-mkdir -p "$(dirname "$LOG")"
+mkdir -p "$(dirname "$LOG")" 2>/dev/null || true
 
 # ─── Policy Resolution ────────────────────────────────────────────────────────
 # Maps binary name → policy file. Mirrors thm_sandbox_integration.h APP_POLICY_MAP.
@@ -99,14 +99,14 @@ fi
 
 # Set up per-app private directory (created if absent)
 APP_PRIVATE_DIR="/var/titan-sandbox/apps/${BINARY}"
-mkdir -p "$APP_PRIVATE_DIR"
+mkdir -p "$APP_PRIVATE_DIR" 2>/dev/null || true
 
 # Project dir = caller's cwd
 PROJECT_DIR="${PWD}"
 
 # Log the launch attempt
 HOOK_PID=$$
-echo "[$(date -Iseconds)] EXEC binary=$BINARY policy=$(basename "$POLICY") cwd=$PROJECT_DIR pid=$HOOK_PID" >> "$LOG"
+echo "[$(date -Iseconds)] EXEC binary=$BINARY policy=$(basename "$POLICY") cwd=$PROJECT_DIR pid=$HOOK_PID" >> "$LOG" 2>/dev/null || true
 
 # Check sandboxd is available
 if [[ ! -x "$SANDBOXD" ]]; then
@@ -114,9 +114,18 @@ if [[ ! -x "$SANDBOXD" ]]; then
     exec "$CMD" "$@"
 fi
 
+# On the live ISO, bypass sandboxd entirely.
+# pivot_root and mount namespaces are unreliable in the squashfs/overlayfs
+# environment — sandboxd silently fails, which kills all keybindings.
+# /run/archiso only exists on live mkarchiso media.
+if [[ -d /run/archiso ]]; then
+    echo "[titan-exec-hook] INFO: live ISO detected — running unsandboxed: $BINARY" >>/var/log/titan-sandbox/exec.log 2>/dev/null || true
+    exec "$CMD" "$@"
+fi
+
 # Launch through the sandbox engine
 REGISTRY_DIR="/run/titan-sandbox"
-mkdir -p "$REGISTRY_DIR"
+mkdir -p "$REGISTRY_DIR" 2>/dev/null || true
 
 # Run sandboxd — it forks the child into namespaces then waits for it.
 # Capture SANDBOX_PID= from its stdout and write to the registry so THM
@@ -128,7 +137,7 @@ while IFS= read -r line; do
     if [[ "$line" == SANDBOX_PID=* ]]; then
         BOX_PID="${line#SANDBOX_PID=}"
         echo "ORIGINAL_PID=${HOOK_PID} BOX_PID=${BOX_PID} BINARY=${BINARY}" \
-             >> "${REGISTRY_DIR}/registry"
-        echo "[$(date -Iseconds)] SANDBOX_PID=$BOX_PID for ORIGINAL_PID=$HOOK_PID" >> "$LOG"
+             >> "${REGISTRY_DIR}/registry" 2>/dev/null || true
+        echo "[$(date -Iseconds)] SANDBOX_PID=$BOX_PID for ORIGINAL_PID=$HOOK_PID" >> "$LOG" 2>/dev/null || true
     fi
 done

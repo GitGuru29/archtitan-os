@@ -15,7 +15,11 @@ RemainAfterExit=yes
 
 # Create required runtime directories
 ExecStartPre=/usr/bin/mkdir -p /var/titan-sandbox/apps
+ExecStartPre=/usr/bin/chmod 1777 /var/titan-sandbox/apps
 ExecStartPre=/usr/bin/mkdir -p /var/log/titan-sandbox
+ExecStartPre=/usr/bin/chmod 1777 /var/log/titan-sandbox
+ExecStartPre=/usr/bin/mkdir -p /run/titan-sandbox
+ExecStartPre=/usr/bin/chmod 1777 /run/titan-sandbox
 
 # Verify the binary and a known policy exist
 ExecStart=/bin/bash -c '\

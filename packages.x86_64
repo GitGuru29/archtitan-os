@@ -66,6 +66,8 @@ kitty
 chromium
 rofi-wayland
 rofi-emoji
+inter-font
+papirus-icon-theme
 polkit-kde-agent
 base-devel
 git
@@ -136,5 +138,6 @@ libseccomp
 libcap
 sddm
 sddm-kcm
+qt6-5compat
 playerctl
 brightnessctl

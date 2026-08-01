@@ -1,3 +1,7 @@
+# ─── Separate projects (not part of this repo) ────────────────────────────────
+# archtitan-settings (Qt6 Settings App) lives at ~/Desktop/archtitan-settings
+# It has its own git repo — do NOT include here.
+
 # Archiso build artifacts
 out/
 tmp-work/
@@ -49,10 +53,9 @@ sandbox/tests/
 # Catch-all safety net — anything else added under sandbox/
 sandbox/
 
-# Titan Hardware Manager build binaries
+# ─── Titan Hardware Manager (THM) compiled binaries ────────────────────────
 titan-hwm-source/titan_hw_manager
 titan-hwm-source/titan-hwm
 titan-hwm-source/test_thm_suite
 titan-hwm
 titan_hw_manager
-

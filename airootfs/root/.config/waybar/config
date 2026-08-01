@@ -1,10 +1,10 @@
 {
     "layer": "top",
     "position": "top",
-    "height": 32,
+    "height": 34,
     "margin-top": 6,
-    "margin-left": 8,
-    "margin-right": 8,
+    "margin-left": 10,
+    "margin-right": 10,
     "spacing": 0,
     "exclusive": true,
 
@@ -18,7 +18,7 @@
         "hyprland/workspaces#dots"
     ],
     "modules-right": [
-        "custom/install",
+        "custom/power",
         "custom/titan-hwm",
         "cpu",
         "memory",
@@ -33,12 +33,6 @@
     "custom/logo": {
         "format": "◆",
         "tooltip": false
-    },
-
-    "custom/install": {
-        "format": "⬇ Install",
-        "tooltip": "Install ArchTitan to disk",
-        "on-click": "sudo -E calamares"
     },
 
     "custom/titan-hwm": {
@@ -114,11 +108,11 @@
             "weeks-pos": "right",
             "on-scroll": 1,
             "format": {
-                "months": "<span color='#C0CAF5'><b>{}</b></span>",
-                "days": "<span color='#A9B1D6'>{}</span>",
-                "weeks": "<span color='#565F89'><b>W{}</b></span>",
+                "months":   "<span color='#C0CAF5'><b>{}</b></span>",
+                "days":     "<span color='#A9B1D6'>{}</span>",
+                "weeks":    "<span color='#565F89'><b>W{}</b></span>",
                 "weekdays": "<span color='#7AA2F7'><b>{}</b></span>",
-                "today": "<span color='#00D4FF'><b><u>{}</u></b></span>"
+                "today":    "<span color='#00D4FF'><b><u>{}</u></b></span>"
             }
         }
     },
@@ -131,7 +125,7 @@
 
     "pulseaudio": {
         "format": "{icon} {volume}%",
-        "format-muted": "󰖁",
+        "format-muted": "󰖁 Muted",
         "format-icons": {
             "headphone": "",
             "hands-free": "",
@@ -148,22 +142,26 @@
 
     "network": {
         "format-wifi": " {signalStrength}%",
-        "format-ethernet": "󰈀",
-        "format-disconnected": "󰤭",
+        "format-ethernet": "󰈀 Wired",
+        "format-disconnected": "󰤭 Off",
         "tooltip-format-wifi": "{essid} — {signalStrength}%\n{ipaddr}",
         "tooltip-format-ethernet": "{ifname}: {ipaddr}"
     },
 
     "battery": {
         "states": {
+            "good": 95,
             "warning": 30,
             "critical": 15
         },
         "format": "{icon} {capacity}%",
-        "format-charging": " {capacity}%",
-        "format-full": " Full",
+        "format-charging": "  {capacity}%",
+        "format-plugged": "  {capacity}%",
+        "format-full": "  Full",
+        "format-not-found": "󰂑 AC",
         "format-icons": ["", "", "", "", ""],
-        "tooltip-format": "{timeTo} — {capacity}%"
+        "tooltip-format": "{timeTo} — {capacity}%\nPower: {power:.1f}W",
+        "interval": 5
     },
 
     "tray": {
@@ -173,12 +171,20 @@
     },
 
     "cpu": {
-        "format": "  {usage}% ",
-        "tooltip": true
+        "format": "  {usage}%",
+        "tooltip": true,
+        "interval": 2
     },
 
     "memory": {
-        "format": "  {}% ",
-        "tooltip-format": "RAM: {used:0.1f} GB / {total:0.1f} GB\nSwap: {swapUsed:0.1f} GB / {swapTotal:0.1f} GB"
+        "format": "  {}%",
+        "tooltip-format": "RAM: {used:0.1f} GB / {total:0.1f} GB\nSwap: {swapUsed:0.1f} GB / {swapTotal:0.1f} GB",
+        "interval": 5
+    },
+
+    "custom/power": {
+        "format": "⏻ ",
+        "tooltip": false,
+        "on-click": "titan-powermenu"
     }
 }
