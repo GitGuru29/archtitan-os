@@ -16,24 +16,20 @@ void Cli::run()
 
     // Taller logo to accommodate all info fields
     const QStringList logo = {
-        QStringLiteral("\033[36m         ..::.          \033[0m"),
-        QStringLiteral("\033[36m       .:::::::.        \033[0m"),
-        QStringLiteral("\033[36m      /:::::::::\\       \033[0m"),
-        QStringLiteral("\033[36m     /:::/  \\:::\\      \033[0m"),
-        QStringLiteral("\033[36m    /:::/ T  \\:::\\     \033[0m"),
-        QStringLiteral("\033[36m   /:::/ ITA  \\:::\\    \033[0m"),
-        QStringLiteral("\033[36m  /:::/ TITAN  \\:::\\   \033[0m"),
-        QStringLiteral("\033[36m /:::/    AN    \\:::\\  \033[0m"),
-        QStringLiteral("\033[36m/:::/____________\\::::  \033[0m"),
-        QStringLiteral("\033[36m\\:::\\            /:::/ \033[0m"),
-        QStringLiteral("\033[36m \\:::\\__________/:::/  \033[0m"),
-        QStringLiteral("\033[36m  \\:::::::::::::::::/ \033[0m"),
-        QStringLiteral("\033[36m   \\:::::::::::::::/ \033[0m"),
-        QStringLiteral("\033[36m    \\'\"\"\"\"\"\"\"\"\"\"\"\"'/  \033[0m"),
-        QStringLiteral("\033[36m      ArchTitan      \033[0m"),
+        QStringLiteral("\033[1;36m        /\\        \033[0m"),
+        QStringLiteral("\033[1;36m       /  \\       \033[0m"),
+        QStringLiteral("\033[1;36m      / /\\ \\      \033[0m"),
+        QStringLiteral("\033[1;36m     / /  \\ \\     \033[0m"),
+        QStringLiteral("\033[1;36m    / /\033[1;37m====\033[1;36m\\ \\    \033[0m"),
+        QStringLiteral("\033[1;36m   / /  \033[1;37m||\033[1;36m  \\ \\   \033[0m"),
+        QStringLiteral("\033[1;36m  / /   \033[1;37m||\033[1;36m   \\ \\  \033[0m"),
+        QStringLiteral("\033[1;36m / /    \033[1;37m\\/\033[1;36m    \\ \\ \033[0m"),
+        QStringLiteral("\033[1;36m/ /--\\      /--\\ \\\033[0m"),
+        QStringLiteral("\033[1;36m\\/__/        \\___/\033[0m"),
+        QStringLiteral("\033[1;37m  ARCH TITAN \033[1;36mOS   \033[0m"),
     };
 
-    const QString pad(24, u' ');
+    const QString pad(18, u' ');
     const int maxLines = std::max(logo.size(), fields.size());
 
     // Header
