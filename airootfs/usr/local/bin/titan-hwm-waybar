@@ -27,12 +27,12 @@ temp="${temp//[^0-9.]/}"
 psi_display=$(printf "%.1f" "${psi_clean:-0}" 2>/dev/null || echo "0.0")
 
 case "$profile" in
-    "Web Dev")     icon="󰖟"; css_class="web"     ;;   # nf-md-web
-    "Android Dev") icon="󰀲"; css_class="android" ;;   # nf-md-android
-    "System Dev")  icon="󰟀"; css_class="system"  ;;   # nf-md-chip
-    "Casual")      icon="󰋊"; css_class="casual"  ;;   # nf-md-coffee
-    "Neutral")     icon="󰒲"; css_class="neutral" ;;   # nf-md-power_sleep
-    *)             icon="󰒓"; css_class="inactive";;   # nf-md-cog
+    "Web Dev")     icon="🌐"; css_class="web"     ;;
+    "Android Dev") icon="🤖"; css_class="android" ;;
+    "System Dev")  icon="⚙️";  css_class="system"  ;;
+    "Casual")      icon="🪑"; css_class="casual"  ;;
+    "Neutral")     icon="💤"; css_class="neutral" ;;
+    *)             icon="⚙";  css_class="inactive";;
 esac
 
 text="${icon} ${profile:-Unknown}"

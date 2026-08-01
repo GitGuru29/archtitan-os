@@ -1,7 +1,7 @@
 {
     "layer": "top",
     "position": "top",
-    "height": 30,
+    "height": 34,
     "margin-top": 6,
     "margin-left": 10,
     "margin-right": 10,
@@ -9,34 +9,38 @@
     "exclusive": true,
 
     "modules-left": [
+        "custom/logo",
         "hyprland/workspaces",
         "hyprland/window"
     ],
     "modules-center": [
-        "mpris"
+        "mpris",
+        "hyprland/workspaces#dots"
     ],
     "modules-right": [
+        "custom/power",
         "custom/titan-hwm",
         "cpu",
-        "memory#swap",
         "memory",
         "clock",
         "tray",
-        "custom/theme-toggle",
         "backlight",
         "pulseaudio",
         "network",
-        "battery",
-        "custom/power"
+        "battery"
     ],
 
+    "custom/logo": {
+        "format": "◆",
+        "tooltip": false
+    },
+
     "custom/titan-hwm": {
-        "exec": "bash -c 'if [ -d /run/archiso ]; then echo \"{\\\"text\\\":\\\"󱐋 Live Mode\\\",\\\"tooltip\\\":\\\"ArchTitan Live ISO — HWM inactive\\\",\\\"class\\\":\\\"live\\\"}\"; else titan-hwm-waybar; fi'",
+        "exec": "bash -c 'if [ -d /run/archiso ]; then echo \"{\\\"text\\\":\\\"⬇ Live Mode\\\",\\\"tooltip\\\":\\\"ArchTitan Live ISO — HWM inactive\\\",\\\"class\\\":\\\"live\\\"}\"; else titan-hwm-waybar; fi'",
         "interval": 5,
         "return-type": "json",
-        "on-click": "bash -c 'if [ ! -d /run/archiso ]; then /usr/local/bin/titan-hwm-cycle; fi'",
-        "on-right-click": "bash -c 'if [ ! -d /run/archiso ]; then kitty --title=\"Titan HWM\" -e bash -c \"titan-hwm status; echo; read -p \\\"Press Enter...\\\"\"; fi'",
-        "tooltip": true
+        "on-click": "bash -c 'if [ ! -d /run/archiso ]; then titan-hwm status; fi'",
+        "on-right-click": "bash -c 'if [ ! -d /run/archiso ]; then kitty --title=\"Titan HWM\" -e bash -c \"titan-hwm status; echo; read -p \\\"Press Enter...\\\"\"; fi'"
     },
 
     "hyprland/workspaces": {
@@ -52,32 +56,47 @@
         }
     },
 
+    "hyprland/workspaces#dots": {
+        "format": "{icon}",
+        "format-icons": {
+            "active": "●",
+            "default": "·",
+            "empty": "·"
+        },
+        "on-click": "activate",
+        "sort-by-number": true,
+        "persistent-workspaces": {
+            "*": 9
+        },
+        "tooltip": false
+    },
+
     "hyprland/window": {
         "format": "{}",
-        "max-length": 55,
+        "max-length": 60,
         "separate-outputs": true,
         "rewrite": {
-            "(.*)calamares(.*)": "󰣙 ArchTitan Setup",
-            "(.*)Calamares(.*)": "󰣙 ArchTitan Setup",
-            "(.*) — Mozilla Firefox": "󰈹 $1",
-            "(.*) - fish": " $1",
-            "(.*) - kitty": " $1"
+            "(.*)calamares(.*)": "⬇ ArchTitan Setup",
+            "(.*)Calamares(.*)": "⬇ ArchTitan Setup",
+            "(.*) — Mozilla Firefox": "🌐 $1",
+            "(.*) - fish": "> $1",
+            "(.*) - kitty": "> $1"
         }
     },
 
     "mpris": {
-        "format": "{player_icon}  {title}",
-        "format-paused": "⏸  {title}",
+        "format": "{player_icon}  {title} — {artist}",
+        "format-paused": "{status_icon}  {title}",
         "format-stopped": "",
         "player-icons": {
-            "default": "󰐊",
-            "spotify": "󰓇"
+            "default": "▶",
+            "spotify": ""
         },
         "status-icons": {
             "paused": "⏸"
         },
         "ignored-players": ["firefox"],
-        "max-length": 42,
+        "max-length": 40,
         "tooltip": false
     },
 
@@ -108,13 +127,13 @@
         "format": "{icon} {volume}%",
         "format-muted": "󰖁 Muted",
         "format-icons": {
-            "headphone": "󰋋",
-            "hands-free": "󰏳",
-            "headset": "󰋎",
-            "phone": "󰏲",
-            "portable": "󰏲",
-            "car": "󰄋",
-            "default": ["󰕿", "󰖀", "󰕾"]
+            "headphone": "",
+            "hands-free": "",
+            "headset": "",
+            "phone": "",
+            "portable": "",
+            "car": "",
+            "default": ["", "", ""]
         },
         "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
         "on-right-click": "pavucontrol",
@@ -122,7 +141,7 @@
     },
 
     "network": {
-        "format-wifi": "󰤨 {signalStrength}%",
+        "format-wifi": " {signalStrength}%",
         "format-ethernet": "󰈀 Wired",
         "format-disconnected": "󰤭 Off",
         "tooltip-format-wifi": "{essid} — {signalStrength}%\n{ipaddr}",
@@ -136,11 +155,11 @@
             "critical": 15
         },
         "format": "{icon} {capacity}%",
-        "format-charging": "󰂄 {capacity}%",
-        "format-plugged": "󰚥 {capacity}%",
-        "format-full": "󰁹 Full",
+        "format-charging": "  {capacity}%",
+        "format-plugged": "  {capacity}%",
+        "format-full": "  Full",
         "format-not-found": "󰂑 AC",
-        "format-icons": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"],
+        "format-icons": ["", "", "", "", ""],
         "tooltip-format": "{timeTo} — {capacity}%\nPower: {power:.1f}W",
         "interval": 5
     },
@@ -152,27 +171,15 @@
     },
 
     "cpu": {
-        "format": "󰻠 {usage}%",
+        "format": "  {usage}%",
         "tooltip": true,
         "interval": 2
     },
 
     "memory": {
-        "format": "󰍛 {percentage}%",
-        "tooltip-format": "RAM: {used:0.1f} GiB / {total:0.1f} GiB",
+        "format": "  {}%",
+        "tooltip-format": "RAM: {used:0.1f} GB / {total:0.1f} GB\nSwap: {swapUsed:0.1f} GB / {swapTotal:0.1f} GB",
         "interval": 5
-    },
-
-    "memory#swap": {
-        "format": "󰾴 {swapPercentage}%",
-        "tooltip-format": "Swap: {swapUsed:0.1f} GiB / {swapTotal:0.1f} GiB",
-        "interval": 5
-    },
-
-    "custom/theme-toggle": {
-        "format": "󰖙",
-        "tooltip": "Toggle light/dark mode",
-        "on-click": "bash -c 'gsettings set org.gnome.desktop.interface color-scheme $([ \"$(gsettings get org.gnome.desktop.interface color-scheme)\" = \"\\\"prefer-dark\\\"\" ] && echo prefer-light || echo prefer-dark)'"
     },
 
     "custom/power": {
