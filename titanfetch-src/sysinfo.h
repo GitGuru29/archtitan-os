@@ -3,6 +3,8 @@
 #include <QString>
 #include <QList>
 #include <QPair>
+#include <QColor>
+#include <QSet>
 
 struct SysData {
     QString user;
@@ -14,7 +16,10 @@ struct SysData {
     long memTotalMiB = 0;
     long diskUsedGiB = 0;
     long diskTotalGiB = 0;
-    int  batteryPct  = -1; // -1 = no battery
+    int  batteryPct  = -1;      // -1 = no battery
+
+    // Live Hyprland workspace accent colors (up to 5)
+    QList<QColor> accentColors;
 };
 
 class SysInfo {

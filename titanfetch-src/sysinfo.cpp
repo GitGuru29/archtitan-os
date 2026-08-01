@@ -288,6 +288,163 @@ static void parseMeminfo(long &usedMiB, long &totalMiB)
     usedMiB  = (total - available) / 1024;
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hyprland workspace accent color extraction
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Parse a single color token: rgba(rrggbbaa), rgb(rrggbb)
+static QColor parseHyprColorToken(const QString &tok)
+{
+    QString s = tok.trimmed().toLower();
+
+    auto parseHex = [](const QString &h, int &r, int &g, int &b, int &a) -> bool {
+        if (h.length() < 6) return false;
+        bool ok;
+        r = h.mid(0, 2).toInt(&ok, 16); if (!ok) return false;
+        g = h.mid(2, 2).toInt(&ok, 16); if (!ok) return false;
+        b = h.mid(4, 2).toInt(&ok, 16); if (!ok) return false;
+        a = (h.length() >= 8) ? h.mid(6, 2).toInt(&ok, 16) : 255;
+        if (!ok) a = 255;
+        return true;
+    };
+
+    int r = 0, g = 0, b = 0, a = 255;
+
+    if (s.startsWith(QLatin1String("rgba("))) {
+        QString inner = s.mid(5);
+        int ep = inner.indexOf(QLatin1Char(')'));
+        if (ep >= 0) inner = inner.left(ep);
+        if (parseHex(inner, r, g, b, a))
+            return QColor(r, g, b, a);
+    }
+
+    if (s.startsWith(QLatin1String("rgb("))) {
+        QString inner = s.mid(4);
+        int ep = inner.indexOf(QLatin1Char(')'));
+        if (ep >= 0) inner = inner.left(ep);
+        if (parseHex(inner, r, g, b, a))
+            return QColor(r, g, b, 255);
+    }
+
+    return {}; // invalid
+}
+
+static bool isInterestingAccent(const QColor &c)
+{
+    if (!c.isValid()) return false;
+    if (c.alpha() < 60) return false;  // near-transparent
+
+    int h, s, v;
+    c.getHsv(&h, &s, &v);
+    if (v < 60)  return false;         // too dark (backgrounds)
+    if (s < 45)  return false;         // too grey / neutral
+    return true;
+}
+
+static bool isDuplicateHue(const QColor &c, const QList<QColor> &list)
+{
+    for (const QColor &ex : list) {
+        int dh = std::abs(c.hsvHue() - ex.hsvHue());
+        if (dh > 180) dh = 360 - dh;
+        if (dh < 25) return true;
+    }
+    return false;
+}
+
+// Lines to skip even if they contain col.
+static bool isSkippedColorLine(const QString &line)
+{
+    return line.contains(QLatin1String("inactive_border"))
+        || line.contains(QLatin1String("background_color"))
+        || line.contains(QLatin1String("bar_color"))
+        || line.contains(QLatin1String("col.text"))
+        || line.contains(QLatin1String("bar_text"))
+        || line.contains(QLatin1String("shadow_color"));
+}
+
+// Recursive file scanner; follows source= directives
+static void scanHyprFile(const QString &path, const QString &hyprDir,
+                          QList<QColor> &out, QSet<QString> &visited, int depth)
+{
+    if (depth > 6 || visited.contains(path)) return;
+    visited.insert(path);
+
+    FILE *f = std::fopen(path.toUtf8().constData(), "r");
+    if (!f) return;
+
+    char buf[1024];
+    while (std::fgets(buf, sizeof(buf), f) && out.size() < 10) {
+        QString line = QString::fromUtf8(buf).trimmed();
+
+        // Follow source= includes
+        if (line.startsWith(QLatin1String("source="))) {
+            QString src = line.mid(7).trimmed().remove(QLatin1Char('"'));
+            if (src.startsWith(QLatin1Char('~')))
+                src = QString::fromUtf8(qgetenv("HOME")) + src.mid(1);
+            else if (!src.startsWith(QLatin1Char('/')))
+                src = hyprDir + QLatin1Char('/') + src;
+            scanHyprFile(src, hyprDir, out, visited, depth + 1);
+            continue;
+        }
+
+        if (line.startsWith(QLatin1Char('#'))) continue;  // comment
+
+        // Only process lines that carry color info
+        bool isColorLine = line.contains(QLatin1String("col."))
+                        || line.contains(QLatin1String("border_color"));
+        if (!isColorLine) continue;
+        if (isSkippedColorLine(line)) continue;
+
+        // Value is everything after '=' (or whole line for windowrule)
+        int eq = line.indexOf(QLatin1Char('='));
+        const QString value = (eq >= 0) ? line.mid(eq + 1) : line;
+
+        // Tokenize and extract colors
+        const QStringList tokens = value.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        for (const QString &tok : tokens) {
+            if (!tok.startsWith(QLatin1String("rgba"), Qt::CaseInsensitive) &&
+                !tok.startsWith(QLatin1String("rgb("), Qt::CaseInsensitive)) continue;
+
+            const QColor c = parseHyprColorToken(tok);
+            if (isInterestingAccent(c) && !isDuplicateHue(c, out))
+                out.append(c);
+        }
+    }
+    std::fclose(f);
+}
+
+// Catppuccin Mocha fallback palette (used to pad if Hyprland gives < 5 colors)
+static const QList<QColor> kCatppuccinFallbacks = {
+    QColor(0x89, 0xb4, 0xfa),  // blue
+    QColor(0xcb, 0xa6, 0xf7),  // mauve/purple
+    QColor(0xa6, 0xe3, 0xa1),  // green
+    QColor(0xf9, 0xe2, 0xaf),  // yellow
+    QColor(0xf3, 0x8b, 0xa8),  // red/pink
+};
+
+static QList<QColor> readHyprlandAccents()
+{
+    const QString home   = QString::fromUtf8(qgetenv("HOME"));
+    const QString hyprDir = home + QStringLiteral("/.config/hypr");
+    const QString mainConf = hyprDir + QStringLiteral("/hyprland.conf");
+
+    QList<QColor> colors;
+    QSet<QString> visited;
+    scanHyprFile(mainConf, hyprDir, colors, visited, 0);
+
+    // Pad to 5 with Catppuccin defaults if config gave us fewer
+    for (const QColor &fb : kCatppuccinFallbacks) {
+        if (colors.size() >= 5) break;
+        if (!isDuplicateHue(fb, colors))
+            colors.append(fb);
+    }
+
+    // Cap at 5
+    if (colors.size() > 5) colors = colors.mid(0, 5);
+    return colors;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SysInfo::fetch
 // ─────────────────────────────────────────────────────────────────────────────
@@ -469,6 +626,9 @@ SysData SysInfo::fetch()
         if (!batt.isEmpty())
             F.append({QStringLiteral("Battery"), batt});
     }
+
+    // ── Hyprland workspace accent colors ───────────────────────────────────────
+    data.accentColors = readHyprlandAccents();
 
     return data;
 }

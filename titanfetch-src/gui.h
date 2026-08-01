@@ -5,8 +5,6 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 
-class ProgressBar;
-
 class Gui final : public QWidget {
     Q_OBJECT
 public:
@@ -20,8 +18,4 @@ protected:
 
 private:
     QPoint m_dragPos;
-    QWidget *buildCard(const QString &title, QWidget *parent);
-    QWidget *buildRow(const QString &icon, const QString &key, const QString &value, QWidget *parent);
-    QWidget *buildProgressRow(const QString &icon, const QString &key,
-                              long used, long total, const QString &unit, QWidget *parent);
 };
