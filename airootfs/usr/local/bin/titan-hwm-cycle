@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# titan-hwm-cycle — Click-to-cycle through Titan HWM profiles from Waybar
+# Profiles cycle: Web Dev → Android Dev → System Dev → Casual → Neutral → Web Dev
+
+STATE="/tmp/titan_hwm_state"
+
+PROFILES=("web" "android" "system" "casual" "neutral")
+
+# Read current profile class from state file
+current_class="inactive"
+if [[ -f "$STATE" ]]; then
+    current_profile=$(grep "^profile=" "$STATE" 2>/dev/null | cut -d= -f2)
+    case "$current_profile" in
+        "Web Dev")     current_class="web"     ;;
+        "Android Dev") current_class="android" ;;
+        "System Dev")  current_class="system"  ;;
+        "Casual")      current_class="casual"  ;;
+        "Neutral")     current_class="neutral" ;;
+    esac
+fi
+
+# Find index of current profile and advance to next
+next="web"
+for i in "${!PROFILES[@]}"; do
+    if [[ "${PROFILES[$i]}" == "$current_class" ]]; then
+        next="${PROFILES[$(( (i + 1) % ${#PROFILES[@]} ))]}"
+        break
+    fi
+done
+
+titan-hwm switch "$next"
