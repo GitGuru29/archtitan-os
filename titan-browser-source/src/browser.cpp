@@ -12,6 +12,7 @@
 #include <QKeySequence>
 #include <QWebEngineView>
 #include <QWebEngineHistory>
+#include <QToolButton>
 
 static const char *kHomeUrl = "qrc:/homepage.html";
 
@@ -22,31 +23,40 @@ QMainWindow, QWidget {
     font-family: "JetBrainsMono Nerd Font", "Inter", monospace;
 }
 QToolBar {
-    background: rgba(10,11,20,0.92);
-    border-bottom: 1px solid rgba(122,162,247,0.18);
-    padding: 4px 8px;
+    background: #080c17;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+    padding: 4px 10px;
     spacing: 6px;
 }
 QToolBar#Sidebar {
     background: #070913;
-    border-right: 1px solid rgba(122,162,247,0.18);
+    border-right: 1px solid rgba(56, 189, 248, 0.12);
     border-bottom: none;
     padding: 10px 4px;
     spacing: 14px;
 }
 QToolButton {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.07);
+    background: transparent;
+    border: none;
     border-radius: 8px;
-    color: #7aa2f7;
+    color: #94a3b8;
     padding: 4px 8px;
     font-size: 14px;
 }
 QToolButton:hover {
-    background: rgba(122,162,247,0.15);
-    border-color: rgba(122,162,247,0.3);
+    background: rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
 }
-QToolButton:disabled { color: #414868; }
+QToolButton:disabled { color: #334155; }
+QToolButton#AvatarButton {
+    background: #6366f1;
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 3px 7px;
+}
+QToolButton#AvatarButton:hover {
+    background: #4f46e5;
+}
 QTabWidget::pane {
     border: none;
     background: #0a0b14;
@@ -136,6 +146,7 @@ void Browser::setupUi()
 
     // ── Toolbar ───────────────────────────────────────────────
     QToolBar *bar = addToolBar(QStringLiteral("Navigation"));
+    bar->setObjectName(QStringLiteral("Navigation"));
     bar->setMovable(false);
     bar->setFloatable(false);
 
@@ -150,8 +161,16 @@ void Browser::setupUi()
     bar->addWidget(m_addressBar);
     connect(m_addressBar, &AddressBar::urlEntered, this, &Browser::loadUrl);
 
-    QAction *newTabAct = bar->addAction(QStringLiteral("+"), this, [this]{ newTab(); });
-    Q_UNUSED(newTabAct)
+    bar->addAction(QStringLiteral("🛡"), this, []{});
+    bar->addAction(QStringLiteral("⬇"), this, []{});
+    bar->addAction(QStringLiteral("👤"), this, []{});
+
+    QAction *avatarAction = bar->addAction(QStringLiteral("👤"), this, []{});
+    if (auto *btn = qobject_cast<QToolButton*>(bar->widgetForAction(avatarAction))) {
+        btn->setObjectName(QStringLiteral("AvatarButton"));
+    }
+
+    bar->addAction(QStringLiteral("⋮"), this, []{});
 
     // ── Progress bar (2px accent line below toolbar) ──────────
     m_progress = new QProgressBar(this);
