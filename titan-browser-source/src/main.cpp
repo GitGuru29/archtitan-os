@@ -9,12 +9,20 @@ int main(int argc, char *argv[])
     QApplication::setOrganizationName(QStringLiteral("ArchTitan"));
     QApplication::setDesktopFileName(QStringLiteral("titanbrowser"));
 
-    // Disable sandbox (required for standalone/non-packaged QtWebEngine binaries)
-    // Vulkan fallback: disable GPU sandbox and let Chromium pick the renderer
+    // Force XCB (XWayland) to avoid Wayland GBM/Vulkan crash on NVIDIA systems.
+    // QtWebEngine's Chromium subprocess segfaults when GBM fails and Vulkan
+    // renderer can't initialize on hybrid NVIDIA+Intel laptops.
+    if (qgetenv("QT_QPA_PLATFORM").isEmpty())
+        qputenv("QT_QPA_PLATFORM", "xcb");
+
+    // Disable GPU + sandbox — required for standalone QtWebEngine binaries.
+    // SwiftShader (CPU renderer) is used as fallback; plenty fast for browsing.
     qputenv("QTWEBENGINE_CHROMIUM_FLAGS",
             "--no-sandbox "
+            "--disable-gpu "
             "--disable-gpu-sandbox "
-            "--disable-features=VaapiVideoDecoder");
+            "--disable-dev-shm-usage "
+            "--disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder");
 
     QApplication app(argc, argv);
 
