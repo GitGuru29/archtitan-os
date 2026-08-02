@@ -9,10 +9,12 @@ int main(int argc, char *argv[])
     QApplication::setOrganizationName(QStringLiteral("ArchTitan"));
     QApplication::setDesktopFileName(QStringLiteral("titanbrowser"));
 
-    // Enable Wayland/Ozone
+    // Disable sandbox (required for standalone/non-packaged QtWebEngine binaries)
+    // Vulkan fallback: disable GPU sandbox and let Chromium pick the renderer
     qputenv("QTWEBENGINE_CHROMIUM_FLAGS",
-            "--enable-features=WebRTC,VaapiVideoDecoder "
-            "--use-gl=egl");
+            "--no-sandbox "
+            "--disable-gpu-sandbox "
+            "--disable-features=VaapiVideoDecoder");
 
     QApplication app(argc, argv);
 

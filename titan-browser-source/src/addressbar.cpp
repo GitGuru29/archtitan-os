@@ -19,11 +19,9 @@ AddressBar::AddressBar(QWidget *parent) : QLineEdit(parent)
         }
         QLineEdit:focus {
             background: rgba(122,162,247,0.08);
-            border-color: rgba(122,162,247,0.45);
-            box-shadow: 0 0 10px rgba(122,162,247,0.15);
+            border: 2px solid rgba(122,162,247,0.55);
         }
-    )"));
-
+    )")); 
     connect(this, &QLineEdit::returnPressed, this, &AddressBar::onReturnPressed);
 }
 
