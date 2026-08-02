@@ -63,7 +63,8 @@ xfsprogs
 hyprland
 waybar
 kitty
-chromium
+falkon
+qt6-webengine
 rofi-wayland
 rofi-emoji
 inter-font
@@ -90,14 +91,6 @@ qt5-quickcontrols2
 swaybg
 starship
 fish
-code
-nodejs
-npm
-go
-rustup
-docker
-docker-compose
-github-cli
 btop
 zellij
 ttf-jetbrains-mono-nerd
@@ -114,7 +107,6 @@ xorg-xwayland
 qt5-wayland
 qt6-wayland
 python
-python-pip
 pipewire
 pipewire-pulse
 pipewire-alsa
@@ -129,10 +121,8 @@ unzip
 zip
 ripgrep
 fd
-lazygit
 tree
 jq
-httpie
 strace
 libseccomp
 libcap
