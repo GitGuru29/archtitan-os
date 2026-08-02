@@ -13,7 +13,7 @@
 #include <QWebEngineView>
 #include <QWebEngineHistory>
 
-static const char *kHomeUrl = "https://archtitan.io";
+static const char *kHomeUrl = "qrc:/homepage.html";
 
 static const char *kTheme = R"(
 QMainWindow, QWidget {
@@ -26,6 +26,13 @@ QToolBar {
     border-bottom: 1px solid rgba(122,162,247,0.18);
     padding: 4px 8px;
     spacing: 6px;
+}
+QToolBar#Sidebar {
+    background: #070913;
+    border-right: 1px solid rgba(122,162,247,0.18);
+    border-bottom: none;
+    padding: 10px 4px;
+    spacing: 14px;
 }
 QToolButton {
     background: rgba(255,255,255,0.04);
@@ -95,6 +102,29 @@ Browser::Browser(QWidget *parent) : QMainWindow(parent)
 
 void Browser::setupUi()
 {
+    // ── Sidebar (Left) ────────────────────────────────────────
+    QToolBar *sidebar = new QToolBar(QStringLiteral("Sidebar"), this);
+    sidebar->setObjectName(QStringLiteral("Sidebar"));
+    sidebar->setMovable(false);
+    sidebar->setFloatable(false);
+    sidebar->setOrientation(Qt::Vertical);
+    addToolBar(Qt::LeftToolBarArea, sidebar);
+
+    sidebar->addAction(QStringLiteral("A"), this, [this]{ loadUrl(QUrl(QString::fromUtf8(kHomeUrl))); });
+    sidebar->addAction(QStringLiteral("󰋜"), this, [this]{ loadUrl(QUrl(QString::fromUtf8(kHomeUrl))); });
+    sidebar->addAction(QStringLiteral("󰋚"), this, []{}); // History
+    sidebar->addAction(QStringLiteral("󰓋"), this, []{}); // Bookmarks
+    sidebar->addAction(QStringLiteral("󰇚"), this, []{}); // Downloads
+    sidebar->addAction(QStringLiteral("🛡"), this, []{}); // Shield
+    sidebar->addAction(QStringLiteral("󰏖"), this, []{}); // Extensions
+    sidebar->addAction(QStringLiteral("󰒓"), this, []{}); // Settings
+
+    QWidget *spacer = new QWidget(this);
+    spacer->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
+    sidebar->addWidget(spacer);
+
+    sidebar->addAction(QStringLiteral("󰖔"), this, []{}); // Theme Toggle
+
     // ── Central widget ────────────────────────────────────────
     m_tabs = new TabWidget(this);
     setCentralWidget(m_tabs);
@@ -185,9 +215,14 @@ void Browser::reload()
 
 void Browser::onUrlChanged(const QUrl &url)
 {
-    m_addressBar->setUrl(url);
+    if (url.toString() == QStringLiteral("qrc:/homepage.html")) {
+        m_addressBar->clear();
+    } else {
+        m_addressBar->setUrl(url);
+    }
+
     if (auto *v = currentView()) {
-    m_backAction->setEnabled(v->page()->history()->canGoBack());
+        m_backAction->setEnabled(v->page()->history()->canGoBack());
         m_forwardAction->setEnabled(v->page()->history()->canGoForward());
     }
 }
