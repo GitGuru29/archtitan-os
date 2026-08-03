@@ -1,10 +1,10 @@
-# 🌌 ArchTitan OS
+#  ArchTitan OS
 
 ArchTitan is a custom, high-performance Linux distribution built on top of Arch Linux. Designed around the modern Wayland ecosystem, it offers a deeply integrated, aesthetically pleasing, and resource-efficient environment tailored for power users, developers, and enthusiasts.
 
 ---
 
-## 🎯 Core Philosophy
+##  Core Philosophy
 
 ArchTitan embraces the Unix philosophy while providing a cohesive, pre-configured premium experience out of the box.
 
@@ -15,7 +15,7 @@ ArchTitan embraces the Unix philosophy while providing a cohesive, pre-configure
 
 ---
 
-## 🏗️ System Architecture
+##  System Architecture
 
 ArchTitan isn't just a collection of packages; it introduces custom middleware to bridge the gap between the window manager and the underlying hardware.
 
@@ -51,7 +51,7 @@ graph TD
     THM -.->|Controls| PM
 ```
 
-### 🛠️ Custom Components
+###  Custom Components
 
 1. **Titan Hardware Manager (`titan-hwm`)**
    A privileged systemd service that dynamically orchestrates system resources. It intercepts power events, monitors Wayland session states, and aggressively manages background tasks using `cgroups v2` to ensure the active desktop session remains flawlessly smooth.
@@ -64,7 +64,7 @@ graph TD
 
 ---
 
-## 📸 Desktop Environment
+##  Desktop Environment
 
 ArchTitan uses a meticulously crafted Hyprland configuration.
 
@@ -89,7 +89,7 @@ mindmap
       Starship Prompt
 ```
 
-### ⌨️ Essential Keybindings
+###  Essential Keybindings
 
 | Shortcut | Action |
 | :--- | :--- |
@@ -105,7 +105,7 @@ mindmap
 
 ---
 
-## 🚀 Building the Live ISO
+##  Building the Live ISO
 
 ArchTitan is built using the official `archiso` tooling. 
 
@@ -153,7 +153,7 @@ The resulting ISO will be located in the `out/` directory.
 
 ---
 
-## 💻 Installation
+##  Installation
 
 ### Bare Metal
 1. Flash the ISO to a USB drive using Rufus, BalenaEtcher, or `dd`.
