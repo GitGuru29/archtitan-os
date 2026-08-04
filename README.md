@@ -62,8 +62,8 @@ graph TD
 3. **Titan Sandbox (`titan-sandboxd`)** — *@GitGuru29*
    A secure container and isolation subsystem leveraging Linux namespaces, seccomp-bpf filters, and capability drops with TOML-based policy enforcement for sandboxed application execution.
 
-4. **Titan Settings** — *@GitGuru29*
-   A unified system configuration panel for managing OS-level settings, subsystem configs, and user preferences. *(In Development)*
+4. **Titan Settings (`archtitan-settings`)** — *@GitGuru29*
+   A native Qt6/QML settings application providing a unified GUI for managing OS-level settings, subsystem configs, display, audio, power, network, and user preferences. *(Active — Core Component)*
 
 5. **Auto GPU Switcher** — *@GitGuru29*
    Intelligent iGPU/dGPU switching based on workload, power state, and thermal conditions with THM integration. *(In Development)*
@@ -199,7 +199,7 @@ This is a **group project** with 4 members. The repository is organized into ded
 | **Titan Hardware Manager** | @GitGuru29 (Lead) | 🟢 Shipped | `subsystems/titan-hwm/` |
 | **TitanFetch** | @GitGuru29 (Lead) | 🟢 Shipped | `subsystems/titan-fetch/` |
 | **Titan Sandbox** | @GitGuru29 (Lead) | 🟢 Shipped | `subsystems/titan-sandbox/` |
-| **Titan Settings** | @GitGuru29 (Lead) | 🟡 In Dev | `subsystems/titan-settings/` |
+| **Titan Settings** | @GitGuru29 (Lead) | 🟢 Active | `archtitan-settings/` |
 | **Auto GPU Switcher** | @GitGuru29 (Lead) | 🟡 In Dev | `subsystems/auto-gpu-switcher/` |
 | **TITAN AI** | Teammate | 🟡 In Dev | `subsystems/titan-ai/` |
 | **TITAN Task Manager** | Teammate | 🟡 In Dev | `subsystems/titan-task-manager/` |
@@ -245,6 +245,7 @@ The following paths are protected via `.github/CODEOWNERS`. Any PR touching thes
 | Protected Path | Description |
 | :--- | :--- |
 | `airootfs/` | OS rootfs overlay — systemd units, configs, binaries |
+| `archtitan-settings/` | Titan Settings — core system settings app (Qt6/QML) |
 | `efiboot/` & `grub/` | Boot configuration |
 | `titan-hwm-source/` | Titan Hardware Manager source |
 | `titanfetch-src/` | TitanFetch source |

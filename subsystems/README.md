@@ -2,6 +2,8 @@
 
 This folder contains all subsystems of ArchTitan OS. Each subsystem has an **identical folder layout** so every team member works in a predictable, consistent structure.
 
+> **Note:** Titan Settings is a **core OS component**, not a subsystem. Its source lives at [`archtitan-settings/`](../archtitan-settings/) in the repository root — alongside `titan-hwm-source/`, `titanfetch-src/`, and `sandbox/`.
+
 ## Subsystem Index
 
 | Subsystem | Owner | Status | Folder |
@@ -9,7 +11,6 @@ This folder contains all subsystems of ArchTitan OS. Each subsystem has an **ide
 | Titan Hardware Manager | @GitGuru29 | ✅ Active | [`titan-hwm/`](titan-hwm/) |
 | TitanFetch | @GitGuru29 | ✅ Active | [`titan-fetch/`](titan-fetch/) |
 | Titan Sandbox | @GitGuru29 | ✅ Active | [`titan-sandbox/`](titan-sandbox/) |
-| Titan Settings | @GitGuru29 | 🚧 Planned | [`titan-settings/`](titan-settings/) |
 | Auto GPU Switcher | @GitGuru29 | 🚧 Planned | [`auto-gpu-switcher/`](auto-gpu-switcher/) |
 | TITAN AI | Teammate | 🚧 In Development | [`titan-ai/`](titan-ai/) |
 | TITAN Task Manager | Teammate | 🚧 In Development | [`titan-task-manager/`](titan-task-manager/) |
