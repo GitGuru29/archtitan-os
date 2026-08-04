@@ -1,32 +1,20 @@
-# Titan Settings
+# Titan Settings — ⚠️ Moved
 
-> **Owner:** [@GitGuru29](https://github.com/GitGuru29)  
-> **Subsystem:** Titan Settings  
-> **Language:** TBD  
-> **Status:** 🚧 Planned
+> **This folder is no longer the active source location for Titan Settings.**
 
-## Overview
+## Titan Settings is a Core Component
 
-Titan Settings is the system configuration panel for ArchTitan OS. It provides a unified UI/CLI interface for managing OS-level settings, subsystem configs, display options, and user preferences.
+Titan Settings has been **promoted from a subsystem to a core OS component**, alongside `titan-hwm-source`, `titanfetch-src`, and `sandbox/`.
 
-## Planned Features
-
-- GUI settings panel (Qt6 or Hyprland-native)
-- Subsystem config management (THM, Sandbox, GPU Switcher)
-- Theme and display configuration
-- User profile management
-
-## Folder Structure
+The full source now lives at the root of the repository:
 
 ```
-titan-settings/
-├── src/        ← Source code
-├── tests/
-├── docs/
-├── configs/
-└── README.md
+archtitan-os/
+└── archtitan-settings/   ← Active source (Qt6/QML)
 ```
 
-## Status
+**See [`archtitan-settings/`](../../archtitan-settings/) for all source code, build instructions, and documentation.**
 
-> Development not yet started. This folder is reserved for the Titan Settings subsystem.
+---
+
+*This stub directory is kept for structural reference only. Do not add source code here.*
