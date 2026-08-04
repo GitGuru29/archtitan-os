@@ -2,9 +2,11 @@
 #include <QMainWindow>
 #include <QWebEngineView>
 #include <QLineEdit>
-#include <QToolBar>
 #include <QProgressBar>
-#include <QLabel>
+#include <QTabBar>
+#include <QStackedWidget>
+#include <QToolButton>
+#include <QPushButton>
 
 class TabWidget;
 class AddressBar;
@@ -31,14 +33,13 @@ private slots:
 
 private:
     void setupUi();
-    void setupToolbar();
-    void applyTheme();
     QWebEngineView *currentView() const;
 
-    TabWidget   *m_tabs       = nullptr;
-    AddressBar  *m_addressBar = nullptr;
-    QAction     *m_backAction    = nullptr;
-    QAction     *m_forwardAction = nullptr;
-    QAction     *m_reloadAction  = nullptr;
-    QProgressBar *m_progress  = nullptr;
+    TabWidget      *m_tabs         = nullptr;
+    AddressBar     *m_addressBar   = nullptr;
+    QPushButton    *m_backBtn      = nullptr;
+    QPushButton    *m_forwardBtn   = nullptr;
+    QPushButton    *m_reloadBtn    = nullptr;
+    QProgressBar   *m_progress     = nullptr;
+    QToolButton    *m_activeSidebarBtn = nullptr;
 };

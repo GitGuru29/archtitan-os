@@ -8,27 +8,28 @@ AddressBar::AddressBar(QWidget *parent) : QLineEdit(parent)
     setPlaceholderText(QStringLiteral("Search or enter address"));
     setClearButtonEnabled(true);
 
+    // Leading search icon
     QAction *searchIcon = addAction(QIcon(), QLineEdit::LeadingPosition);
     searchIcon->setText(QStringLiteral("🔍"));
-
-    QAction *starIcon = addAction(QIcon(), QLineEdit::TrailingPosition);
-    starIcon->setText(QStringLiteral("⭐"));
 
     setStyleSheet(QStringLiteral(R"(
         QLineEdit {
             background: #0d1322;
-            border: 1px solid rgba(56, 189, 248, 0.18);
-            border-radius: 16px;
-            color: #f8fafc;
-            padding: 5px 12px;
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 20px;
+            color: #e2e8f0;
+            padding: 6px 16px 6px 12px;
             font-size: 13px;
             selection-background-color: rgba(56, 189, 248, 0.3);
+            min-height: 22px;
         }
         QLineEdit:focus {
             background: #111827;
-            border: 1px solid rgba(56, 189, 248, 0.55);
+            border: 1px solid rgba(56, 189, 248, 0.5);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
         }
     )"));
+
     connect(this, &QLineEdit::returnPressed, this, &AddressBar::onReturnPressed);
 }
 
