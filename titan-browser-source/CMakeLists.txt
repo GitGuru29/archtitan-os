@@ -7,7 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS
-    Core Widgets WebEngineWidgets WebEngineCore)
+    Core Widgets WebEngineWidgets WebEngineCore Svg)
 
 qt_add_executable(titanbrowser
     src/main.cpp
@@ -25,6 +25,7 @@ target_link_libraries(titanbrowser PRIVATE
     Qt6::Widgets
     Qt6::WebEngineWidgets
     Qt6::WebEngineCore
+    Qt6::Svg
 )
 
 install(TARGETS titanbrowser DESTINATION /usr/local/bin)

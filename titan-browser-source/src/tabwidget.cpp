@@ -1,67 +1,101 @@
 #include "tabwidget.h"
 #include <QTabBar>
+#include <QStackedWidget>
 #include <QWebEngineView>
-#include <QWebEngineProfile>
+#include <QIcon>
 
-TabWidget::TabWidget(QWidget *parent) : QTabWidget(parent)
+TabWidget::TabWidget(QWidget *parent) : QObject(parent)
 {
-    setTabsClosable(true);
-    setMovable(true);
-    setDocumentMode(true);
-    setElideMode(Qt::ElideRight);
+    m_tabBar = new QTabBar(parent);
+    m_tabBar->setTabsClosable(true);
+    m_tabBar->setMovable(true);
+    m_tabBar->setElideMode(Qt::ElideRight);
+    m_tabBar->setExpanding(false);
 
-    connect(this, &QTabWidget::tabCloseRequested,
-            this, &TabWidget::onTabCloseRequested);
-    connect(this, &QTabWidget::currentChanged, this, [this](int idx) {
-        if (auto *v = qobject_cast<QWebEngineView *>(widget(idx))) {
-            emit urlChanged(v->url());
-            emit titleChanged(v->title());
-        }
-    });
+    m_stack = new QStackedWidget(parent);
+
+    connect(m_tabBar, &QTabBar::tabCloseRequested, this, &TabWidget::onTabCloseRequested);
+    connect(m_tabBar, &QTabBar::currentChanged, this, &TabWidget::onCurrentTabChanged);
 }
 
 QWebEngineView *TabWidget::newTab(const QUrl &url)
 {
-    auto *view = new QWebEngineView(this);
-    view->setUrl(url);
+    auto *view = new QWebEngineView(m_stack);
+    if (!url.isEmpty()) {
+        view->setUrl(url);
+    }
 
-    int idx = addTab(view, QStringLiteral("New Tab"));
-    setCurrentIndex(idx);
+    int stackIndex = m_stack->addWidget(view);
+    int tabIndex = m_tabBar->addTab(QStringLiteral("New Tab"));
+
+    m_tabBar->setCurrentIndex(tabIndex);
+    m_stack->setCurrentIndex(stackIndex);
+
     connectView(view);
-
     return view;
 }
 
 QWebEngineView *TabWidget::currentView() const
 {
-    return qobject_cast<QWebEngineView *>(currentWidget());
+    return qobject_cast<QWebEngineView *>(m_stack->currentWidget());
 }
 
 void TabWidget::connectView(QWebEngineView *view)
 {
     connect(view, &QWebEngineView::urlChanged, this, [this, view](const QUrl &url) {
-        if (view == currentWidget()) emit urlChanged(url);
+        if (view == m_stack->currentWidget()) emit urlChanged(url);
     });
+
     connect(view, &QWebEngineView::titleChanged, this, [this, view](const QString &title) {
-        int idx = indexOf(view);
-        if (idx >= 0) {
-            setTabText(idx, title.left(28));
-            setTabToolTip(idx, title);
+        int idx = m_stack->indexOf(view);
+        if (idx >= 0 && idx < m_tabBar->count()) {
+            QString displayTitle = title.isEmpty() ? QStringLiteral("New Tab") : title;
+            m_tabBar->setTabText(idx, displayTitle.left(24));
+            m_tabBar->setTabToolTip(idx, title);
         }
-        if (view == currentWidget()) emit titleChanged(title);
+        if (view == m_stack->currentWidget()) emit titleChanged(title);
     });
+
     connect(view, &QWebEngineView::loadProgress, this, [this, view](int p) {
-        if (view == currentWidget()) emit loadProgress(p);
+        if (view == m_stack->currentWidget()) emit loadProgress(p);
     });
+
     connect(view, &QWebEngineView::loadFinished, this, [this, view](bool ok) {
-        if (view == currentWidget()) emit loadFinished(ok);
+        if (view == m_stack->currentWidget()) emit loadFinished(ok);
     });
+
+    connect(view, &QWebEngineView::iconChanged, this, [this, view](const QIcon &icon) {
+        int idx = m_stack->indexOf(view);
+        if (idx >= 0 && idx < m_tabBar->count()) {
+            m_tabBar->setTabIcon(idx, icon);
+        }
+    });
+}
+
+void TabWidget::onCurrentTabChanged(int index)
+{
+    if (index >= 0 && index < m_stack->count()) {
+        m_stack->setCurrentIndex(index);
+        if (auto *v = qobject_cast<QWebEngineView *>(m_stack->widget(index))) {
+            emit urlChanged(v->url());
+            emit titleChanged(v->title());
+        }
+    }
 }
 
 void TabWidget::onTabCloseRequested(int index)
 {
-    if (count() <= 1) return; // keep at least one tab
-    auto *v = qobject_cast<QWebEngineView *>(widget(index));
-    removeTab(index);
-    delete v;
+    if (m_tabBar->count() <= 1) return; // Keep at least one tab
+
+    auto *v = qobject_cast<QWebEngineView *>(m_stack->widget(index));
+    m_tabBar->removeTab(index);
+    if (v) {
+        m_stack->removeWidget(v);
+        delete v;
+    }
+}
+
+void TabWidget::removeTab(int index)
+{
+    onTabCloseRequested(index);
 }

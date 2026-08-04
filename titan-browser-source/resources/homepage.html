@@ -7,11 +7,12 @@
     <style>
         :root {
             --bg-dark: #070913;
+            --bg-deep: #050710;
             --card-bg: rgba(15, 23, 42, 0.55);
-            --card-border: rgba(56, 189, 248, 0.12);
-            --card-hover-border: rgba(56, 189, 248, 0.4);
-            --card-hover-bg: rgba(30, 41, 59, 0.7);
-            --text-primary: #f8fafc;
+            --card-border: rgba(56, 189, 248, 0.10);
+            --card-hover-border: rgba(56, 189, 248, 0.35);
+            --card-hover-bg: rgba(30, 41, 59, 0.65);
+            --text-primary: #f0f4f8;
             --text-secondary: #94a3b8;
             --text-muted: #64748b;
             --accent-blue: #38bdf8;
@@ -28,7 +29,7 @@
         }
 
         body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Inter, sans-serif;
+            font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg-dark);
             color: var(--text-primary);
             min-height: 100vh;
@@ -39,7 +40,7 @@
             position: relative;
         }
 
-        /* ── Horizon Background Glow Effects ── */
+        /* ── Space Background Canvas ──────────────────────────────────── */
         .background-canvas {
             position: absolute;
             top: 0;
@@ -51,77 +52,104 @@
             overflow: hidden;
         }
 
-        /* Planet Horizon Glow curve */
-        .horizon-glow {
-            position: absolute;
-            bottom: 12%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 140vw;
-            height: 500px;
-            border-radius: 50%;
-            background: radial-gradient(ellipse at top, rgba(14, 116, 144, 0.35) 0%, rgba(14, 165, 233, 0.15) 35%, rgba(7, 9, 19, 0) 70%);
-            box-shadow: 0 -20px 80px 10px rgba(56, 189, 248, 0.25), inset 0 2px 30px 2px rgba(56, 189, 248, 0.5);
-            border-top: 1.5px solid rgba(186, 230, 253, 0.6);
-            opacity: 0.85;
-        }
-
+        /* Starfield */
         .starfield {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: 
-                radial-gradient(1.5px 1.5px at 15% 15%, rgba(255, 255, 255, 0.8), rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 35% 25%, rgba(255, 255, 255, 0.6), rgba(0,0,0,0)),
-                radial-gradient(2px 2px at 65% 12%, rgba(255, 255, 255, 0.9), rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 85% 30%, rgba(255, 255, 255, 0.7), rgba(0,0,0,0)),
-                radial-gradient(1.5px 1.5px at 50% 45%, rgba(255, 255, 255, 0.5), rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 20% 70%, rgba(255, 255, 255, 0.6), rgba(0,0,0,0)),
-                radial-gradient(1.5px 1.5px at 75% 75%, rgba(255, 255, 255, 0.7), rgba(0,0,0,0));
-            opacity: 0.6;
+            background-image:
+                radial-gradient(1.2px 1.2px at 10% 12%, rgba(255,255,255,0.75), transparent),
+                radial-gradient(1px 1px at 25% 8%, rgba(255,255,255,0.5), transparent),
+                radial-gradient(1.5px 1.5px at 40% 20%, rgba(255,255,255,0.85), transparent),
+                radial-gradient(0.8px 0.8px at 55% 5%, rgba(255,255,255,0.4), transparent),
+                radial-gradient(1px 1px at 70% 15%, rgba(255,255,255,0.6), transparent),
+                radial-gradient(1.3px 1.3px at 85% 22%, rgba(255,255,255,0.7), transparent),
+                radial-gradient(0.7px 0.7px at 92% 8%, rgba(255,255,255,0.45), transparent),
+                radial-gradient(1px 1px at 15% 35%, rgba(255,255,255,0.55), transparent),
+                radial-gradient(1.5px 1.5px at 50% 42%, rgba(255,255,255,0.5), transparent),
+                radial-gradient(0.8px 0.8px at 78% 38%, rgba(255,255,255,0.6), transparent),
+                radial-gradient(1px 1px at 30% 55%, rgba(255,255,255,0.4), transparent),
+                radial-gradient(1.2px 1.2px at 62% 48%, rgba(255,255,255,0.55), transparent);
+            opacity: 0.5;
         }
 
-        /* ── Main Container ── */
+        /* Planet horizon glow — bright blue-white arc at bottom */
+        .horizon-glow {
+            position: absolute;
+            bottom: 8%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 160vw;
+            height: 550px;
+            border-radius: 50%;
+            background: radial-gradient(ellipse at top,
+                rgba(14, 165, 233, 0.30) 0%,
+                rgba(14, 116, 144, 0.18) 30%,
+                rgba(7, 9, 19, 0) 65%);
+            box-shadow:
+                0 -15px 60px 8px rgba(56, 189, 248, 0.20),
+                inset 0 2px 40px 4px rgba(56, 189, 248, 0.45);
+            border-top: 1.5px solid rgba(186, 230, 253, 0.55);
+            opacity: 0.9;
+        }
+
+        /* Subtle upper atmosphere glow */
+        .atmo-glow {
+            position: absolute;
+            bottom: 18%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 120vw;
+            height: 300px;
+            border-radius: 50%;
+            background: radial-gradient(ellipse at bottom,
+                rgba(56, 189, 248, 0.06) 0%,
+                transparent 70%);
+        }
+
+        /* ── Main Container ───────────────────────────────────────────── */
         .container {
             position: relative;
             z-index: 1;
             width: 100%;
-            max-width: 1100px;
+            max-width: 1080px;
             margin: 0 auto;
-            padding: 40px 24px 20px;
+            padding: 36px 28px 16px;
             display: flex;
             flex-direction: column;
             align-items: center;
+            flex: 1;
         }
 
-        /* ── Header Branding ── */
+        /* ── Hero Branding ────────────────────────────────────────────── */
         .hero {
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-bottom: 32px;
+            margin-bottom: 28px;
             text-align: center;
         }
 
         .logo-container {
             display: flex;
             align-items: center;
-            gap: 16px;
-            margin-bottom: 10px;
+            gap: 14px;
+            margin-bottom: 8px;
         }
 
         .logo-mark {
-            width: 48px;
-            height: 48px;
-            filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.6));
+            width: 56px;
+            height: 56px;
+            filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.5))
+                    drop-shadow(0 0 40px rgba(56, 189, 248, 0.2));
         }
 
         .brand-title {
-            font-size: 38px;
-            font-weight: 800;
-            letter-spacing: 2px;
+            font-size: 42px;
+            font-weight: 900;
+            letter-spacing: 3px;
             display: flex;
             align-items: center;
         }
@@ -131,53 +159,59 @@
         }
 
         .brand-browser {
-            color: #38bdf8;
-            margin-left: 2px;
-            background: linear-gradient(135deg, #38bdf8 0%, #00d4ff 100%);
+            margin-left: 4px;
+            background: linear-gradient(135deg, #38bdf8 0%, #00b4d8 50%, #0284c7 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.4));
+            background-clip: text;
+            filter: drop-shadow(0 0 24px rgba(56, 189, 248, 0.35));
         }
 
         .tagline {
-            font-size: 14px;
+            font-size: 13px;
             color: var(--text-secondary);
-            letter-spacing: 3px;
+            letter-spacing: 4px;
             font-weight: 500;
             text-transform: uppercase;
-            opacity: 0.85;
+            opacity: 0.9;
         }
 
-        .tagline span {
+        .tagline .dot {
             color: var(--accent-blue);
-            margin: 0 8px;
+            margin: 0 10px;
+            font-size: 14px;
         }
 
-        /* ── Central Search Bar ── */
+        /* ── Central Search Bar ───────────────────────────────────────── */
         .search-wrapper {
             width: 100%;
-            max-width: 680px;
-            margin-bottom: 40px;
+            max-width: 660px;
+            margin-bottom: 36px;
             position: relative;
         }
 
         .search-form {
             display: flex;
             align-items: center;
-            background: rgba(15, 23, 42, 0.65);
-            border: 1px solid rgba(56, 189, 248, 0.25);
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.20);
             border-radius: 28px;
-            padding: 6px 14px 6px 20px;
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-            transition: all 0.25s ease;
+            padding: 8px 14px 8px 20px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.06);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .search-form:focus-within {
-            border-color: rgba(56, 189, 248, 0.65);
-            box-shadow: 0 0 25px rgba(56, 189, 248, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-            background: rgba(15, 23, 42, 0.85);
+            border-color: rgba(56, 189, 248, 0.55);
+            box-shadow:
+                0 0 0 3px rgba(56, 189, 248, 0.08),
+                0 0 30px rgba(56, 189, 248, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.8);
         }
 
         .search-icon {
@@ -185,7 +219,8 @@
             margin-right: 12px;
             display: flex;
             align-items: center;
-            transition: color 0.2s ease;
+            transition: color 0.25s ease;
+            flex-shrink: 0;
         }
 
         .search-form:focus-within .search-icon {
@@ -200,6 +235,7 @@
             color: var(--text-primary);
             font-size: 15px;
             font-family: inherit;
+            caret-color: var(--accent-blue);
         }
 
         .search-input::placeholder {
@@ -217,27 +253,28 @@
             align-items: center;
             justify-content: center;
             transition: all 0.2s ease;
+            flex-shrink: 0;
         }
 
         .search-submit:hover {
             color: var(--text-primary);
-            background: rgba(56, 189, 248, 0.15);
+            background: rgba(56, 189, 248, 0.12);
         }
 
-        /* ── Top Grid Shortcuts ── */
+        /* ── Shortcuts Grid ───────────────────────────────────────────── */
         .shortcuts-grid {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 16px;
+            gap: 14px;
             width: 100%;
-            margin-bottom: 48px;
+            margin-bottom: 44px;
         }
 
         .shortcut-card {
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 16px;
-            padding: 20px 12px 16px;
+            padding: 22px 12px 16px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -250,27 +287,46 @@
             cursor: pointer;
             position: relative;
             overflow: hidden;
-            height: 125px;
+            height: 130px;
+        }
+
+        .shortcut-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 16px;
+            background: radial-gradient(circle at 50% 0%, rgba(56,189,248,0.06) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .shortcut-card:hover::before {
+            opacity: 1;
         }
 
         .shortcut-card:hover {
             background: var(--card-hover-bg);
             border-color: var(--card-hover-border);
             transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4), 0 0 15px var(--accent-glow);
+            box-shadow:
+                0 12px 28px rgba(0, 0, 0, 0.4),
+                0 0 12px var(--accent-glow);
         }
 
         .shortcut-icon-wrapper {
-            width: 44px;
-            height: 44px;
+            width: 48px;
+            height: 48px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 12px;
             font-size: 22px;
-            background: rgba(255, 255, 255, 0.05);
-            transition: transform 0.2s ease;
+            background: rgba(255, 255, 255, 0.04);
+            transition: transform 0.25s ease;
         }
 
         .shortcut-card:hover .shortcut-icon-wrapper {
@@ -280,7 +336,7 @@
         .shortcut-title {
             font-size: 13px;
             font-weight: 600;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
             text-align: center;
             white-space: nowrap;
             overflow: hidden;
@@ -299,25 +355,27 @@
         }
 
         .add-shortcut-btn {
-            border: 1px dashed rgba(56, 189, 248, 0.25);
-            background: rgba(15, 23, 42, 0.3);
+            border: 1.5px dashed rgba(56, 189, 248, 0.22);
+            background: rgba(15, 23, 42, 0.25);
         }
 
         .add-shortcut-btn:hover {
             border-style: solid;
-            background: rgba(30, 41, 59, 0.5);
+            background: rgba(30, 41, 59, 0.45);
         }
 
         .add-icon {
-            font-size: 24px;
+            font-size: 28px;
             color: var(--text-muted);
             margin-bottom: 8px;
+            font-weight: 300;
+            line-height: 1;
         }
 
-        /* ── Section: Continue Browsing ── */
+        /* ── Section: Continue Browsing ────────────────────────────────── */
         .section-container {
             width: 100%;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         .section-header {
@@ -329,20 +387,31 @@
             letter-spacing: 1.5px;
             color: var(--text-secondary);
             text-transform: uppercase;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             padding-left: 4px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .section-header:hover {
+            color: var(--text-primary);
         }
 
         .section-header svg {
-            width: 12px;
-            height: 12px;
+            width: 14px;
+            height: 14px;
             fill: currentColor;
+            transition: transform 0.2s ease;
+        }
+
+        .section-header:hover svg {
+            transform: translateX(2px);
         }
 
         .recent-grid {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
-            gap: 16px;
+            gap: 14px;
             width: 100%;
         }
 
@@ -359,7 +428,7 @@
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             transition: all 0.2s ease;
-            height: 94px;
+            height: 96px;
             cursor: pointer;
         }
 
@@ -377,14 +446,15 @@
         }
 
         .recent-icon {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             flex-shrink: 0;
-            margin-top: 2px;
+            margin-top: 1px;
         }
 
         .recent-info {
             overflow: hidden;
+            min-width: 0;
         }
 
         .recent-title {
@@ -415,7 +485,7 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            border-color: rgba(56, 189, 248, 0.2);
+            border-color: rgba(56, 189, 248, 0.15);
         }
 
         .history-btn-card .history-icon {
@@ -432,12 +502,12 @@
             color: var(--text-primary);
         }
 
-        /* ── Footer / Status Bar ── */
+        /* ── Footer / Status Bar ──────────────────────────────────────── */
         .footer-bar {
             position: relative;
             z-index: 2;
             width: 100%;
-            padding: 16px 24px;
+            padding: 14px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -447,13 +517,25 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(56, 189, 248, 0.18);
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(56, 189, 248, 0.14);
             border-radius: 20px;
-            padding: 6px 14px;
+            padding: 7px 16px;
             font-size: 12px;
             color: var(--text-secondary);
             backdrop-filter: blur(8px);
+            transition: all 0.2s ease;
+        }
+
+        .status-pill:hover {
+            border-color: rgba(56, 189, 248, 0.3);
+            background: rgba(15, 23, 42, 0.7);
+        }
+
+        .status-pill .shield-icon {
+            display: flex;
+            align-items: center;
+            color: var(--accent-blue);
         }
 
         .status-dot {
@@ -462,57 +544,154 @@
             border-radius: 50%;
             background-color: var(--shield-green);
             box-shadow: 0 0 8px var(--shield-green);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--shield-green); }
+            50% { opacity: 0.7; box-shadow: 0 0 12px var(--shield-green); }
         }
 
         .customize-btn {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(56, 189, 248, 0.18);
+            gap: 7px;
+            background: rgba(15, 23, 42, 0.55);
+            border: 1px solid rgba(56, 189, 248, 0.14);
             border-radius: 20px;
-            padding: 6px 16px;
+            padding: 7px 18px;
             font-size: 12px;
             color: var(--text-secondary);
             cursor: pointer;
             backdrop-filter: blur(8px);
             transition: all 0.2s ease;
+            font-family: inherit;
         }
 
         .customize-btn:hover {
             color: var(--text-primary);
-            border-color: rgba(56, 189, 248, 0.4);
-            background: rgba(30, 41, 59, 0.7);
+            border-color: rgba(56, 189, 248, 0.35);
+            background: rgba(30, 41, 59, 0.65);
         }
 
-        /* Modal Overlay */
+        /* ── Add Shortcut Modal ───────────────────────────────────────── */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
             z-index: 100;
             display: none;
             align-items: center;
             justify-content: center;
         }
+
         .modal-card {
             background: #0f172a;
-            border: 1px solid rgba(56,189,248,0.3);
+            border: 1px solid rgba(56, 189, 248, 0.25);
             border-radius: 16px;
             padding: 24px;
             width: 380px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
+            animation: modal-in 0.2s ease-out;
         }
-        .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+
+        @keyframes modal-in {
+            from { opacity: 0; transform: scale(0.95) translateY(8px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .modal-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--text-primary);
+        }
+
         .modal-input {
-            width: 100%; background: #1e293b; border: 1px solid rgba(56,189,248,0.2);
-            border-radius: 8px; padding: 10px 12px; color: #fff; margin-bottom: 12px;
-            outline: none; font-size: 13px;
+            width: 100%;
+            background: #1e293b;
+            border: 1px solid rgba(56, 189, 248, 0.18);
+            border-radius: 10px;
+            padding: 10px 14px;
+            color: #fff;
+            margin-bottom: 12px;
+            outline: none;
+            font-size: 13px;
+            font-family: inherit;
+            transition: border-color 0.2s ease;
         }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
-        .btn-cancel { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 8px 14px; font-size: 13px; }
-        .btn-save { background: var(--accent-blue); border: none; color: #0f172a; font-weight: 600; border-radius: 8px; cursor: pointer; padding: 8px 16px; font-size: 13px; }
+
+        .modal-input:focus {
+            border-color: rgba(56, 189, 248, 0.5);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .btn-cancel:hover {
+            color: var(--text-secondary);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+            border: none;
+            color: #0f172a;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            padding: 8px 20px;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .btn-save:hover {
+            filter: brightness(1.1);
+            box-shadow: 0 4px 16px rgba(56, 189, 248, 0.3);
+        }
+
+        /* ── Animations ───────────────────────────────────────────────── */
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.8; }
+        }
+
+        .starfield {
+            animation: twinkle 4s ease-in-out infinite alternate;
+        }
+
+        /* ── Scrollbar ────────────────────────────────────────────────── */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.15);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -520,6 +699,7 @@
     <!-- Background Planet Horizon Glow -->
     <div class="background-canvas">
         <div class="starfield"></div>
+        <div class="atmo-glow"></div>
         <div class="horizon-glow"></div>
     </div>
 
@@ -530,11 +710,12 @@
         <div class="hero">
             <div class="logo-container">
                 <svg class="logo-mark" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M32 6L6 54H20L32 30L44 54H58L32 6Z" fill="url(#arch-grad)" />
-                    <path d="M25 40H39L32 26L25 40Z" fill="#ffffff" opacity="0.9" />
+                    <path d="M32 4L4 56H18L32 28L46 56H60L32 4Z" fill="url(#arch-grad)" />
+                    <path d="M24 42H40L32 26L24 42Z" fill="#ffffff" opacity="0.85" />
                     <defs>
-                        <linearGradient id="arch-grad" x1="6" y1="6" x2="58" y2="54" gradientUnits="userSpaceOnUse">
+                        <linearGradient id="arch-grad" x1="4" y1="4" x2="60" y2="56" gradientUnits="userSpaceOnUse">
                             <stop stop-color="#38BDF8" />
+                            <stop offset="0.5" stop-color="#0EA5E9" />
                             <stop offset="1" stop-color="#0284C7" />
                         </linearGradient>
                     </defs>
@@ -544,7 +725,7 @@
                     <span class="brand-browser">BROWSER</span>
                 </div>
             </div>
-            <div class="tagline">Native <span>•</span> Secure <span>•</span> Fast</div>
+            <div class="tagline">Native <span class="dot">•</span> Secure <span class="dot">•</span> Fast</div>
         </div>
 
         <!-- Central Search Bar -->
@@ -570,7 +751,7 @@
         <div class="shortcuts-grid" id="shortcutsGrid">
             <a href="https://archtitan.io" class="shortcut-card">
                 <div class="shortcut-icon-wrapper" style="color: #38bdf8;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2L2 22h5l5-10 5 10h5L12 2z"/>
                     </svg>
                 </div>
@@ -580,7 +761,7 @@
 
             <a href="https://github.com" class="shortcut-card">
                 <div class="shortcut-icon-wrapper" style="color: #ffffff;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
                         <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
                     </svg>
                 </div>
@@ -590,7 +771,7 @@
 
             <a href="https://youtube.com" class="shortcut-card">
                 <div class="shortcut-icon-wrapper" style="color: #ef4444;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                     </svg>
                 </div>
@@ -600,7 +781,7 @@
 
             <a href="https://google.com" class="shortcut-card">
                 <div class="shortcut-icon-wrapper">
-                    <svg width="24" height="24" viewBox="0 0 24 24">
+                    <svg width="26" height="26" viewBox="0 0 24 24">
                         <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
                         <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.25 21.3 7.31 24 12 24z"/>
                         <path fill="#FBBC05" d="M5.28 14.27a7.19 7.19 0 010-4.54V6.58H1.26a11.98 11.98 0 000 10.84l4.02-3.15z"/>
@@ -613,7 +794,7 @@
 
             <a href="https://reddit.com" class="shortcut-card">
                 <div class="shortcut-icon-wrapper" style="color: #ff4500;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 0C5.373 0 0 5.373 0 12c0 3.314 1.344 6.315 3.516 8.484l-1.04 3.09 3.284-1.002C7.79 23.36 9.827 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm5.01 4.744c.688 0 1.25.56 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.362.768-.584 1.277-.584 1.01 0 1.83 0.82 1.83 1.83 0 .783-.497 1.45-1.19 1.706.02.215.03.433.03.655 0 3.33-3.834 6.03-8.56 6.03-4.727 0-8.56-2.7-8.56-6.03 0-.22.01-.438.03-.653C4.256 13.414 3.76 12.748 3.76 11.965c0-1.01.82-1.83 1.83-1.83.51 0 .97.22 1.277.583 1.192-.857 2.846-1.42 4.67-1.488l.898-4.21 3.26.687a1.25 1.25 0 011.315-.963z"/>
                     </svg>
                 </div>
@@ -705,7 +886,7 @@
                 </a>
 
                 <div class="recent-card history-btn-card" id="viewHistoryBtn">
-                    <svg class="history-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="history-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"></circle>
                         <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
@@ -719,8 +900,13 @@
     <!-- Footer Bar -->
     <div class="footer-bar">
         <div class="status-pill">
-            <span class="status-dot"></span>
+            <div class="shield-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+            </div>
             <span>TitanShield Active</span>
+            <span class="status-dot"></span>
         </div>
         <button class="customize-btn" id="customizeBtn">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -770,6 +956,18 @@
             modal.style.display = 'none';
         });
 
+        // Close modal on overlay click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.style.display = 'none';
+        });
+
+        // Close modal on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.style.display === 'flex') {
+                modal.style.display = 'none';
+            }
+        });
+
         document.getElementById('saveShortcutModal').addEventListener('click', () => {
             const name = document.getElementById('shortcutNameInput').value.trim();
             let url = document.getElementById('shortcutUrlInput').value.trim();
@@ -786,7 +984,7 @@
             card.className = 'shortcut-card';
             card.innerHTML = `
                 <div class="shortcut-icon-wrapper" style="color: #38bdf8;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
                 </div>
                 <div class="shortcut-title">${name}</div>
                 <div class="shortcut-domain">${domain}</div>
