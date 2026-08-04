@@ -1,6 +1,6 @@
-# ─── Separate projects (not part of this repo) ────────────────────────────────
-# archtitan-settings (Qt6 Settings App) lives at ~/Desktop/archtitan-settings
-# It has its own git repo — do NOT include here.
+# Build artifacts for archtitan-settings
+archtitan-settings/build/
+archtitan-settings/archtitan-settings
 
 # Archiso build artifacts
 out/
