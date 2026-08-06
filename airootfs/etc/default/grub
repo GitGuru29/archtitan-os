@@ -32,4 +32,4 @@ GRUB_GFXPAYLOAD_LINUX=keep
 GRUB_DISABLE_RECOVERY=true
 
 # --- Your Custom Theme ---
-GRUB_THEME="/usr/share/grub/themes/archtitan/theme.txt"
+# GRUB_THEME="/usr/share/grub/themes/archtitan/theme.txt"
