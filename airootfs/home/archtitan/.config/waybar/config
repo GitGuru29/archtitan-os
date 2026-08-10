@@ -1,7 +1,7 @@
 {
     "layer": "top",
     "position": "top",
-    "height": 34,
+    "height": 46,
     "margin-top": 6,
     "margin-left": 10,
     "margin-right": 10,
@@ -10,29 +10,70 @@
 
     "modules-left": [
         "custom/logo",
-        "hyprland/workspaces",
-        "hyprland/window"
+        "memory",
+        "network",
+        "cpu",
+        "mpris"
     ],
     "modules-center": [
-        "mpris",
-        "hyprland/workspaces#dots"
+        "hyprland/workspaces"
     ],
     "modules-right": [
-        "custom/power",
         "custom/titan-hwm",
-        "cpu",
-        "memory",
+        "battery",
         "clock",
         "tray",
-        "backlight",
-        "pulseaudio",
-        "network",
-        "battery"
+        "bluetooth"
     ],
 
     "custom/logo": {
-        "format": "◆",
+        "format": "✦  ARCHTITAN",
         "tooltip": false
+    },
+
+    "hyprland/workspaces": {
+        "format": "{id}",
+        "on-click": "activate",
+        "sort-by-number": true,
+        "persistent-workspaces": {
+            "*": 5
+        }
+    },
+
+    "mpris": {
+        "format": "{player_icon}  {title} — {artist}",
+        "format-paused": "{status_icon}  {title}",
+        "format-stopped": "♪  No media",
+        "player-icons": {
+            "default": "▶",
+            "spotify": ""
+        },
+        "status-icons": {
+            "paused": "⏸"
+        },
+        "ignored-players": ["firefox"],
+        "max-length": 30,
+        "tooltip": false
+    },
+
+    "memory": {
+        "format": "  {}%",
+        "tooltip-format": "RAM: {used:0.1f} GB / {total:0.1f} GB\nSwap: {swapUsed:0.1f} GB / {swapTotal:0.1f} GB",
+        "interval": 5
+    },
+
+    "network": {
+        "format-wifi": "  {signalStrength}%",
+        "format-ethernet": "󰈀  Wired",
+        "format-disconnected": "󰤭  Off",
+        "tooltip-format-wifi": "{essid} — {signalStrength}%\n{ipaddr}",
+        "tooltip-format-ethernet": "{ifname}: {ipaddr}"
+    },
+
+    "cpu": {
+        "format": "  {usage}%",
+        "tooltip": true,
+        "interval": 2
     },
 
     "custom/titan-hwm": {
@@ -43,65 +84,24 @@
         "on-right-click": "bash -c 'if [ ! -d /run/archiso ]; then kitty --title=\"Titan HWM\" -e bash -c \"titan-hwm status; echo; read -p \\\"Press Enter...\\\"\"; fi'"
     },
 
-    "hyprland/workspaces": {
-        "format": "{id}",
-        "on-click": "activate",
-        "sort-by-number": true,
-        "persistent-workspaces": {
-            "*": 5
+    "battery": {
+        "states": {
+            "good": 95,
+            "warning": 30,
+            "critical": 15
         },
-        "format-icons": {
-            "active": "{id}",
-            "default": "{id}"
-        }
-    },
-
-    "hyprland/workspaces#dots": {
-        "format": "{icon}",
-        "format-icons": {
-            "active": "●",
-            "default": "·",
-            "empty": "·"
-        },
-        "on-click": "activate",
-        "sort-by-number": true,
-        "persistent-workspaces": {
-            "*": 9
-        },
-        "tooltip": false
-    },
-
-    "hyprland/window": {
-        "format": "{}",
-        "max-length": 60,
-        "separate-outputs": true,
-        "rewrite": {
-            "(.*)calamares(.*)": "⬇ ArchTitan Setup",
-            "(.*)Calamares(.*)": "⬇ ArchTitan Setup",
-            "(.*) — Mozilla Firefox": "🌐 $1",
-            "(.*) - fish": "> $1",
-            "(.*) - kitty": "> $1"
-        }
-    },
-
-    "mpris": {
-        "format": "{player_icon}  {title} — {artist}",
-        "format-paused": "{status_icon}  {title}",
-        "format-stopped": "",
-        "player-icons": {
-            "default": "▶",
-            "spotify": ""
-        },
-        "status-icons": {
-            "paused": "⏸"
-        },
-        "ignored-players": ["firefox"],
-        "max-length": 40,
-        "tooltip": false
+        "format": "{icon}  {capacity}%",
+        "format-charging": "  {capacity}%",
+        "format-plugged": "  {capacity}%",
+        "format-full": "  Full",
+        "format-not-found": "󰂑  AC",
+        "format-icons": ["", "", "", "", ""],
+        "tooltip-format": "{timeTo} — {capacity}%\nPower: {power:.1f}W",
+        "interval": 5
     },
 
     "clock": {
-        "format": "  {:%H:%M  •  %a, %d/%m}",
+        "format": "{:%H:%M\n%a, %d/%m}",
         "tooltip-format": "<tt><big>{calendar}</big></tt>",
         "calendar": {
             "mode": "month",
@@ -117,74 +117,20 @@
         }
     },
 
-    "backlight": {
-        "format": "{icon} {percent}%",
-        "format-icons": ["", "", "", "", "", "", "", "", ""],
-        "tooltip": false
-    },
-
-    "pulseaudio": {
-        "format": "{icon} {volume}%",
-        "format-muted": "󰖁 Muted",
-        "format-icons": {
-            "headphone": "",
-            "hands-free": "",
-            "headset": "",
-            "phone": "",
-            "portable": "",
-            "car": "",
-            "default": ["", "", ""]
-        },
-        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
-        "on-right-click": "pavucontrol",
-        "tooltip": false
-    },
-
-    "network": {
-        "format-wifi": " {signalStrength}%",
-        "format-ethernet": "󰈀 Wired",
-        "format-disconnected": "󰤭 Off",
-        "tooltip-format-wifi": "{essid} — {signalStrength}%\n{ipaddr}",
-        "tooltip-format-ethernet": "{ifname}: {ipaddr}"
-    },
-
-    "battery": {
-        "states": {
-            "good": 95,
-            "warning": 30,
-            "critical": 15
-        },
-        "format": "{icon} {capacity}%",
-        "format-charging": "  {capacity}%",
-        "format-plugged": "  {capacity}%",
-        "format-full": "  Full",
-        "format-not-found": "󰂑 AC",
-        "format-icons": ["", "", "", "", ""],
-        "tooltip-format": "{timeTo} — {capacity}%\nPower: {power:.1f}W",
-        "interval": 5
+    "bluetooth": {
+        "format": "󰂯",
+        "format-connected": "󰂱",
+        "format-disabled": "󰂲",
+        "format-off": "󰂲",
+        "tooltip-format": "{controller_alias}\n{num_connections} connected",
+        "tooltip-format-connected": "{controller_alias}\n{num_connections} connected\n\n{device_enumerate}",
+        "tooltip-format-enumerate-connected": "{device_alias}",
+        "on-click": "blueman-manager"
     },
 
     "tray": {
         "icon-size": 14,
         "spacing": 6,
         "show-passive-items": true
-    },
-
-    "cpu": {
-        "format": "  {usage}%",
-        "tooltip": true,
-        "interval": 2
-    },
-
-    "memory": {
-        "format": "  {}%",
-        "tooltip-format": "RAM: {used:0.1f} GB / {total:0.1f} GB\nSwap: {swapUsed:0.1f} GB / {swapTotal:0.1f} GB",
-        "interval": 5
-    },
-
-    "custom/power": {
-        "format": "⏻ ",
-        "tooltip": false,
-        "on-click": "titan-powermenu"
     }
 }
