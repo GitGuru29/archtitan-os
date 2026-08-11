@@ -1,255 +1,224 @@
 /* ═══════════════════════════════════════════════════════════
- * ArchTitan Waybar — Redesigned Glassmorphism Theme
- * Pill-grouped layout with neon accents & circular workspace
+ * ARCHTITAN HUD — Technical Instrumentation Theme
+ * Industrial, developer-focused, minimal Wayland HUD
  * ═══════════════════════════════════════════════════════════ */
 
 * {
-    font-family: "JetBrainsMono Nerd Font", "Inter", monospace;
-    font-size: 12px;
+    font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+    font-size: 11px;
+    font-weight: 500;
     min-height: 0;
     border: none;
     border-radius: 0;
     padding: 0;
     margin: 0;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
-/* ── Main bar — frosted glass panel ──────────────────────── */
+/* ── Main Persistent HUD Bar ─────────────────────────────── */
 window#waybar {
-    background: rgba(10, 11, 20, 0.72);
-    border: 1px solid rgba(122, 162, 247, 0.10);
-    border-radius: 14px;
-    color: #C0CAF5;
-    box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.45),
-        0 2px 8px  rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    background: rgba(17, 17, 27, 0.88); /* Catppuccin Crust with 88% opacity */
+    border: 1px solid rgba(137, 180, 250, 0.14); /* Subtle 1px sapphire border */
+    border-radius: 6px;
+    color: #CDD6F4;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 window#waybar.hidden {
-    opacity: 0.15;
+    opacity: 0.1;
 }
 
-/* ── Module containers — pill groups ─────────────────────── */
-.modules-left {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 12px;
-    margin: 4px 6px;
-    padding: 0 2px;
-}
-
-.modules-center {
+/* ── Module Group Containers ─────────────────────────────── */
+.modules-left,
+.modules-center,
+.modules-right {
     padding: 0 6px;
 }
 
-.modules-right {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 12px;
-    margin: 4px 6px;
-    padding: 0 2px;
-}
+/* ═══════════ LEFT SECTION — IDENTITY ═════════════════════ */
 
-/* ═══════════ LEFT SIDE ═══════════════════════════════════ */
-
-/* ── Logo — ARCHTITAN branding ────────────────────────────── */
 #custom-logo {
-    color: #C0CAF5;
-    font-size: 12px;
+    color: #89B4FA;
+    font-size: 11px;
     font-weight: 700;
-    padding: 0 14px 0 12px;
-    margin: 2px 0;
-    letter-spacing: 1.5px;
-    text-shadow: 0 0 12px rgba(122, 162, 247, 0.5);
-    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    letter-spacing: 1.2px;
+    padding: 0 12px 0 6px;
+    text-shadow: 0 0 8px rgba(137, 180, 250, 0.35);
 }
 
-/* ── Memory ──────────────────────────────────────────────── */
-#memory {
-    color: #A9B1D6;
-    padding: 0 10px;
-    font-size: 11.5px;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
+/* ═══════════ CENTER SECTION — WORKSPACES & CONTEXT ═══════ */
+
+/* ── Workspaces ───────────────────────────────────────────── */
+#workspaces {
+    margin: 0 2px;
 }
 
-/* ── Network ─────────────────────────────────────────────── */
-#network {
-    color: #A9B1D6;
-    padding: 0 10px;
-    font-size: 11.5px;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
+#workspaces button {
+    padding: 2px 7px;
+    margin: 4px 1px;
+    color: #585B70; /* Dimmed inactive */
+    background: transparent;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
 }
 
-#network.disconnected {
-    color: #414868;
+#workspaces button:hover {
+    color: #A6ADC8;
+    background: rgba(137, 180, 250, 0.08);
+}
+
+/* Active workspace — clean geometric accent */
+#workspaces button.active {
+    color: #89B4FA;
+    background: rgba(137, 180, 250, 0.12);
+    border-bottom: 2px solid #89B4FA;
+    border-radius: 3px 3px 0 0;
+    text-shadow: 0 0 6px rgba(137, 180, 250, 0.4);
+}
+
+#workspaces button.urgent {
+    color: #F38BA8;
+    background: rgba(243, 139, 168, 0.15);
+    border-bottom: 2px solid #F38BA8;
+}
+
+/* ── Center Dividers ──────────────────────────────────────── */
+#custom-separator-center,
+#custom-separator-app {
+    color: rgba(88, 91, 112, 0.5);
+    padding: 0 8px;
+    font-size: 11px;
+}
+
+/* ── Contextual Workspace Name ────────────────────────────── */
+#custom-hud-context {
+    color: #A6ADC8;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.8px;
+    padding: 0 4px;
+}
+
+#custom-hud-context.system-dev {
+    color: #74C7EC; /* Sapphire */
+}
+
+#custom-hud-context.web-dev {
+    color: #89B4FA; /* Blue */
+}
+
+#custom-hud-context.android-dev {
+    color: #A6E3A1; /* Green */
+}
+
+#custom-hud-context.casual {
+    color: #F9E2AF; /* Yellow */
+}
+
+#custom-hud-context.neutral {
+    color: #9399B2; /* Overlay */
+}
+
+/* ── Focused Application Name ─────────────────────────────── */
+#window {
+    color: #CDD6F4;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 0 6px;
+}
+
+/* ═══════════ RIGHT SECTION — TELEMETRY ═══════════════════ */
+
+/* Telemetry Items Common Styling */
+#cpu,
+#memory,
+#custom-gpu,
+#network,
+#pulseaudio,
+#battery,
+#clock {
+    color: #A6ADC8;
+    padding: 0 8px;
+    font-size: 10.5px;
+    letter-spacing: 0.3px;
+    margin: 4px 1px;
+}
+
+/* Subtle separator between telemetry items */
+.modules-right > widget:not(:last-child) > * {
+    border-right: 1px solid rgba(88, 91, 112, 0.25);
 }
 
 /* ── CPU ──────────────────────────────────────────────────── */
 #cpu {
-    color: #A9B1D6;
-    padding: 0 10px;
-    font-size: 11.5px;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    color: #89B4FA;
 }
 
-/* ── MPRIS Media ──────────────────────────────────────────── */
-#mpris {
-    color: #565F89;
-    padding: 0 12px;
-    font-size: 11px;
+/* ── Memory ───────────────────────────────────────────────── */
+#memory {
+    color: #74C7EC;
 }
 
-#mpris.playing {
-    color: #A9B1D6;
+/* ── GPU ──────────────────────────────────────────────────── */
+#custom-gpu {
+    color: #94E2D5;
 }
 
-/* ═══════════ CENTER — WORKSPACES ════════════════════════ */
-
-#workspaces {
-    margin: 0 4px;
+#custom-gpu.hidden {
+    padding: 0;
+    margin: 0;
+    border: none;
 }
 
-#workspaces button {
-    padding: 2px 8px;
-    margin: 5px 3px;
-    color: rgba(192, 202, 245, 0.5);
-    background: transparent;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 600;
-    min-width: 22px;
-    min-height: 22px;
-    transition: all 0.15s ease;
+/* ── Network ──────────────────────────────────────────────── */
+#network {
+    color: #A6ADC8;
 }
 
-#workspaces button:hover {
-    background: rgba(122, 162, 247, 0.10);
-    color: #A9B1D6;
+#network.disconnected {
+    color: #585B70;
 }
 
-/* Active workspace — circular highlight */
-#workspaces button.active {
-    background: rgba(122, 162, 247, 0.25);
-    color: #FFFFFF;
-    border-radius: 50%;
-    min-width: 26px;
-    min-height: 26px;
-    box-shadow:
-        0 0 12px rgba(122, 162, 247, 0.3),
-        inset 0 0 6px rgba(122, 162, 247, 0.15);
-    text-shadow: 0 0 8px rgba(122, 162, 247, 0.5);
+/* ── Audio ────────────────────────────────────────────────── */
+#pulseaudio {
+    color: #B4BEFE;
 }
 
-#workspaces button.urgent {
-    background: rgba(247, 118, 142, 0.18);
-    color: #F7768E;
-}
-
-/* Empty workspaces — show as dash */
-#workspaces button.empty {
-    color: rgba(86, 95, 137, 0.5);
-    font-size: 11px;
-}
-
-/* ═══════════ RIGHT SIDE ═════════════════════════════════ */
-
-/* ── Titan HWM — standalone pill ─────────────────────────── */
-#custom-titan-hwm {
-    font-size: 11px;
-    font-weight: 600;
-    color: #565F89;
-    padding: 3px 14px;
-    margin: 2px 0;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-#custom-titan-hwm.web {
-    color: #00D8FF;
-    text-shadow: 0 0 10px rgba(0, 216, 255, 0.4);
-}
-
-#custom-titan-hwm.android {
-    color: #3DDC84;
-    text-shadow: 0 0 10px rgba(61, 220, 132, 0.4);
-}
-
-#custom-titan-hwm.system {
-    color: #7DCFFF;
-    text-shadow: 0 0 10px rgba(125, 207, 255, 0.4);
-}
-
-#custom-titan-hwm.casual {
-    color: #CBA6F7;
-    text-shadow: 0 0 10px rgba(203, 166, 247, 0.4);
-}
-
-#custom-titan-hwm.neutral,
-#custom-titan-hwm.inactive {
-    color: #414868;
-}
-
-#custom-titan-hwm.live {
-    color: #E0AF68;
-    text-shadow: 0 0 10px rgba(224, 175, 104, 0.4);
+#pulseaudio.muted {
+    color: #585B70;
 }
 
 /* ── Battery ──────────────────────────────────────────────── */
 #battery {
-    color: #9ECE6A;
-    padding: 0 10px;
-    font-size: 11.5px;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-#battery.good {
-    color: #9ECE6A;
+    color: #A6E3A1;
 }
 
 #battery.warning {
-    color: #E0AF68;
+    color: #F9E2AF;
 }
 
 #battery.critical {
-    color: #F7768E;
-    text-shadow: 0 0 8px rgba(247, 118, 142, 0.4);
+    color: #F38BA8;
+    text-shadow: 0 0 6px rgba(243, 139, 168, 0.4);
 }
 
 #battery.charging,
 #battery.plugged {
-    color: #73DACA;
+    color: #94E2D5;
 }
 
-/* ── Clock — two-line (time + date) ──────────────────────── */
+/* ── Clock ────────────────────────────────────────────────── */
 #clock {
-    color: #C0CAF5;
-    font-weight: 600;
-    font-size: 10px;
-    padding: 2px 12px;
-    margin: 2px 0;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* ── Bluetooth ───────────────────────────────────────────── */
-#bluetooth {
-    color: #7AA2F7;
+    color: #CDD6F4;
+    font-weight: 700;
+    font-size: 11px;
     padding: 0 10px 0 8px;
-    font-size: 14px;
-}
-
-#bluetooth.disabled,
-#bluetooth.off {
-    color: #414868;
-}
-
-#bluetooth.connected {
-    color: #7AA2F7;
-    text-shadow: 0 0 8px rgba(122, 162, 247, 0.4);
 }
 
 /* ── System Tray ──────────────────────────────────────────── */
 #tray {
-    padding: 0 6px;
+    padding: 0 4px;
 }
 
 #tray > .passive {
@@ -258,40 +227,21 @@ window#waybar.hidden {
 
 #tray > .needs-attention {
     -gtk-icon-effect: highlight;
-    background: rgba(247, 118, 142, 0.18);
-    border-radius: 6px;
+    background: rgba(243, 139, 168, 0.15);
+    border-radius: 3px;
 }
 
-/* ── Install button (live ISO) ────────────────────────────── */
-#custom-install {
-    color: #0D0E14;
-    background: linear-gradient(135deg, #00D4FF, #7AA2F7);
-    font-weight: 700;
-    font-size: 11px;
-    padding: 3px 14px;
-    margin: 5px 6px;
-    border-radius: 8px;
-    letter-spacing: 0.5px;
-    border: none;
-    box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
-}
-
-#custom-install:hover {
-    background: linear-gradient(135deg, #33DDFF, #9FBFFF);
-    box-shadow: 0 0 18px rgba(0, 212, 255, 0.5);
-}
-
-/* ── Tooltip ──────────────────────────────────────────────── */
+/* ── Tooltips ─────────────────────────────────────────────── */
 tooltip {
-    background: rgba(10, 11, 20, 0.92);
-    border: 1px solid rgba(122, 162, 247, 0.2);
-    border-radius: 10px;
-    color: #C0CAF5;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    background: rgba(17, 17, 27, 0.94);
+    border: 1px solid rgba(137, 180, 250, 0.25);
+    border-radius: 6px;
+    color: #CDD6F4;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
 }
 
 tooltip label {
-    color: #C0CAF5;
-    padding: 6px 10px;
-    font-size: 11px;
+    color: #CDD6F4;
+    padding: 6px 8px;
+    font-size: 10.5px;
 }
