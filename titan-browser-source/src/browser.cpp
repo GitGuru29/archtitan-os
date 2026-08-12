@@ -730,9 +730,14 @@ void Browser::onLoadProgress(int progress)
     }
 }
 
-void Browser::onLoadFinished(bool /*ok*/)
+void Browser::onLoadFinished(bool ok)
 {
     m_progress->hide();
+    if (ok && m_adBlocker) {
+        if (auto *v = currentView()) {
+            m_adBlocker->injectContentScriptIntoView(v);
+        }
+    }
 }
 
 void Browser::onTitleChanged(const QString &title)

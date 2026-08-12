@@ -37,6 +37,11 @@ public:
     void loadFilterList(const QString &filePath);
     void addRule(const QString &rawRule);
 
+    // Content script injection for YouTube & Spotify & cosmetic ad blocking
+    void installContentScript(class QWebEngineProfile *profile);
+    void injectContentScriptIntoView(class QWebEngineView *view);
+    QString contentScriptSource() const;
+
 private:
     bool isBlocked(const QUrl &url, const QUrl &firstPartyUrl,
                    QWebEngineUrlRequestInfo::ResourceType type) const;

@@ -27,10 +27,11 @@ int main(int argc, char *argv[])
 
     QApplication app(argc, argv);
 
-    // ── Install TitanShield Ad Blocker ───────────────────────────────────
+    // ── Install TitanShield Ad Blocker & Content Engine ──────────────────
     // Must be set BEFORE any QWebEngineView is created.
     auto *adBlocker = new AdBlocker(QWebEngineProfile::defaultProfile());
     QWebEngineProfile::defaultProfile()->setUrlRequestInterceptor(adBlocker);
+    adBlocker->installContentScript(QWebEngineProfile::defaultProfile());
 
     // Optionally load a user filter list from disk
     const QString userList = QDir::homePath() + QStringLiteral("/.config/titanbrowser/filters.txt");

@@ -3,12 +3,26 @@
 #include <QTextStream>
 #include <QDebug>
 #include <QUrl>
+#include <QWebEngineScript>
+#include <QWebEngineScriptCollection>
+#include <QWebEngineProfile>
+#include <QWebEngineView>
 
 /* ──────────────────────────────────────────────────────────────────────────
    Built-in block list — curated from EasyList, EasyPrivacy, uBlock Origin,
    and Peter Lowe's blocklist. Covers ads, trackers, telemetry, and malware.
    ─────────────────────────────────────────────────────────────────────── */
 static const char * const kBuiltinDomains[] = {
+    /* ── YouTube Ad & Telemetry Endpoints ─────────────────────────────── */
+    "googleads.g.doubleclick.net", "pagead2.googleadservices.com",
+    "ad.youtube.com", "ads.youtube.com",
+
+    /* ── Spotify Ad & Telemetry Endpoints ──────────────────────────────── */
+    "spclient.wg.spotify.com/ads", "spclient.wg.spotify.com/ad-logic",
+    "spclient.wg.spotify.com/gabo-receiver-service", "audio-ak-spotify-com.akamaized.net/ad",
+    "audio-fa.scdn.co/ad", "heads-fa.spotify.com", "adeventtracker.spotify.com",
+    "ads-fa.spotify.com",
+
     /* ── Google Advertising ────────────────────────────────────────────── */
     "doubleclick.net", "googleadservices.com", "googlesyndication.com",
     "googletagmanager.com", "googletagservices.com", "google-analytics.com",
@@ -161,6 +175,29 @@ static const char * const kBuiltinDomains[] = {
 
 /* URL-pattern rules (EasyList-compatible subset) */
 static const char * const kBuiltinUrlRules[] = {
+    /* ── YouTube In-Stream Ads & Tracking ───────────────────────────────── */
+    "||youtube.com/api/stats/ads",
+    "||youtube.com/pagead/",
+    "||youtube.com/ptracking",
+    "||youtube.com/youtubei/v1/player/ad_break",
+    "||youtube.com/get_midroll_info",
+    "||youtube.com/api/stats/qoe?*adformat*",
+    "||youtube.com/api/stats/atr",
+    "||youtube.com/api/stats/watchtime?*adformat*",
+    "||googleads.g.doubleclick.net/pagead/",
+    "||static.doubleclick.net/instream/ad_status.js",
+
+    /* ── Spotify Ads & Tracking ─────────────────────────────────────────── */
+    "||spclient.wg.spotify.com/ads/",
+    "||spclient.wg.spotify.com/ad-logic/",
+    "||spclient.wg.spotify.com/gabo-receiver-service/",
+    "||audio-ak-spotify-com.akamaized.net/ad/",
+    "||audio-fa.scdn.co/ad/",
+    "||heads-fa.spotify.com/",
+    "||adeventtracker.spotify.com/",
+    "||ads-fa.spotify.com/",
+
+    /* ── Web Ad Networks & Trackers ─────────────────────────────────────── */
     "||googlesyndication.com/pagead/",
     "||doubleclick.net/adi/",
     "||doubleclick.net/adj/",
@@ -425,3 +462,43 @@ void AdBlocker::interceptRequest(QWebEngineUrlRequestInfo &info)
         m_blocked.fetchAndAddRelaxed(1);
     }
 }
+
+/* ─── Content Script Injection for YouTube, Spotify & Web Ads ─────────── */
+QString AdBlocker::contentScriptSource() const
+{
+    static QString cachedSource;
+    if (cachedSource.isEmpty()) {
+        QFile f(QStringLiteral(":/titan_shield_content.js"));
+        if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            cachedSource = QString::fromUtf8(f.readAll());
+        }
+    }
+    return cachedSource;
+}
+
+void AdBlocker::installContentScript(QWebEngineProfile *profile)
+{
+    if (!profile) return;
+    const QString src = contentScriptSource();
+    if (src.isEmpty()) return;
+
+    QWebEngineScript script;
+    script.setName(QStringLiteral("TitanShieldContentEngine"));
+    script.setSourceCode(src);
+    script.setInjectionPoint(QWebEngineScript::DocumentCreation);
+    script.setWorldId(QWebEngineScript::MainWorld);
+    script.setRunsOnSubFrames(true);
+
+    profile->scripts()->insert(script);
+    qDebug() << "[AdBlocker] Installed TitanShield content script into WebEngine profile";
+}
+
+void AdBlocker::injectContentScriptIntoView(QWebEngineView *view)
+{
+    if (!view || !view->page()) return;
+    const QString src = contentScriptSource();
+    if (!src.isEmpty()) {
+        view->page()->runJavaScript(src);
+    }
+}
+
