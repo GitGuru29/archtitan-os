@@ -59,3 +59,6 @@ titan-hwm-source/titan-hwm
 titan-hwm-source/test_thm_suite
 titan-hwm
 titan_hw_manager
+
+# ─── CMake build artifacts (all subsystems) ─────────────────────────────────
+subsystems/titan-media-hud/build/

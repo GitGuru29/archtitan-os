@@ -1,32 +1,41 @@
 #include "addressbar.h"
 #include <QFocusEvent>
 #include <QKeyEvent>
-#include <QUrl>
+#include <QAction>
+#include <QIcon>
 
 AddressBar::AddressBar(QWidget *parent) : QLineEdit(parent)
 {
-    setPlaceholderText(QStringLiteral("Search or enter address"));
+    setPlaceholderText(QStringLiteral("Search the web, enter URL, or ask Titan AI..."));
     setClearButtonEnabled(true);
 
-    // Leading search icon
-    QAction *searchIcon = addAction(QIcon(), QLineEdit::LeadingPosition);
-    searchIcon->setText(QStringLiteral("🔍"));
+    // Leading subtle search icon
+    QAction *searchIcon = addAction(QIcon(QStringLiteral(":/icons/search.svg")), QLineEdit::LeadingPosition);
+    searchIcon->setToolTip(QStringLiteral("Search or Command Bar"));
+
+    // Trailing subtle bookmark icon
+    QAction *bmIcon = addAction(QIcon(QStringLiteral(":/icons/bookmark.svg")), QLineEdit::TrailingPosition);
+    bmIcon->setToolTip(QStringLiteral("Bookmark this tab"));
 
     setStyleSheet(QStringLiteral(R"(
         QLineEdit {
-            background: #0d1322;
-            border: 1px solid rgba(56, 189, 248, 0.15);
-            border-radius: 20px;
-            color: #e2e8f0;
-            padding: 6px 16px 6px 12px;
+            background: #090e1a;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            color: #f1f5f9;
+            padding: 5px 12px 5px 10px;
             font-size: 13px;
-            selection-background-color: rgba(56, 189, 248, 0.3);
-            min-height: 22px;
+            selection-background-color: rgba(56, 189, 248, 0.35);
+            min-height: 24px;
+        }
+        QLineEdit:hover {
+            background: #0d1527;
+            border-color: rgba(56, 189, 248, 0.25);
         }
         QLineEdit:focus {
-            background: #111827;
-            border: 1px solid rgba(56, 189, 248, 0.5);
-            box-shadow: 0 0 12px rgba(56, 189, 248, 0.15);
+            background: #0f182d;
+            border: 1px solid #38bdf8;
+            color: #ffffff;
         }
     )"));
 
@@ -35,8 +44,13 @@ AddressBar::AddressBar(QWidget *parent) : QLineEdit(parent)
 
 void AddressBar::setUrl(const QUrl &url)
 {
-    if (!hasFocus())
-        setText(url.toString());
+    if (!hasFocus()) {
+        if (url.toString() == QStringLiteral("qrc:/homepage.html")) {
+            clear();
+        } else {
+            setText(url.toString());
+        }
+    }
 }
 
 void AddressBar::focusInEvent(QFocusEvent *e)
@@ -60,7 +74,6 @@ void AddressBar::onReturnPressed()
     if (input.isEmpty()) return;
 
     QUrl url;
-    // Bare domain / IP → prepend https://
     if (!input.contains(QStringLiteral("://")) &&
         (input.contains(u'.') || input.startsWith(QStringLiteral("localhost"))))
     {
@@ -68,7 +81,6 @@ void AddressBar::onReturnPressed()
     } else if (input.contains(QStringLiteral("://"))) {
         url = QUrl(input);
     } else {
-        // Treat as DuckDuckGo search
         url = QUrl(QStringLiteral("https://duckduckgo.com/?q=") +
                    QUrl::toPercentEncoding(input));
     }

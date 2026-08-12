@@ -7,10 +7,18 @@
     <file>icons/forward.svg</file>
     <file>icons/reload.svg</file>
     <file>icons/home.svg</file>
+    <file>icons/ai.svg</file>
+    <file>icons/tabgroups.svg</file>
+    <file>icons/spaces.svg</file>
     <file>icons/history.svg</file>
     <file>icons/bookmark.svg</file>
     <file>icons/download.svg</file>
     <file>icons/shield.svg</file>
+    <file>icons/shield-check.svg</file>
+    <file>icons/lightning.svg</file>
+    <file>icons/cube.svg</file>
+    <file>icons/scanner.svg</file>
+    <file>icons/sync.svg</file>
     <file>icons/extension.svg</file>
     <file>icons/settings.svg</file>
     <file>icons/moon.svg</file>

@@ -3,22 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Tab — TitanBrowser</title>
+    <title>New Tab — Titan Browser</title>
     <style>
         :root {
-            --bg-dark: #070913;
-            --bg-deep: #050710;
-            --card-bg: rgba(15, 23, 42, 0.55);
-            --card-border: rgba(56, 189, 248, 0.10);
-            --card-hover-border: rgba(56, 189, 248, 0.35);
-            --card-hover-bg: rgba(30, 41, 59, 0.65);
-            --text-primary: #f0f4f8;
-            --text-secondary: #94a3b8;
+            --bg-base: #060913;
+            --bg-surface: #0b1120;
+            --bg-surface-hover: #10192e;
+            --bg-command: #090e1a;
+            --border-subtle: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(56, 189, 248, 0.25);
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
             --text-muted: #64748b;
-            --accent-blue: #38bdf8;
-            --accent-cyan: #00d4ff;
-            --accent-glow: rgba(56, 189, 248, 0.25);
-            --shield-green: #22c55e;
+            --accent-cyan: #38bdf8;
+            --accent-blue: #0ea5e9;
+            --accent-purple: #c084fc;
+            --accent-indigo: #818cf8;
+            --green-active: #22c55e;
+            --radius-md: 8px;
+            --radius-lg: 12px;
         }
 
         * {
@@ -30,975 +33,1087 @@
 
         body {
             font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-primary);
+            background-color: var(--bg-base);
+            color: var(--text-main);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: flex-start;
+            align-items: center;
             overflow-x: hidden;
             position: relative;
+            background-image: 
+                radial-gradient(circle at 50% 15%, rgba(14, 165, 233, 0.07) 0%, transparent 55%),
+                radial-gradient(circle at 80% 80%, rgba(129, 140, 248, 0.03) 0%, transparent 40%);
         }
 
-        /* ── Space Background Canvas ──────────────────────────────────── */
-        .background-canvas {
-            position: absolute;
+        /* ─── Ambient Subtle Canvas ───────────────────────────────────── */
+        .ambient-canvas {
+            position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             pointer-events: none;
             z-index: 0;
-            overflow: hidden;
         }
 
-        /* Starfield */
-        .starfield {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image:
-                radial-gradient(1.2px 1.2px at 10% 12%, rgba(255,255,255,0.75), transparent),
-                radial-gradient(1px 1px at 25% 8%, rgba(255,255,255,0.5), transparent),
-                radial-gradient(1.5px 1.5px at 40% 20%, rgba(255,255,255,0.85), transparent),
-                radial-gradient(0.8px 0.8px at 55% 5%, rgba(255,255,255,0.4), transparent),
-                radial-gradient(1px 1px at 70% 15%, rgba(255,255,255,0.6), transparent),
-                radial-gradient(1.3px 1.3px at 85% 22%, rgba(255,255,255,0.7), transparent),
-                radial-gradient(0.7px 0.7px at 92% 8%, rgba(255,255,255,0.45), transparent),
-                radial-gradient(1px 1px at 15% 35%, rgba(255,255,255,0.55), transparent),
-                radial-gradient(1.5px 1.5px at 50% 42%, rgba(255,255,255,0.5), transparent),
-                radial-gradient(0.8px 0.8px at 78% 38%, rgba(255,255,255,0.6), transparent),
-                radial-gradient(1px 1px at 30% 55%, rgba(255,255,255,0.4), transparent),
-                radial-gradient(1.2px 1.2px at 62% 48%, rgba(255,255,255,0.55), transparent);
-            opacity: 0.5;
-        }
-
-        /* Planet horizon glow — bright blue-white arc at bottom */
-        .horizon-glow {
-            position: absolute;
-            bottom: 8%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 160vw;
-            height: 550px;
-            border-radius: 50%;
-            background: radial-gradient(ellipse at top,
-                rgba(14, 165, 233, 0.30) 0%,
-                rgba(14, 116, 144, 0.18) 30%,
-                rgba(7, 9, 19, 0) 65%);
-            box-shadow:
-                0 -15px 60px 8px rgba(56, 189, 248, 0.20),
-                inset 0 2px 40px 4px rgba(56, 189, 248, 0.45);
-            border-top: 1.5px solid rgba(186, 230, 253, 0.55);
-            opacity: 0.9;
-        }
-
-        /* Subtle upper atmosphere glow */
-        .atmo-glow {
-            position: absolute;
-            bottom: 18%;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 120vw;
-            height: 300px;
-            border-radius: 50%;
-            background: radial-gradient(ellipse at bottom,
-                rgba(56, 189, 248, 0.06) 0%,
-                transparent 70%);
-        }
-
-        /* ── Main Container ───────────────────────────────────────────── */
-        .container {
+        /* ─── Workspace Main Container ────────────────────────────────── */
+        .workspace-container {
             position: relative;
             z-index: 1;
             width: 100%;
-            max-width: 1080px;
+            max-width: 980px;
             margin: 0 auto;
-            padding: 36px 28px 16px;
+            padding: 60px 24px 48px 24px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            flex: 1;
+            gap: 32px;
         }
 
-        /* ── Hero Branding ────────────────────────────────────────────── */
-        .hero {
+        /* ─── Header & Ambient Greeting ───────────────────────────────── */
+        .workspace-header {
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-bottom: 28px;
+            gap: 10px;
             text-align: center;
         }
 
-        .logo-container {
+        .ambient-logo-wrapper {
+            position: relative;
+            width: 52px;
+            height: 52px;
             display: flex;
             align-items: center;
-            gap: 14px;
-            margin-bottom: 8px;
+            justify-content: center;
+            margin-bottom: 4px;
         }
 
-        .logo-mark {
-            width: 56px;
-            height: 56px;
-            filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.5))
-                    drop-shadow(0 0 40px rgba(56, 189, 248, 0.2));
+        .ambient-logo-glow {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.3) 0%, transparent 70%);
+            filter: blur(8px);
+            animation: pulseGlow 4s ease-in-out infinite alternate;
         }
 
-        .brand-title {
-            font-size: 42px;
-            font-weight: 900;
-            letter-spacing: 3px;
-            display: flex;
-            align-items: center;
+        @keyframes pulseGlow {
+            0% { transform: scale(0.9); opacity: 0.5; }
+            100% { transform: scale(1.2); opacity: 0.9; }
         }
 
-        .brand-titan {
+        .workspace-greeting {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
             color: #ffffff;
         }
 
-        .brand-browser {
-            margin-left: 4px;
-            background: linear-gradient(135deg, #38bdf8 0%, #00b4d8 50%, #0284c7 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            filter: drop-shadow(0 0 24px rgba(56, 189, 248, 0.35));
+        .workspace-sub-greeting {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            font-weight: 400;
         }
 
-        .tagline {
-            font-size: 13px;
-            color: var(--text-secondary);
-            letter-spacing: 4px;
-            font-weight: 500;
-            text-transform: uppercase;
-            opacity: 0.9;
-        }
-
-        .tagline .dot {
-            color: var(--accent-blue);
-            margin: 0 10px;
-            font-size: 14px;
-        }
-
-        /* ── Central Search Bar ───────────────────────────────────────── */
-        .search-wrapper {
+        /* ─── Titan Command Bar (Spotlight / Raycast Hybrid) ──────────── */
+        .command-bar-wrapper {
             width: 100%;
-            max-width: 660px;
-            margin-bottom: 36px;
+            max-width: 680px;
             position: relative;
         }
 
-        .search-form {
+        .command-bar {
+            width: 100%;
             display: flex;
             align-items: center;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(56, 189, 248, 0.20);
-            border-radius: 28px;
-            padding: 8px 14px 8px 20px;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            box-shadow:
-                0 8px 32px rgba(0, 0, 0, 0.35),
-                inset 0 1px 0 rgba(255, 255, 255, 0.06);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--bg-command);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 12px 18px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.02);
+            transition: all 0.18s ease;
         }
 
-        .search-form:focus-within {
-            border-color: rgba(56, 189, 248, 0.55);
-            box-shadow:
-                0 0 0 3px rgba(56, 189, 248, 0.08),
-                0 0 30px rgba(56, 189, 248, 0.15),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            background: rgba(15, 23, 42, 0.8);
+        .command-bar:focus-within, .command-bar.active {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 1px var(--accent-cyan), 0 8px 32px rgba(0, 0, 0, 0.55);
+            background: #0b1222;
         }
 
-        .search-icon {
-            color: var(--text-muted);
+        .command-icon {
+            color: var(--accent-cyan);
             margin-right: 12px;
             display: flex;
             align-items: center;
-            transition: color 0.25s ease;
-            flex-shrink: 0;
         }
 
-        .search-form:focus-within .search-icon {
-            color: var(--accent-blue);
-        }
-
-        .search-input {
+        .command-input {
             flex: 1;
             background: transparent;
             border: none;
             outline: none;
-            color: var(--text-primary);
-            font-size: 15px;
-            font-family: inherit;
-            caret-color: var(--accent-blue);
+            color: #ffffff;
+            font-size: 14.5px;
+            font-weight: 400;
         }
 
-        .search-input::placeholder {
+        .command-input::placeholder {
             color: var(--text-muted);
         }
 
-        .search-submit {
-            background: transparent;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 50%;
+        .command-shortcut-badge {
             display: flex;
             align-items: center;
-            justify-content: center;
-            transition: all 0.2s ease;
-            flex-shrink: 0;
-        }
-
-        .search-submit:hover {
-            color: var(--text-primary);
-            background: rgba(56, 189, 248, 0.12);
-        }
-
-        /* ── Shortcuts Grid ───────────────────────────────────────────── */
-        .shortcuts-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 14px;
-            width: 100%;
-            margin-bottom: 44px;
-        }
-
-        .shortcut-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 22px 12px 16px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            color: var(--text-primary);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            height: 130px;
-        }
-
-        .shortcut-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border-radius: 16px;
-            background: radial-gradient(circle at 50% 0%, rgba(56,189,248,0.06) 0%, transparent 70%);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .shortcut-card:hover::before {
-            opacity: 1;
-        }
-
-        .shortcut-card:hover {
-            background: var(--card-hover-bg);
-            border-color: var(--card-hover-border);
-            transform: translateY(-4px);
-            box-shadow:
-                0 12px 28px rgba(0, 0, 0, 0.4),
-                0 0 12px var(--accent-glow);
-        }
-
-        .shortcut-icon-wrapper {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 12px;
-            font-size: 22px;
-            background: rgba(255, 255, 255, 0.04);
-            transition: transform 0.25s ease;
-        }
-
-        .shortcut-card:hover .shortcut-icon-wrapper {
-            transform: scale(1.08);
-        }
-
-        .shortcut-title {
-            font-size: 13px;
+            gap: 4px;
+            font-size: 11px;
             font-weight: 600;
-            margin-bottom: 3px;
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            width: 100%;
-        }
-
-        .shortcut-domain {
-            font-size: 11px;
             color: var(--text-muted);
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            padding: 3px 7px;
+            border-radius: 5px;
+        }
+
+        /* Command Bar Dropdown Menu */
+        .command-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
             width: 100%;
+            background: #0b1120;
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+            padding: 6px;
+            display: none;
+            flex-direction: column;
+            gap: 2px;
+            z-index: 50;
+            backdrop-filter: blur(16px);
         }
 
-        .add-shortcut-btn {
-            border: 1.5px dashed rgba(56, 189, 248, 0.22);
-            background: rgba(15, 23, 42, 0.25);
+        .command-dropdown.show {
+            display: flex;
         }
 
-        .add-shortcut-btn:hover {
-            border-style: solid;
-            background: rgba(30, 41, 59, 0.45);
-        }
-
-        .add-icon {
-            font-size: 28px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-            font-weight: 300;
-            line-height: 1;
-        }
-
-        /* ── Section: Continue Browsing ────────────────────────────────── */
-        .section-container {
-            width: 100%;
-            margin-bottom: 20px;
-        }
-
-        .section-header {
+        .command-item {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            margin-bottom: 14px;
-            padding-left: 4px;
-            cursor: pointer;
-            transition: color 0.2s ease;
-        }
-
-        .section-header:hover {
-            color: var(--text-primary);
-        }
-
-        .section-header svg {
-            width: 14px;
-            height: 14px;
-            fill: currentColor;
-            transition: transform 0.2s ease;
-        }
-
-        .section-header:hover svg {
-            transform: translateX(2px);
-        }
-
-        .recent-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 14px;
-            width: 100%;
-        }
-
-        .recent-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 14px;
-            padding: 14px 14px 12px;
-            display: flex;
-            flex-direction: column;
             justify-content: space-between;
-            text-decoration: none;
-            color: var(--text-primary);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            transition: all 0.2s ease;
-            height: 96px;
+            padding: 9px 12px;
+            border-radius: var(--radius-md);
+            color: var(--text-sub);
+            font-size: 13px;
             cursor: pointer;
+            transition: all 0.12s ease;
         }
 
-        .recent-card:hover {
-            background: var(--card-hover-bg);
-            border-color: var(--card-hover-border);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+        .command-item:hover, .command-item.selected {
+            background: rgba(56, 189, 248, 0.12);
+            color: #ffffff;
         }
 
-        .recent-top {
+        .command-item-left {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             gap: 10px;
         }
 
-        .recent-icon {
-            width: 20px;
-            height: 20px;
-            flex-shrink: 0;
-            margin-top: 1px;
+        .command-item-icon {
+            font-size: 14px;
+            color: var(--accent-cyan);
+            width: 18px;
+            display: flex;
+            justify-content: center;
         }
 
-        .recent-info {
-            overflow: hidden;
-            min-width: 0;
+        .command-item-badge {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* ─── Titan Spaces Section ────────────────────────────────────── */
+        .section-box {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .section-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .spaces-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .space-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .space-card:hover {
+            background: var(--bg-surface-hover);
+            border-color: var(--border-hover);
+            transform: translateY(-1px);
+        }
+
+        .space-card.active {
+            background: #0e172a;
+            border-color: rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.08);
+        }
+
+        .space-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .space-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--accent-cyan);
+            box-shadow: 0 0 6px var(--accent-cyan);
+        }
+        .space-dot.purple { background: var(--accent-purple); box-shadow: 0 0 6px var(--accent-purple); }
+        .space-dot.green { background: var(--green-active); box-shadow: 0 0 6px var(--green-active); }
+
+        .space-sub {
+            font-size: 11px;
+            color: var(--text-muted);
+            padding-left: 15px;
+        }
+
+        .space-card.new-space-btn {
+            border-style: dashed;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .space-card.new-space-btn:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+        }
+
+        /* ─── Quick Access Launcher ───────────────────────────────────── */
+        .launcher-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 12px;
+        }
+
+        .launcher-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 14px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .launcher-card:hover {
+            background: var(--bg-surface-hover);
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+        }
+
+        .launcher-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2px;
+        }
+
+        .launcher-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .launcher-sub {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .launcher-card.add-card {
+            border-style: dashed;
+        }
+        .launcher-card.add-card:hover {
+            border-color: var(--accent-cyan);
+        }
+
+        /* ─── Recent Activity Timeline ────────────────────────────────── */
+        .recent-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .recent-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 8px 14px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.12s ease;
+        }
+
+        .recent-row:hover {
+            background: var(--bg-surface-hover);
+            border-color: var(--border-hover);
+        }
+
+        .recent-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .recent-icon {
+            color: var(--accent-cyan);
+            display: flex;
         }
 
         .recent-title {
-            font-size: 12px;
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-bottom: 2px;
-            color: var(--text-primary);
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #ffffff;
         }
 
         .recent-domain {
             font-size: 11px;
             color: var(--text-muted);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         .recent-time {
-            font-size: 10px;
+            font-size: 11px;
             color: var(--text-muted);
-            margin-top: auto;
         }
 
-        .history-btn-card {
+        /* ─── Native AI Side Panel (Flyout Drawer) ────────────────────── */
+        .ai-panel {
+            position: fixed;
+            top: 0;
+            right: -380px;
+            width: 360px;
+            height: 100vh;
+            background: #080d1a;
+            border-left: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 100;
+            transition: right 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(20px);
+        }
+
+        .ai-panel.open {
+            right: 0;
+        }
+
+        .ai-panel-header {
+            padding: 16px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .ai-panel-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .ai-panel-close {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .ai-panel-close:hover { color: #ffffff; }
+
+        .ai-conversation {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            font-size: 13px;
+        }
+
+        .ai-msg-user {
+            align-self: flex-end;
+            background: rgba(14, 165, 233, 0.2);
+            border: 1px solid rgba(14, 165, 233, 0.35);
+            padding: 8px 12px;
+            border-radius: 10px 10px 0 10px;
+            color: #ffffff;
+            max-width: 85%;
+        }
+
+        .ai-msg-bot {
+            align-self: flex-start;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 10px 12px;
+            border-radius: 10px 10px 10px 0;
+            color: #e2e8f0;
+            line-height: 1.5;
+            max-width: 90%;
+        }
+
+        .ai-chips-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 0 16px 10px 16px;
+        }
+
+        .ai-chip {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 11px;
+            color: var(--text-sub);
+            cursor: pointer;
+            transition: all 0.12s ease;
+        }
+        .ai-chip:hover {
+            background: rgba(56, 189, 248, 0.12);
+            border-color: var(--border-hover);
+            color: #ffffff;
+        }
+
+        .ai-panel-footer {
+            padding: 14px 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #060913;
+        }
+
+        .ai-panel-input {
+            flex: 1;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: #ffffff;
+            font-size: 12.5px;
+            outline: none;
+        }
+        .ai-panel-input:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        .ai-panel-send {
+            background: var(--accent-cyan);
+            border: none;
+            border-radius: 8px;
+            width: 32px;
+            height: 32px;
+            color: #060913;
+            font-weight: bold;
+            display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            border-color: rgba(56, 189, 248, 0.15);
-        }
-
-        .history-btn-card .history-icon {
-            color: var(--accent-blue);
-        }
-
-        .history-btn-card span {
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--text-secondary);
-        }
-
-        .history-btn-card:hover span {
-            color: var(--text-primary);
-        }
-
-        /* ── Footer / Status Bar ──────────────────────────────────────── */
-        .footer-bar {
-            position: relative;
-            z-index: 2;
-            width: 100%;
-            padding: 14px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(15, 23, 42, 0.55);
-            border: 1px solid rgba(56, 189, 248, 0.14);
-            border-radius: 20px;
-            padding: 7px 16px;
-            font-size: 12px;
-            color: var(--text-secondary);
-            backdrop-filter: blur(8px);
-            transition: all 0.2s ease;
-        }
-
-        .status-pill:hover {
-            border-color: rgba(56, 189, 248, 0.3);
-            background: rgba(15, 23, 42, 0.7);
-        }
-
-        .status-pill .shield-icon {
-            display: flex;
-            align-items: center;
-            color: var(--accent-blue);
-        }
-
-        .status-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background-color: var(--shield-green);
-            box-shadow: 0 0 8px var(--shield-green);
-            animation: pulse-dot 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse-dot {
-            0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--shield-green); }
-            50% { opacity: 0.7; box-shadow: 0 0 12px var(--shield-green); }
-        }
-
-        .customize-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            background: rgba(15, 23, 42, 0.55);
-            border: 1px solid rgba(56, 189, 248, 0.14);
-            border-radius: 20px;
-            padding: 7px 18px;
-            font-size: 12px;
-            color: var(--text-secondary);
             cursor: pointer;
-            backdrop-filter: blur(8px);
-            transition: all 0.2s ease;
-            font-family: inherit;
         }
 
-        .customize-btn:hover {
-            color: var(--text-primary);
-            border-color: rgba(56, 189, 248, 0.35);
-            background: rgba(30, 41, 59, 0.65);
-        }
-
-        /* ── Add Shortcut Modal ───────────────────────────────────────── */
-        .modal-overlay {
+        /* ─── Subtle TitanShield Security Flyout ────────────────────────── */
+        .shield-flyout {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 50px;
+            right: 180px;
+            width: 280px;
+            background: #0b1120;
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+            padding: 16px;
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 90;
+        }
+        .shield-flyout.open { display: flex; }
+
+        .shield-stat-badge {
+            font-size: 11px;
+            color: var(--green-active);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* ─── Modal System ────────────────────────────────────────────── */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(8px);
-            z-index: 100;
+            backdrop-filter: blur(6px);
             display: none;
             align-items: center;
             justify-content: center;
+            z-index: 110;
         }
+        .modal-backdrop.active { display: flex; }
 
-        .modal-card {
-            background: #0f172a;
-            border: 1px solid rgba(56, 189, 248, 0.25);
-            border-radius: 16px;
+        .modal-box {
+            background: #0b1120;
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius-lg);
             padding: 24px;
-            width: 380px;
-            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.6);
-            animation: modal-in 0.2s ease-out;
-        }
-
-        @keyframes modal-in {
-            from { opacity: 0; transform: scale(0.95) translateY(8px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        .modal-title {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            color: var(--text-primary);
+            width: 90%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
         }
 
         .modal-input {
             width: 100%;
-            background: #1e293b;
-            border: 1px solid rgba(56, 189, 248, 0.18);
-            border-radius: 10px;
-            padding: 10px 14px;
-            color: #fff;
-            margin-bottom: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 8px 12px;
+            color: #ffffff;
+            font-size: 13px;
             outline: none;
-            font-size: 13px;
-            font-family: inherit;
-            transition: border-color 0.2s ease;
         }
+        .modal-input:focus { border-color: var(--accent-cyan); }
 
-        .modal-input:focus {
-            border-color: rgba(56, 189, 248, 0.5);
-        }
-
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-            margin-top: 4px;
-        }
-
-        .btn-cancel {
-            background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 8px;
-            color: var(--text-muted);
-            cursor: pointer;
-            padding: 8px 16px;
-            font-size: 13px;
-            font-family: inherit;
-            transition: all 0.2s ease;
-        }
-
-        .btn-cancel:hover {
-            color: var(--text-secondary);
-            border-color: rgba(255, 255, 255, 0.15);
-        }
-
-        .btn-save {
-            background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+        .btn-modal-submit {
+            background: var(--accent-cyan);
             border: none;
-            color: #0f172a;
+            border-radius: 6px;
+            padding: 8px 14px;
+            color: #060913;
             font-weight: 600;
-            border-radius: 8px;
             cursor: pointer;
-            padding: 8px 20px;
-            font-size: 13px;
-            font-family: inherit;
-            transition: all 0.2s ease;
-        }
-
-        .btn-save:hover {
-            filter: brightness(1.1);
-            box-shadow: 0 4px 16px rgba(56, 189, 248, 0.3);
-        }
-
-        /* ── Animations ───────────────────────────────────────────────── */
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 0.8; }
-        }
-
-        .starfield {
-            animation: twinkle 4s ease-in-out infinite alternate;
-        }
-
-        /* ── Scrollbar ────────────────────────────────────────────────── */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(56, 189, 248, 0.15);
-            border-radius: 3px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(56, 189, 248, 0.3);
         }
     </style>
 </head>
 <body>
 
-    <!-- Background Planet Horizon Glow -->
-    <div class="background-canvas">
-        <div class="starfield"></div>
-        <div class="atmo-glow"></div>
-        <div class="horizon-glow"></div>
-    </div>
+    <!-- Ambient Subtle Star / Particle Field -->
+    <canvas class="ambient-canvas" id="ambientCanvas"></canvas>
 
-    <!-- Main Container -->
-    <div class="container">
+    <!-- Workspace Container -->
+    <div class="workspace-container">
 
-        <!-- Hero Header -->
-        <div class="hero">
-            <div class="logo-container">
-                <svg class="logo-mark" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M32 4L4 56H18L32 28L46 56H60L32 4Z" fill="url(#arch-grad)" />
-                    <path d="M24 42H40L32 26L24 42Z" fill="#ffffff" opacity="0.85" />
+        <!-- 1. Ambient Greeting & Glyph -->
+        <div class="workspace-header">
+            <div class="ambient-logo-wrapper">
+                <div class="ambient-logo-glow"></div>
+                <svg width="34" height="34" viewBox="0 0 64 64" fill="none">
+                    <path d="M32 4L4 56H18L32 28L46 56H60L32 4Z" fill="url(#arch-brand-grad)" />
+                    <path d="M24 42H40L32 26L24 42Z" fill="#ffffff" opacity="0.9" />
                     <defs>
-                        <linearGradient id="arch-grad" x1="4" y1="4" x2="60" y2="56" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#38BDF8" />
-                            <stop offset="0.5" stop-color="#0EA5E9" />
-                            <stop offset="1" stop-color="#0284C7" />
+                        <linearGradient id="arch-brand-grad" x1="4" y1="4" x2="60" y2="56">
+                            <stop stop-color="#38bdf8" />
+                            <stop offset="0.5" stop-color="#0ea5e9" />
+                            <stop offset="1" stop-color="#818cf8" />
                         </linearGradient>
                     </defs>
                 </svg>
-                <div class="brand-title">
-                    <span class="brand-titan">TITAN</span>
-                    <span class="brand-browser">BROWSER</span>
-                </div>
             </div>
-            <div class="tagline">Native <span class="dot">•</span> Secure <span class="dot">•</span> Fast</div>
+            <div class="workspace-greeting" id="greetingText">Good evening, Titan.</div>
+            <div class="workspace-sub-greeting">Search the web, manage spaces, or ask Titan AI</div>
         </div>
 
-        <!-- Central Search Bar -->
-        <div class="search-wrapper">
-            <form class="search-form" id="searchForm">
-                <div class="search-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
+        <!-- 2. Titan Command Bar -->
+        <div class="command-bar-wrapper">
+            <div class="command-bar" id="commandBarBox">
+                <div class="command-icon">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 </div>
-                <input type="text" class="search-input" id="searchInput" placeholder="Search or enter address" autocomplete="off" autofocus>
-                <button type="submit" class="search-submit" title="Search">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                </button>
-            </form>
-        </div>
+                <input type="text" id="commandInput" class="command-input" placeholder="Search the web, enter URL, or ask Titan AI..." autocomplete="off" />
+                <div class="command-shortcut-badge">⌘K</div>
+            </div>
 
-        <!-- Shortcuts Grid -->
-        <div class="shortcuts-grid" id="shortcutsGrid">
-            <a href="https://archtitan.io" class="shortcut-card">
-                <div class="shortcut-icon-wrapper" style="color: #38bdf8;">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2L2 22h5l5-10 5 10h5L12 2z"/>
-                    </svg>
+            <!-- Interactive Suggestions Dropdown -->
+            <div class="command-dropdown" id="commandDropdown">
+                <div class="command-item" onclick="executeCommand('search')">
+                    <div class="command-item-left">
+                        <div class="command-item-icon">↗</div>
+                        <span id="cmdSearchLabel">Search web</span>
+                    </div>
+                    <span class="command-item-badge">Enter</span>
                 </div>
-                <div class="shortcut-title">ArchTitan</div>
-                <div class="shortcut-domain">archtitan.io</div>
-            </a>
-
-            <a href="https://github.com" class="shortcut-card">
-                <div class="shortcut-icon-wrapper" style="color: #ffffff;">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
-                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-                    </svg>
+                <div class="command-item" onclick="executeCommand('ai')">
+                    <div class="command-item-left">
+                        <div class="command-item-icon">✦</div>
+                        <span id="cmdAILabel">Ask Titan AI</span>
+                    </div>
+                    <span class="command-item-badge">Tab</span>
                 </div>
-                <div class="shortcut-title">GitHub</div>
-                <div class="shortcut-domain">github.com</div>
-            </a>
-
-            <a href="https://youtube.com" class="shortcut-card">
-                <div class="shortcut-icon-wrapper" style="color: #ef4444;">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                    </svg>
+                <div class="command-item" onclick="executeCommand('tabs')">
+                    <div class="command-item-left">
+                        <div class="command-item-icon">⌘</div>
+                        <span>Search open tabs and spaces</span>
+                    </div>
                 </div>
-                <div class="shortcut-title">YouTube</div>
-                <div class="shortcut-domain">youtube.com</div>
-            </a>
-
-            <a href="https://google.com" class="shortcut-card">
-                <div class="shortcut-icon-wrapper">
-                    <svg width="26" height="26" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.25 21.3 7.31 24 12 24z"/>
-                        <path fill="#FBBC05" d="M5.28 14.27a7.19 7.19 0 010-4.54V6.58H1.26a11.98 11.98 0 000 10.84l4.02-3.15z"/>
-                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
-                    </svg>
-                </div>
-                <div class="shortcut-title">Google</div>
-                <div class="shortcut-domain">google.com</div>
-            </a>
-
-            <a href="https://reddit.com" class="shortcut-card">
-                <div class="shortcut-icon-wrapper" style="color: #ff4500;">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 0C5.373 0 0 5.373 0 12c0 3.314 1.344 6.315 3.516 8.484l-1.04 3.09 3.284-1.002C7.79 23.36 9.827 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm5.01 4.744c.688 0 1.25.56 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.362.768-.584 1.277-.584 1.01 0 1.83 0.82 1.83 1.83 0 .783-.497 1.45-1.19 1.706.02.215.03.433.03.655 0 3.33-3.834 6.03-8.56 6.03-4.727 0-8.56-2.7-8.56-6.03 0-.22.01-.438.03-.653C4.256 13.414 3.76 12.748 3.76 11.965c0-1.01.82-1.83 1.83-1.83.51 0 .97.22 1.277.583 1.192-.857 2.846-1.42 4.67-1.488l.898-4.21 3.26.687a1.25 1.25 0 011.315-.963z"/>
-                    </svg>
-                </div>
-                <div class="shortcut-title">Reddit</div>
-                <div class="shortcut-domain">reddit.com</div>
-            </a>
-
-            <div class="shortcut-card add-shortcut-btn" id="addShortcutBtn">
-                <div class="add-icon">+</div>
-                <div class="shortcut-title" style="color: var(--text-secondary);">Add Shortcut</div>
             </div>
         </div>
 
-        <!-- Continue Browsing Section -->
-        <div class="section-container">
-            <div class="section-header">
-                <span>Continue Browsing</span>
-                <svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+        <!-- 3. Titan Spaces Workspace -->
+        <div class="section-box">
+            <div class="section-title-row">
+                <span class="section-title">SPACES</span>
             </div>
-
-            <div class="recent-grid">
-                <a href="https://github.com/GitGuru29/archtitan-os" class="recent-card">
-                    <div class="recent-top">
-                        <svg class="recent-icon" viewBox="0 0 24 24" fill="#ffffff">
-                            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-                        </svg>
-                        <div class="recent-info">
-                            <div class="recent-title">ArchTitan OS</div>
-                            <div class="recent-domain">github.com</div>
-                        </div>
+            <div class="spaces-grid" id="spacesGrid">
+                <div class="space-card active" onclick="selectSpace(this, 'Development')">
+                    <div class="space-header">
+                        <span class="space-dot"></span>
+                        <span>Development</span>
                     </div>
-                    <div class="recent-time">just now</div>
-                </a>
-
-                <a href="https://wiki.archlinux.org" class="recent-card">
-                    <div class="recent-top">
-                        <svg class="recent-icon" viewBox="0 0 24 24" fill="#38bdf8">
-                            <path d="M12 2L2 22h5l5-10 5 10h5L12 2z"/>
-                        </svg>
-                        <div class="recent-info">
-                            <div class="recent-title">Arch Linux Docs</div>
-                            <div class="recent-domain">wiki.archlinux.org</div>
-                        </div>
-                    </div>
-                    <div class="recent-time">5 mins ago</div>
-                </a>
-
-                <a href="https://youtube.com/results?search_query=lofi+hip+hop" class="recent-card">
-                    <div class="recent-top">
-                        <svg class="recent-icon" viewBox="0 0 24 24" fill="#ef4444">
-                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                        </svg>
-                        <div class="recent-info">
-                            <div class="recent-title">Lofi Hip Hop Radio</div>
-                            <div class="recent-domain">youtube.com</div>
-                        </div>
-                    </div>
-                    <div class="recent-time">1 hour ago</div>
-                </a>
-
-                <a href="https://x.com" class="recent-card">
-                    <div class="recent-top">
-                        <svg class="recent-icon" viewBox="0 0 24 24" fill="#ffffff">
-                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                        </svg>
-                        <div class="recent-info">
-                            <div class="recent-title">Home / X</div>
-                            <div class="recent-domain">x.com</div>
-                        </div>
-                    </div>
-                    <div class="recent-time">2 hours ago</div>
-                </a>
-
-                <a href="https://figma.com" class="recent-card">
-                    <div class="recent-top">
-                        <svg class="recent-icon" viewBox="0 0 38 57" fill="none">
-                            <path d="M19 28.5C19 23.2533 23.2533 19 28.5 19C33.7467 19 38 23.2533 38 28.5C38 33.7467 33.7467 38 28.5 38H19V28.5Z" fill="#1ABCFE"/>
-                            <path d="M0 47.5C0 42.2533 4.25329 38 9.5 38H19V47.5C19 52.7467 14.7467 57 9.5 57C4.25329 57 0 52.7467 0 47.5Z" fill="#0ACF83"/>
-                            <path d="M19 0V19H28.5C33.7467 19 38 14.7467 38 9.5C38 4.25329 33.7467 0 28.5 0H19Z" fill="#FF7262"/>
-                            <path d="M0 9.5C0 14.7467 4.25329 19 9.5 19H19V0H9.5C4.25329 0 0 4.25329 0 9.5Z" fill="#F24E1E"/>
-                            <path d="M0 28.5C0 33.7467 4.25329 38 9.5 38H19V19H9.5C4.25329 19 0 23.2533 0 28.5Z" fill="#A259FF"/>
-                        </svg>
-                        <div class="recent-info">
-                            <div class="recent-title">Figma</div>
-                            <div class="recent-domain">figma.com</div>
-                        </div>
-                    </div>
-                    <div class="recent-time">3 hours ago</div>
-                </a>
-
-                <div class="recent-card history-btn-card" id="viewHistoryBtn">
-                    <svg class="history-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                    <span>View History</span>
+                    <div class="space-sub">8 tabs · Node, Vite, C++</div>
                 </div>
+                <div class="space-card" onclick="selectSpace(this, 'Research')">
+                    <div class="space-header">
+                        <span class="space-dot purple"></span>
+                        <span>Research</span>
+                    </div>
+                    <div class="space-sub">12 tabs · Papers, Docs</div>
+                </div>
+                <div class="space-card" onclick="selectSpace(this, 'Personal')">
+                    <div class="space-header">
+                        <span class="space-dot green"></span>
+                        <span>Personal</span>
+                    </div>
+                    <div class="space-sub">4 tabs · Feeds, Media</div>
+                </div>
+                <div class="space-card new-space-btn" onclick="openNewSpaceModal()">
+                    + New Space
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Quick Access Launcher -->
+        <div class="section-box">
+            <div class="section-title-row">
+                <span class="section-title">QUICK ACCESS</span>
+            </div>
+            <div class="launcher-grid" id="launcherContainer">
+                
+                <a href="https://archtitan.io" class="launcher-card">
+                    <div class="launcher-icon" style="color: #38bdf8;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 22h5l5-10 5 10h5L12 2z"/></svg>
+                    </div>
+                    <div class="launcher-title">ArchTitan</div>
+                    <div class="launcher-sub">archtitan.io</div>
+                </a>
+
+                <a href="https://github.com" class="launcher-card">
+                    <div class="launcher-icon" style="color: #ffffff;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                    </div>
+                    <div class="launcher-title">GitHub</div>
+                    <div class="launcher-sub">github.com</div>
+                </a>
+
+                <a href="https://youtube.com" class="launcher-card">
+                    <div class="launcher-icon" style="color: #ef4444;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    </div>
+                    <div class="launcher-title">YouTube</div>
+                    <div class="launcher-sub">youtube.com</div>
+                </a>
+
+                <a href="https://google.com" class="launcher-card">
+                    <div class="launcher-icon">
+                        <svg width="19" height="19" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.25 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27a7.19 7.19 0 010-4.54V6.58H1.26a11.98 11.98 0 000 10.84l4.02-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+                    </div>
+                    <div class="launcher-title">Google</div>
+                    <div class="launcher-sub">google.com</div>
+                </a>
+
+                <a href="https://reddit.com" class="launcher-card">
+                    <div class="launcher-icon" style="color: #ff4500;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12c0 3.314 1.344 6.315 3.516 8.484l-1.04 3.09 3.284-1.002C7.79 23.36 9.827 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm5.01 4.744c.688 0 1.25.56 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.362.768-.584 1.277-.584 1.01 0 1.83 0.82 1.83 1.83 0 .783-.497 1.45-1.19 1.706.02.215.03.433.03.655 0 3.33-3.834 6.03-8.56 6.03-4.727 0-8.56-2.7-8.56-6.03 0-.22.01-.438.03-.653C4.256 13.414 3.76 12.748 3.76 11.965c0-1.01.82-1.83 1.83-1.83.51 0 .97.22 1.277.583 1.192-.857 2.846-1.42 4.67-1.488l.898-4.21 3.26.687a1.25 1.25 0 011.315-.963z"/></svg>
+                    </div>
+                    <div class="launcher-title">Reddit</div>
+                    <div class="launcher-sub">reddit.com</div>
+                </a>
+
+                <a href="https://notion.so" class="launcher-card">
+                    <div class="launcher-icon" style="color: #ffffff;">
+                        <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.876c-.466-.373-.933-.653-1.773-.606L3.385 2.25c-.373.046-.466.28-.326.42l1.4 1.538zm-1.073 3.36v13.54c0 .56.374.84.98 1.027l14.428.84c.607.046.934-.234.934-.794V8.406c0-.56-.233-.84-.793-.886L3.999 6.822c-.42 0-.613.233-.613.746zm13.12 1.774v9.565c0 .327-.14.467-.42.467-.187 0-.374-.093-.56-.28l-5.694-8.82v8.587c0 .327-.187.514-.514.514h-1.4c-.327 0-.514-.187-.514-.514V9.669c0-.327.14-.514.42-.514.234 0 .42.093.607.327l5.648 8.727V9.342c0-.327.187-.514.514-.514h1.4c.327 0 .513.234.513.514z"/></svg>
+                    </div>
+                    <div class="launcher-title">Notion</div>
+                    <div class="launcher-sub">notion.so</div>
+                </a>
+
+                <div class="launcher-card add-card" onclick="openAddShortcutModal()">
+                    <div class="launcher-icon" style="color: var(--text-muted);">+</div>
+                    <div class="launcher-title" style="color: var(--text-sub);">Add</div>
+                    <div class="launcher-sub">shortcut</div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- 5. Recent Activity Timeline -->
+        <div class="section-box">
+            <div class="section-title-row">
+                <span class="section-title">RECENT ACTIVITY</span>
+            </div>
+            <div class="recent-list">
+                <a href="https://github.com/GitGuru29/archtitan-os" class="recent-row">
+                    <div class="recent-left">
+                        <div class="recent-icon">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                        </div>
+                        <span class="recent-title">GitGuru29 / archtitan-os</span>
+                        <span class="recent-domain">github.com</span>
+                    </div>
+                    <span class="recent-time">5m ago</span>
+                </a>
+                <a href="https://wiki.archlinux.org" class="recent-row">
+                    <div class="recent-left">
+                        <div class="recent-icon">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                        </div>
+                        <span class="recent-title">Arch Linux Documentation</span>
+                        <span class="recent-domain">wiki.archlinux.org</span>
+                    </div>
+                    <span class="recent-time">22m ago</span>
+                </a>
             </div>
         </div>
 
     </div>
 
-    <!-- Footer Bar -->
-    <div class="footer-bar">
-        <div class="status-pill">
-            <div class="shield-icon">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
+    <!-- ─── Native AI Side Panel ──────────────────────────────────────── -->
+    <div class="ai-panel" id="aiSidePanel">
+        <div class="ai-panel-header">
+            <div class="ai-panel-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4v1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2V6a4 4 0 0 1 4-4z"/><circle cx="9.5" cy="11.5" r="1.5" fill="#38bdf8"/><circle cx="14.5" cy="11.5" r="1.5" fill="#38bdf8"/></svg>
+                <span>TITAN AI</span>
+                <span style="font-size: 10px; color: var(--text-muted); font-weight: 500;">Local • Private</span>
             </div>
-            <span>TitanShield Active</span>
-            <span class="status-dot"></span>
+            <button class="ai-panel-close" onclick="toggleAIPanel(false)">&times;</button>
         </div>
-        <button class="customize-btn" id="customizeBtn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 20h9"></path>
-                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
-            </svg>
-            <span>Customize</span>
-        </button>
-    </div>
 
-    <!-- Add Shortcut Modal -->
-    <div class="modal-overlay" id="addShortcutModal">
-        <div class="modal-card">
-            <div class="modal-title">Add Shortcut</div>
-            <input type="text" class="modal-input" id="shortcutNameInput" placeholder="Name (e.g. Arch Wiki)">
-            <input type="text" class="modal-input" id="shortcutUrlInput" placeholder="URL (e.g. archlinux.org)">
-            <div class="modal-actions">
-                <button class="btn-cancel" id="cancelShortcutModal">Cancel</button>
-                <button class="btn-save" id="saveShortcutModal">Save</button>
+        <div class="ai-conversation" id="aiChatStream">
+            <div class="ai-msg-bot">
+                What are we working on? I can summarize pages, analyze code, translate, or execute browser actions locally.
+            </div>
+        </div>
+
+        <div>
+            <div class="ai-chips-row">
+                <button class="ai-chip" onclick="handleAIQuick('Summarize current page context')">📄 Summarize</button>
+                <button class="ai-chip" onclick="handleAIQuick('Explain code implementation')">💻 Explain Code</button>
+                <button class="ai-chip" onclick="handleAIQuick('Translate text')">🌐 Translate</button>
+                <button class="ai-chip" onclick="handleAIQuick('Draft a response')">✍️ Write</button>
+            </div>
+            <div class="ai-panel-footer">
+                <input type="text" id="aiPanelInput" class="ai-panel-input" placeholder="Ask Titan..." onkeydown="if(event.key==='Enter') sendAIMessage()" />
+                <button class="ai-panel-send" onclick="sendAIMessage()">&uarr;</button>
             </div>
         </div>
     </div>
 
+    <!-- ─── Subtle TitanShield Security Flyout ────────────────────────── -->
+    <div class="shield-flyout" id="shieldFlyout">
+        <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
+            <div style="font-weight: 700; font-size: 13px; color: #ffffff;">TitanShield</div>
+            <span class="shield-stat-badge">● Protected</span>
+        </div>
+        <div style="font-size: 11.5px; color: var(--text-sub); display: flex; flex-direction: column; gap: 6px;">
+            <div>✔ 18,230 Trackers Blocked</div>
+            <div>✔ Fingerprint Defense Active</div>
+            <div>✔ Sandbox Isolation Enforced</div>
+            <div>✔ DNS-over-HTTPS Active</div>
+            <div>⚡ 42% Memory Optimized</div>
+        </div>
+        <button class="ai-chip" style="align-self: flex-start;" onclick="toggleShieldFlyout(false)">Close</button>
+    </div>
+
+    <!-- ─── Modals ────────────────────────────────────────────────────── -->
+    <div class="modal-backdrop" id="genericModal">
+        <div class="modal-box">
+            <h3 id="modalTitle" style="font-size: 15px; color: #ffffff;">Modal Title</h3>
+            <div id="modalBody"></div>
+            <button class="btn-modal-submit" onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <!-- ─── Script Core ───────────────────────────────────────────────── -->
     <script>
-        // Handle Search Form Submission
-        document.getElementById('searchForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const query = document.getElementById('searchInput').value.trim();
-            if (!query) return;
+        /* 1. Time-based Greeting */
+        function initGreeting() {
+            const h = new Date().getHours();
+            let period = "Good evening";
+            if (h >= 5 && h < 12) period = "Good morning";
+            else if (h >= 12 && h < 18) period = "Good afternoon";
+            document.getElementById('greetingText').innerText = `${period}, Titan.`;
+        }
+        initGreeting();
 
-            let targetUrl;
-            if (query.includes('://') || (query.includes('.') && !query.includes(' '))) {
-                targetUrl = query.includes('://') ? query : 'https://' + query;
+        /* 2. Command Bar & Suggestions */
+        const cmdInput = document.getElementById('commandInput');
+        const cmdDropdown = document.getElementById('commandDropdown');
+        const cmdSearchLabel = document.getElementById('cmdSearchLabel');
+        const cmdAILabel = document.getElementById('cmdAILabel');
+
+        cmdInput.addEventListener('focus', () => {
+            cmdDropdown.classList.add('show');
+        });
+
+        cmdInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            if (val) {
+                cmdSearchLabel.innerText = `Search web for "${val}"`;
+                cmdAILabel.innerText = `Ask Titan AI: "${val}"`;
+                cmdDropdown.classList.add('show');
             } else {
-                targetUrl = 'https://duckduckgo.com/?q=' + encodeURIComponent(query);
-            }
-            window.location.href = targetUrl;
-        });
-
-        // Add Shortcut Modal Logic
-        const modal = document.getElementById('addShortcutModal');
-        document.getElementById('addShortcutBtn').addEventListener('click', () => {
-            modal.style.display = 'flex';
-            document.getElementById('shortcutNameInput').focus();
-        });
-        document.getElementById('cancelShortcutModal').addEventListener('click', () => {
-            modal.style.display = 'none';
-        });
-
-        // Close modal on overlay click
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.style.display = 'none';
-        });
-
-        // Close modal on Escape
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && modal.style.display === 'flex') {
-                modal.style.display = 'none';
+                cmdSearchLabel.innerText = `Search web`;
+                cmdAILabel.innerText = `Ask Titan AI`;
             }
         });
 
-        document.getElementById('saveShortcutModal').addEventListener('click', () => {
+        cmdInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const val = cmdInput.value.trim();
+                if (!val) return;
+                if (val.startsWith('http://') || val.startsWith('https://')) {
+                    window.location.href = val;
+                } else if (val.includes('.') && !val.includes(' ')) {
+                    window.location.href = 'https://' + val;
+                } else {
+                    window.location.href = 'https://duckduckgo.com/?q=' + encodeURIComponent(val);
+                }
+            } else if (e.key === 'Escape') {
+                cmdDropdown.classList.remove('show');
+                cmdInput.blur();
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!document.getElementById('commandBarBox').contains(e.target) && !cmdDropdown.contains(e.target)) {
+                cmdDropdown.classList.remove('show');
+            }
+        });
+
+        function executeCommand(type) {
+            const val = cmdInput.value.trim();
+            cmdDropdown.classList.remove('show');
+            if (type === 'search') {
+                if (val) window.location.href = 'https://duckduckgo.com/?q=' + encodeURIComponent(val);
+            } else if (type === 'ai') {
+                toggleAIPanel(true);
+                if (val) {
+                    sendAIQuery(val);
+                    cmdInput.value = '';
+                }
+            } else if (type === 'tabs') {
+                openModal('Open Tabs', '<div style="font-size:12px; color: #94a3b8;">• Tab 1: New Tab (Active)<br>• Tab 2: Development Workspace<br>• Tab 3: Research Notes</div>');
+            }
+        }
+
+        window.focusCommandBar = function() {
+            cmdInput.focus();
+            cmdInput.select();
+        };
+
+        /* 3. Spaces Selection */
+        function selectSpace(card, name) {
+            document.querySelectorAll('.space-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+        }
+
+        function openNewSpaceModal() {
+            openModal('Create New Space', `
+                <input type="text" id="newSpaceName" class="modal-input" placeholder="Space name (e.g., Security Labs)" style="margin-bottom: 8px;" />
+                <button class="btn-modal-submit" onclick="createSpaceSubmit()">Create Space</button>
+            `);
+        }
+
+        function createSpaceSubmit() {
+            const val = document.getElementById('newSpaceName').value.trim();
+            if (!val) return;
+            const grid = document.getElementById('spacesGrid');
+            const newBtn = grid.querySelector('.new-space-btn');
+            const card = document.createElement('div');
+            card.className = 'space-card';
+            card.onclick = function() { selectSpace(this, val); };
+            card.innerHTML = `
+                <div class="space-header">
+                    <span class="space-dot"></span>
+                    <span>${val}</span>
+                </div>
+                <div class="space-sub">0 tabs · Custom environment</div>
+            `;
+            grid.insertBefore(card, newBtn);
+            closeModal();
+        }
+
+        /* 4. Native AI Panel */
+        function toggleAIPanel(open) {
+            document.getElementById('aiSidePanel').classList.toggle('open', open);
+            if (open) document.getElementById('aiPanelInput').focus();
+        }
+        window.toggleAIPanel = toggleAIPanel;
+
+        function handleAIQuick(prompt) {
+            sendAIQuery(prompt);
+        }
+
+        function sendAIMessage() {
+            const input = document.getElementById('aiPanelInput');
+            const val = input.value.trim();
+            if (!val) return;
+            input.value = '';
+            sendAIQuery(val);
+        }
+
+        function sendAIQuery(text) {
+            const stream = document.getElementById('aiChatStream');
+            const userBubble = document.createElement('div');
+            userBubble.className = 'ai-msg-user';
+            userBubble.innerText = text;
+            stream.appendChild(userBubble);
+            stream.scrollTop = stream.scrollHeight;
+
+            setTimeout(() => {
+                const botBubble = document.createElement('div');
+                botBubble.className = 'ai-msg-bot';
+                let reply = "Titan AI: Processing request locally via ArchTitan engine.";
+                const low = text.toLowerCase();
+                if (low.includes('summarize')) reply = "Summary: Clean, high-performance developer browser focused on speed and zero cloud telemetry.";
+                else if (low.includes('code')) reply = "Code insight: Memory namespace partitioned via cgroups v2 and seccomp system call sandboxing.";
+                else if (low.includes('translate')) reply = "Translation complete: All content processed locally on device.";
+                else if (low.includes('write')) reply = "Draft generated: 'Titan Browser delivers native Linux speed with an integrated operating environment.'";
+                else reply = `Answer: Verified local result for "${text}".`;
+                botBubble.innerText = reply;
+                stream.appendChild(botBubble);
+                stream.scrollTop = stream.scrollHeight;
+            }, 400);
+        }
+
+        /* 5. TitanShield Flyout */
+        function toggleShieldFlyout(show) {
+            document.getElementById('shieldFlyout').classList.toggle('open', show);
+        }
+        window.openShieldFlyout = function() {
+            const flyout = document.getElementById('shieldFlyout');
+            flyout.classList.toggle('open');
+        };
+
+        /* 6. Shortcuts Modal */
+        function openAddShortcutModal() {
+            openModal('Add Quick Access Shortcut', `
+                <input type="text" id="shortcutNameInput" class="modal-input" placeholder="Name (e.g., DuckDuckGo)" style="margin-bottom: 8px;" />
+                <input type="text" id="shortcutUrlInput" class="modal-input" placeholder="URL (e.g., https://duckduckgo.com)" style="margin-bottom: 8px;" />
+                <button class="btn-modal-submit" onclick="submitNewShortcut()">Save Shortcut</button>
+            `);
+        }
+
+        function submitNewShortcut() {
             const name = document.getElementById('shortcutNameInput').value.trim();
             let url = document.getElementById('shortcutUrlInput').value.trim();
             if (!name || !url) return;
-
-            if (!url.includes('://')) url = 'https://' + url;
-            let domain = url.replace('https://','').replace('http://','').split('/')[0];
-
-            const grid = document.getElementById('shortcutsGrid');
-            const addBtn = document.getElementById('addShortcutBtn');
-
-            const card = document.createElement('a');
-            card.href = url;
-            card.className = 'shortcut-card';
-            card.innerHTML = `
-                <div class="shortcut-icon-wrapper" style="color: #38bdf8;">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+            
+            const container = document.getElementById('launcherContainer');
+            const addBtn = container.querySelector('.add-card');
+            const a = document.createElement('a');
+            a.href = url;
+            a.className = 'launcher-card';
+            a.innerHTML = `
+                <div class="launcher-icon" style="color: #38bdf8;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg>
                 </div>
-                <div class="shortcut-title">${name}</div>
-                <div class="shortcut-domain">${domain}</div>
+                <div class="launcher-title">${name}</div>
+                <div class="launcher-sub">${new URL(url).hostname}</div>
             `;
-            grid.insertBefore(card, addBtn);
-            modal.style.display = 'none';
-            document.getElementById('shortcutNameInput').value = '';
-            document.getElementById('shortcutUrlInput').value = '';
-        });
+            container.insertBefore(a, addBtn);
+            closeModal();
+        }
 
-        // View History button handler
-        document.getElementById('viewHistoryBtn').addEventListener('click', () => {
-            alert("TitanBrowser History");
-        });
+        /* 7. Generic Modal */
+        function openModal(title, contentHtml) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalBody').innerHTML = contentHtml;
+            document.getElementById('genericModal').classList.add('active');
+        }
+        function closeModal() {
+            document.getElementById('genericModal').classList.remove('active');
+        }
+        window.openSettingsModal = function() {
+            openModal('Titan Settings', '<div style="font-size:12.5px; color:#94a3b8; line-height:1.6;">• Hardware Acceleration: SwiftShader / Ozone EGL<br>• Local AI Model: Active (RAM: 180MB)<br>• Privacy Shield: Maximum<br>• Theme: Dark Navy (Titan Standard)</div>');
+        };
+        window.openSpacesModal = function() {
+            openModal('Manage Spaces', '<div style="font-size:12.5px; color:#94a3b8; line-height:1.6;">Spaces allow you to isolate tabs, cookies, and memory states per project. Click any Space above to switch instantly.</div>');
+        };
+        window.toggleTheme = function() {
+            document.body.classList.toggle('light-mode');
+        };
     </script>
 </body>
 </html>
