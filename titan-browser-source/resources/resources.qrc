@@ -2,6 +2,7 @@
 <RCC version="1.0">
   <qresource prefix="/">
     <file>homepage.html</file>
+    <file>settings.html</file>
     <file>icons/logo.svg</file>
     <file>icons/back.svg</file>
     <file>icons/forward.svg</file>

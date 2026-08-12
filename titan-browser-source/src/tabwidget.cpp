@@ -101,3 +101,12 @@ void TabWidget::removeTab(int index)
 {
     onTabCloseRequested(index);
 }
+
+QUrl TabWidget::tabUrl(int index) const
+{
+    if (index >= 0 && index < m_stack->count()) {
+        if (auto *v = qobject_cast<QWebEngineView *>(m_stack->widget(index)))
+            return v->url();
+    }
+    return QUrl();
+}

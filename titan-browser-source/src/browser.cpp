@@ -19,7 +19,8 @@
 #include <QMessageBox>
 #include <QStyle>
 
-static const char *kHomeUrl = "qrc:/homepage.html";
+static const char *kHomeUrl     = "qrc:/homepage.html";
+static const char *kSettingsUrl = "qrc:/settings.html";
 
 /* ─── Modern Developer Browser Stylesheet ─────────────────────────────── */
 static const char *kTheme = R"(
@@ -566,9 +567,15 @@ void Browser::onExtensionsClicked()
 void Browser::onSettingsClicked()
 {
     setActiveRailButton(m_railSettingsBtn);
-    if (auto *v = currentView()) {
-        v->page()->runJavaScript(QStringLiteral("if (window.openSettingsModal) window.openSettingsModal();"));
+    // Check if a settings tab is already open — if so, just switch to it
+    for (int i = 0; i < m_tabs->count(); ++i) {
+        QUrl tabUrl = m_tabs->tabUrl(i);
+        if (tabUrl.toString().startsWith(QStringLiteral("qrc:/settings.html"))) {
+            m_tabs->setCurrentIndex(i);
+            return;
+        }
     }
+    newTab(QUrl(QString::fromUtf8(kSettingsUrl)));
 }
 
 void Browser::onShieldClicked()

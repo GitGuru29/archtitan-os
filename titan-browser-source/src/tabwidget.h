@@ -19,6 +19,8 @@ public:
     int count() const { return m_tabBar->count(); }
     int currentIndex() const { return m_tabBar->currentIndex(); }
     void removeTab(int index);
+    void setCurrentIndex(int index) { m_tabBar->setCurrentIndex(index); }
+    QUrl tabUrl(int index) const;
 
 signals:
     void urlChanged(const QUrl &url);
