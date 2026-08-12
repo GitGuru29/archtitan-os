@@ -4,6 +4,7 @@
 - [ ] titan-fetch
 - [ ] titan-sandbox
 - [ ] titan-settings
+- [ ] titan-browser
 - [ ] auto-gpu-switcher
 - [ ] titan-ai
 - [ ] titan-task-manager
