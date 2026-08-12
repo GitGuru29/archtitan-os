@@ -1,5 +1,6 @@
 #pragma once
 #include <QLineEdit>
+#include <QUrl>
 
 class AddressBar : public QLineEdit
 {

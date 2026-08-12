@@ -7,6 +7,7 @@
 #include <QStackedWidget>
 #include <QToolButton>
 #include <QPushButton>
+#include <QMenu>
 
 class TabWidget;
 class AddressBar;
@@ -31,15 +32,38 @@ private slots:
     void reload();
     void onTabChanged(int index);
 
+    // Rail & Chrome Actions
+    void onHomeClicked();
+    void onAICoreClicked();
+    void onSpacesClicked();
+    void onHistoryClicked();
+    void onDownloadsClicked();
+    void onExtensionsClicked();
+    void onSettingsClicked();
+    void onShieldClicked();
+    void onProfileClicked();
+    void onMenuClicked();
+    void onThemeToggleClicked();
+
 private:
     void setupUi();
+    void setActiveRailButton(QToolButton *btn);
+    void showStatusNotification(const QString &title, const QString &message);
     QWebEngineView *currentView() const;
 
-    TabWidget      *m_tabs         = nullptr;
-    AddressBar     *m_addressBar   = nullptr;
-    QPushButton    *m_backBtn      = nullptr;
-    QPushButton    *m_forwardBtn   = nullptr;
-    QPushButton    *m_reloadBtn    = nullptr;
-    QProgressBar   *m_progress     = nullptr;
-    QToolButton    *m_activeSidebarBtn = nullptr;
+    TabWidget      *m_tabs             = nullptr;
+    AddressBar     *m_addressBar       = nullptr;
+    QProgressBar   *m_progress         = nullptr;
+
+    // Compact Navigation Rail Buttons
+    QToolButton    *m_railHomeBtn      = nullptr;
+    QToolButton    *m_railAiBtn        = nullptr;
+    QToolButton    *m_railSpacesBtn    = nullptr;
+    QToolButton    *m_railHistoryBtn   = nullptr;
+    QToolButton    *m_railDlBtn        = nullptr;
+    QToolButton    *m_railExtBtn       = nullptr;
+    QToolButton    *m_railSettingsBtn  = nullptr;
+    QToolButton    *m_activeRailBtn    = nullptr;
+
+    bool            m_isDarkMode       = true;
 };

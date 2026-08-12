@@ -26,7 +26,7 @@ QWebEngineView *TabWidget::newTab(const QUrl &url)
     }
 
     int stackIndex = m_stack->addWidget(view);
-    int tabIndex = m_tabBar->addTab(QStringLiteral("New Tab"));
+    int tabIndex = m_tabBar->addTab(QIcon(QStringLiteral(":/icons/home.svg")), QStringLiteral("New Tab"));
 
     m_tabBar->setCurrentIndex(tabIndex);
     m_stack->setCurrentIndex(stackIndex);
@@ -50,7 +50,7 @@ void TabWidget::connectView(QWebEngineView *view)
         int idx = m_stack->indexOf(view);
         if (idx >= 0 && idx < m_tabBar->count()) {
             QString displayTitle = title.isEmpty() ? QStringLiteral("New Tab") : title;
-            m_tabBar->setTabText(idx, displayTitle.left(24));
+            m_tabBar->setTabText(idx, displayTitle.left(22));
             m_tabBar->setTabToolTip(idx, title);
         }
         if (view == m_stack->currentWidget()) emit titleChanged(title);
@@ -67,7 +67,9 @@ void TabWidget::connectView(QWebEngineView *view)
     connect(view, &QWebEngineView::iconChanged, this, [this, view](const QIcon &icon) {
         int idx = m_stack->indexOf(view);
         if (idx >= 0 && idx < m_tabBar->count()) {
-            m_tabBar->setTabIcon(idx, icon);
+            if (!icon.isNull()) {
+                m_tabBar->setTabIcon(idx, icon);
+            }
         }
     });
 }
