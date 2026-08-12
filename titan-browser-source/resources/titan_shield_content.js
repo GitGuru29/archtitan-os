@@ -1,12 +1,12 @@
 /**
- * TitanShield Advanced Content Engine — Next-Gen Ad Purging & Auto-Skip
- * Operates across YouTube, Spotify, and the entire web.
- * Injected at DocumentCreation (MainWorld) + refreshed on navigation.
+ * TitanShield Advanced Content Engine — Ultra-Grade Ad Destroyer
+ * Intercepts YouTube & Spotify player payloads (JSON/fetch/XHR), skips in-stream video ads,
+ * neutralizes anti-adblock modals, and purges all cosmetic web advertising slots.
  */
 (function () {
     'use strict';
 
-    /* ─── 1. Neutralize Anti-Adblock Traps & Globals ──────────────────────── */
+    /* ─── 1. Neutralize Anti-Adblock Globals & Traps ───────────────────────── */
     try {
         window.canRunAds = true;
         window.isAdBlockActive = false;
@@ -15,7 +15,111 @@
         window.isAdblockActive = false;
     } catch (e) { }
 
-    /* ─── 2. High-Priority Universal Cosmetic Purge Stylesheet ────────────── */
+    /* ─── 2. YouTube JSON & Network Payload Interceptor (Root-Level Ad Block) ─── */
+    function sanitizeYTData(obj) {
+        if (!obj || typeof obj !== 'object') return obj;
+
+        try {
+            // Strip ad placements, midrolls, prerolls, companion ads
+            if (obj.adPlacements) delete obj.adPlacements;
+            if (obj.adSlots) delete obj.adSlots;
+            if (obj.playerAds) delete obj.playerAds;
+            if (obj.adBreakHeartbeatParams) delete obj.adBreakHeartbeatParams;
+            if (obj.paidContentOverlay) delete obj.paidContentOverlay;
+
+            // Neutralize YouTube Anti-Adblock Enforcement modals
+            if (obj.auxiliaryUi && obj.auxiliaryUi.messageRenderers) {
+                if (obj.auxiliaryUi.messageRenderers.enforcementMessageViewModel) {
+                    delete obj.auxiliaryUi.messageRenderers.enforcementMessageViewModel;
+                }
+            }
+            if (obj.enforcementMessageViewModel) {
+                delete obj.enforcementMessageViewModel;
+            }
+
+            // Recursively sanitize playerResponse
+            if (obj.playerResponse && typeof obj.playerResponse === 'object') {
+                sanitizeYTData(obj.playerResponse);
+            }
+        } catch (e) { }
+
+        return obj;
+    }
+
+    // Intercept window.ytInitialPlayerResponse
+    let rawPlayerResponse = window.ytInitialPlayerResponse;
+    try {
+        Object.defineProperty(window, 'ytInitialPlayerResponse', {
+            get: function () {
+                return rawPlayerResponse;
+            },
+            set: function (val) {
+                rawPlayerResponse = sanitizeYTData(val);
+            },
+            configurable: true
+        });
+    } catch (e) { }
+
+    // Intercept JSON.parse
+    const origJSONParse = JSON.parse;
+    JSON.parse = function (text, reviver) {
+        let data = origJSONParse.apply(this, arguments);
+        try {
+            if (data && typeof data === 'object') {
+                if (data.adPlacements || data.adSlots || data.playerAds || data.adBreakHeartbeatParams) {
+                    sanitizeYTData(data);
+                }
+            }
+        } catch (e) { }
+        return data;
+    };
+
+    // Intercept window.fetch
+    const origFetch = window.fetch;
+    window.fetch = async function (...args) {
+        const response = await origFetch.apply(this, args);
+        try {
+            const url = args[0] ? (typeof args[0] === 'string' ? args[0] : args[0].url || '') : '';
+            if (url.includes('/youtubei/v1/player') || url.includes('/youtubei/v1/next') || url.includes('player_response')) {
+                const clone = response.clone();
+                const json = await clone.json();
+                sanitizeYTData(json);
+                return new Response(JSON.stringify(json), {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: response.headers
+                });
+            }
+        } catch (e) { }
+        return response;
+    };
+
+    // Intercept XMLHttpRequest
+    const origXHROpen = XMLHttpRequest.prototype.open;
+    const origXHRSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function (method, url) {
+        this._reqUrl = url;
+        return origXHROpen.apply(this, arguments);
+    };
+    XMLHttpRequest.prototype.send = function (body) {
+        if (this._reqUrl && typeof this._reqUrl === 'string' &&
+            (this._reqUrl.includes('/youtubei/v1/player') || this._reqUrl.includes('/youtubei/v1/next'))) {
+            this.addEventListener('readystatechange', function () {
+                if (this.readyState === 4 && this.status === 200) {
+                    try {
+                        const parsed = origJSONParse(this.responseText);
+                        sanitizeYTData(parsed);
+                        const sanitizedStr = JSON.stringify(parsed);
+                        Object.defineProperty(this, 'responseText', { value: sanitizedStr, writable: true });
+                        Object.defineProperty(this, 'response', { value: sanitizedStr, writable: true });
+                    } catch (e) { }
+                }
+            });
+        }
+        return origXHRSend.apply(this, arguments);
+    };
+
+    /* ─── 3. High-Priority Universal Cosmetic Purge Stylesheet ────────────── */
     const COSMETIC_CSS = `
         /* ── General Web Ads ── */
         ins.adsbygoogle,
@@ -63,6 +167,7 @@
         ytd-compact-promoted-video-renderer,
         .ytd-player-legacy-desktop-watch-ads-renderer,
         ytd-companion-slot-renderer,
+        ytd-in-feed-ad-layout-renderer,
 
         /* ── Spotify Ad Elements ── */
         .Root__ad-banner,
@@ -101,9 +206,8 @@
         document.addEventListener('DOMContentLoaded', ensureCosmeticStyles);
     }
 
-    /* ─── 3. Bulletproof YouTube Video Ad Destroyer ───────────────────────── */
+    /* ─── 4. Bulletproof YouTube Video Ad Fast-Forwarder & Auto-Skipper ────── */
     let ytAdMuted = false;
-    let ytLastVolume = 1.0;
 
     function purgeYouTubeAds() {
         const host = window.location.hostname || '';
@@ -144,9 +248,8 @@
         const isAdActive = hasAdClass || hasAdOverlay;
 
         if (isAdActive) {
-            // 1. Mute ad immediately
+            // 1. Mute ad immediately so no sound leaks
             if (video && !ytAdMuted) {
-                ytLastVolume = video.volume;
                 video.muted = true;
                 ytAdMuted = true;
             }
@@ -203,7 +306,7 @@
         }
     }
 
-    /* ─── 4. Spotify Web Player Auto-Skip & Audio Muter ───────────────────── */
+    /* ─── 5. Spotify Web Player Auto-Skip & Audio Muter ───────────────────── */
     let spotifyAdMuted = false;
 
     function purgeSpotifyAds() {
@@ -243,14 +346,14 @@
         }
     }
 
-    /* ─── 5. Main Execution Loop & Mutation Observer ──────────────────────── */
+    /* ─── 6. High-Frequency Tick & Mutation Observer ──────────────────────── */
     function tick() {
         purgeYouTubeAds();
         purgeSpotifyAds();
     }
 
-    // High frequency interval (30ms) for instantaneous ad skipping
-    setInterval(tick, 30);
+    // High frequency interval (25ms) for instantaneous ad skipping
+    setInterval(tick, 25);
 
     // Mutation observer to capture dynamic DOM injections instantly
     const domObserver = new MutationObserver(tick);
@@ -258,7 +361,7 @@
         if (document.body) {
             domObserver.observe(document.body, { childList: true, subtree: true, attributes: true });
         } else {
-            setTimeout(attachObserver, 100);
+            setTimeout(attachObserver, 80);
         }
     }
     attachObserver();
