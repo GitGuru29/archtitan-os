@@ -266,6 +266,19 @@ Browser::Browser(AdBlocker *adBlocker, QWidget *parent)
             m_shieldBadgeBtn->setText(label);
         });
         m_statsTimer->start();
+
+        // Guardian heartbeat timer for instant ad skip across YouTube & Spotify SPA routes
+        auto *guardianTimer = new QTimer(this);
+        guardianTimer->setInterval(350);
+        connect(guardianTimer, &QTimer::timeout, this, [this] {
+            if (auto *v = currentView()) {
+                const QString host = v->url().host().toLower();
+                if (host.contains(QStringLiteral("youtube.com")) || host.contains(QStringLiteral("spotify.com"))) {
+                    m_adBlocker->injectContentScriptIntoView(v);
+                }
+            }
+        });
+        guardianTimer->start();
     }
 }
 
@@ -716,6 +729,9 @@ void Browser::onUrlChanged(const QUrl &url)
         setActiveRailButton(m_railHomeBtn);
     } else {
         m_addressBar->setUrl(url);
+        if (m_adBlocker && currentView()) {
+            m_adBlocker->injectContentScriptIntoView(currentView());
+        }
     }
 }
 
@@ -724,6 +740,9 @@ void Browser::onLoadProgress(int progress)
     if (progress > 0 && progress < 100) {
         m_progress->show();
         m_progress->setValue(progress);
+        if (progress > 40 && m_adBlocker && currentView()) {
+            m_adBlocker->injectContentScriptIntoView(currentView());
+        }
     } else {
         m_progress->hide();
         m_progress->setValue(0);
