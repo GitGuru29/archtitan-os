@@ -1,4 +1,5 @@
 #include "browser.h"
+#include "adblocker.h"
 #include <QApplication>
 #include <QWebEngineProfile>
 
@@ -26,7 +27,17 @@ int main(int argc, char *argv[])
 
     QApplication app(argc, argv);
 
-    Browser w;
+    // ── Install TitanShield Ad Blocker ───────────────────────────────────
+    // Must be set BEFORE any QWebEngineView is created.
+    auto *adBlocker = new AdBlocker(QWebEngineProfile::defaultProfile());
+    QWebEngineProfile::defaultProfile()->setUrlRequestInterceptor(adBlocker);
+
+    // Optionally load a user filter list from disk
+    const QString userList = QDir::homePath() + QStringLiteral("/.config/titanbrowser/filters.txt");
+    if (QFile::exists(userList))
+        adBlocker->loadFilterList(userList);
+
+    Browser w(adBlocker);
     w.show();
 
     return app.exec();

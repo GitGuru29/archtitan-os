@@ -1,6 +1,7 @@
 #include "browser.h"
 #include "tabwidget.h"
 #include "addressbar.h"
+#include "adblocker.h"
 
 #include <QApplication>
 #include <QHBoxLayout>
@@ -243,13 +244,29 @@ QMenu::item:selected {
 )";
 
 /* ─── Constructor ──────────────────────────────────────────────────────── */
-Browser::Browser(QWidget *parent) : QMainWindow(parent)
+Browser::Browser(AdBlocker *adBlocker, QWidget *parent)
+    : QMainWindow(parent), m_adBlocker(adBlocker)
 {
     setWindowTitle(QStringLiteral("Titan Browser"));
     resize(1360, 840);
     setStyleSheet(QString::fromUtf8(kTheme));
     setupUi();
     newTab(QUrl(QString::fromUtf8(kHomeUrl)));
+
+    // Live blocked-requests counter — updates shield badge every 2s
+    if (m_adBlocker) {
+        m_statsTimer = new QTimer(this);
+        m_statsTimer->setInterval(2000);
+        connect(m_statsTimer, &QTimer::timeout, this, [this] {
+            if (!m_shieldBadgeBtn) return;
+            qint64 n = m_adBlocker->blockedCount();
+            QString label = (n >= 1000)
+                ? QStringLiteral(" %1K blocked").arg(n / 1000)
+                : QStringLiteral(" %1 blocked").arg(n);
+            m_shieldBadgeBtn->setText(label);
+        });
+        m_statsTimer->start();
+    }
 }
 
 /* ─── UI Setup ─────────────────────────────────────────────────────────── */
@@ -355,15 +372,15 @@ void Browser::setupUi()
     navLayout->addWidget(m_addressBar, 1);
     connect(m_addressBar, &AddressBar::urlEntered, this, &Browser::loadUrl);
 
-    // Subtle TitanShield Status Button
-    auto *shieldBtn = new QToolButton(navBar);
-    shieldBtn->setObjectName(QStringLiteral("ShieldBadgeBtn"));
-    shieldBtn->setIcon(QIcon(QStringLiteral(":/icons/shield.svg")));
-    shieldBtn->setText(QStringLiteral(" Protected"));
-    shieldBtn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    shieldBtn->setToolTip(QStringLiteral("TitanShield Security: Active"));
-    connect(shieldBtn, &QToolButton::clicked, this, &Browser::onShieldClicked);
-    navLayout->addWidget(shieldBtn);
+    // Subtle TitanShield Status Button (reference stored for live update)
+    m_shieldBadgeBtn = new QToolButton(navBar);
+    m_shieldBadgeBtn->setObjectName(QStringLiteral("ShieldBadgeBtn"));
+    m_shieldBadgeBtn->setIcon(QIcon(QStringLiteral(":/icons/shield.svg")));
+    m_shieldBadgeBtn->setText(QStringLiteral(" Protected"));
+    m_shieldBadgeBtn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    m_shieldBadgeBtn->setToolTip(QStringLiteral("TitanShield — click for security details"));
+    connect(m_shieldBadgeBtn, &QToolButton::clicked, this, &Browser::onShieldClicked);
+    navLayout->addWidget(m_shieldBadgeBtn);
 
     // Extensions
     auto *extBtn = new QToolButton(navBar);
@@ -580,11 +597,19 @@ void Browser::onSettingsClicked()
 
 void Browser::onShieldClicked()
 {
+    if (m_adBlocker) {
+        qint64 blocked  = m_adBlocker->blockedCount();
+        qint64 requests = m_adBlocker->requestCount();
+        double pct      = (requests > 0) ? (100.0 * blocked / requests) : 0.0;
+        QString js = QStringLiteral(
+            "if (window.updateShieldStats) "
+            "window.updateShieldStats(%1, %2, %3);"
+        ).arg(blocked).arg(requests).arg(pct, 0, 'f', 1);
+        if (auto *v = currentView())
+            v->page()->runJavaScript(js);
+    }
     if (auto *v = currentView()) {
         v->page()->runJavaScript(QStringLiteral("if (window.openShieldFlyout) window.openShieldFlyout();"));
-    } else {
-        showStatusNotification(QStringLiteral("TitanShield Security"),
-            QStringLiteral("Status: Protected\n✔ 18,230 Trackers Blocked\n✔ Fingerprint Defense Active\n✔ Sandbox Isolation Enforced"));
     }
 }
 

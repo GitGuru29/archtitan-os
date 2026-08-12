@@ -8,15 +8,20 @@
 #include <QToolButton>
 #include <QPushButton>
 #include <QMenu>
+#include <QTimer>
+#include <QDir>
+#include <QFile>
 
 class TabWidget;
 class AddressBar;
+class AdBlocker;
+
 
 class Browser : public QMainWindow
 {
     Q_OBJECT
 public:
-    explicit Browser(QWidget *parent = nullptr);
+    explicit Browser(AdBlocker *adBlocker = nullptr, QWidget *parent = nullptr);
     void loadUrl(const QUrl &url);
 
 private slots:
@@ -65,5 +70,9 @@ private:
     QToolButton    *m_railSettingsBtn  = nullptr;
     QToolButton    *m_activeRailBtn    = nullptr;
 
-    bool            m_isDarkMode       = true;
+    AdBlocker      *m_adBlocker      = nullptr;
+    QTimer         *m_statsTimer     = nullptr;
+    QToolButton    *m_shieldBadgeBtn = nullptr;  // live-updated blocked count
+
+    bool            m_isDarkMode     = true;
 };
