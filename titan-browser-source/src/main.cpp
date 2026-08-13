@@ -2,6 +2,9 @@
 #include "adblocker.h"
 #include <QApplication>
 #include <QWebEngineProfile>
+#include <QWebEngineCookieStore>
+#include <QNetworkCookie>
+#include <QDateTime>
 
 int main(int argc, char *argv[])
 {
@@ -23,15 +26,34 @@ int main(int argc, char *argv[])
             "--disable-gpu "
             "--disable-gpu-sandbox "
             "--disable-dev-shm-usage "
+            "--lang=en-US "
             "--disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder");
 
     QApplication app(argc, argv);
 
+    // ── Enforce Default English (en-US) Locale ────────────────────────────
+    auto *profile = QWebEngineProfile::defaultProfile();
+    profile->setHttpAcceptLanguage(QStringLiteral("en-US,en;q=0.9"));
+
+    // Set English preferences on YouTube & Google
+    auto *cookieStore = profile->cookieStore();
+    QNetworkCookie ytPref(QByteArrayLiteral("PREF"), QByteArrayLiteral("f6=40000000&hl=en&gl=US"));
+    ytPref.setDomain(QStringLiteral(".youtube.com"));
+    ytPref.setPath(QStringLiteral("/"));
+    ytPref.setExpirationDate(QDateTime::currentDateTime().addYears(5));
+    cookieStore->setCookie(ytPref, QUrl(QStringLiteral("https://www.youtube.com")));
+
+    QNetworkCookie googlePref(QByteArrayLiteral("PREF"), QByteArrayLiteral("hl=en&gl=US"));
+    googlePref.setDomain(QStringLiteral(".google.com"));
+    googlePref.setPath(QStringLiteral("/"));
+    googlePref.setExpirationDate(QDateTime::currentDateTime().addYears(5));
+    cookieStore->setCookie(googlePref, QUrl(QStringLiteral("https://www.google.com")));
+
     // ── Install TitanShield Ad Blocker & Content Engine ──────────────────
     // Must be set BEFORE any QWebEngineView is created.
-    auto *adBlocker = new AdBlocker(QWebEngineProfile::defaultProfile());
-    QWebEngineProfile::defaultProfile()->setUrlRequestInterceptor(adBlocker);
-    adBlocker->installContentScript(QWebEngineProfile::defaultProfile());
+    auto *adBlocker = new AdBlocker(profile);
+    profile->setUrlRequestInterceptor(adBlocker);
+    adBlocker->installContentScript(profile);
 
     // Optionally load a user filter list from disk
     const QString userList = QDir::homePath() + QStringLiteral("/.config/titanbrowser/filters.txt");

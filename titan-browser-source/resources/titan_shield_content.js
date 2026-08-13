@@ -6,13 +6,30 @@
 (function () {
     'use strict';
 
-    /* ─── 1. Neutralize Anti-Adblock Globals & Traps ───────────────────────── */
+    /* ─── 1. Neutralize Anti-Adblock Globals & Enforce English Locale ─────── */
     try {
         window.canRunAds = true;
         window.isAdBlockActive = false;
         window.google_ad_status = 1;
         window._adblock = false;
         window.isAdblockActive = false;
+
+        // Force browser navigator language properties to English
+        Object.defineProperty(navigator, 'language', { get: () => 'en-US', configurable: true });
+        Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'], configurable: true });
+
+        // Enforce English on YouTube
+        if (window.location.hostname.includes('youtube.com')) {
+            if (!document.cookie.includes('hl=en')) {
+                document.cookie = "PREF=f6=40000000&hl=en&gl=US;domain=.youtube.com;path=/;max-age=31536000;SameSite=Lax";
+            }
+        }
+        // Enforce English on Google
+        if (window.location.hostname.includes('google.')) {
+            if (!document.cookie.includes('hl=en')) {
+                document.cookie = "PREF=hl=en&gl=US;domain=" + window.location.hostname + ";path=/;max-age=31536000";
+            }
+        }
     } catch (e) { }
 
     /* ─── 2. YouTube JSON & Network Payload Interceptor (Root-Level Ad Block) ─── */

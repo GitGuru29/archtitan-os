@@ -443,6 +443,9 @@ void AdBlocker::interceptRequest(QWebEngineUrlRequestInfo &info)
     const QUrl url          = info.requestUrl();
     const QUrl firstParty   = info.firstPartyUrl();
 
+    // Always enforce English locale in HTTP headers for all outgoing requests
+    info.setHttpHeader(QByteArrayLiteral("Accept-Language"), QByteArrayLiteral("en-US,en;q=0.9"));
+
     // Never block the home page, qrc:// resources, or data: URIs
     const QString scheme = url.scheme();
     if (scheme == QStringLiteral("qrc") ||
