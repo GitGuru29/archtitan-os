@@ -6,17 +6,17 @@
     <title>Settings — Titan Browser</title>
     <style>
         :root {
-            --bg-base: #060913;
-            --bg-surface: #0b1120;
+            --bg-base: #060812;
+            --bg-surface: #0a0f1d;
             --bg-surface-2: #0e172e;
-            --bg-surface-hover: #111d35;
-            --border: rgba(255,255,255,0.06);
-            --border-accent: rgba(56,189,248,0.3);
+            --bg-surface-hover: #121e38;
+            --border: rgba(255, 255, 255, 0.07);
+            --border-accent: rgba(56, 189, 248, 0.35);
             --text: #f1f5f9;
             --text-sub: #94a3b8;
             --text-muted: #64748b;
             --accent: #38bdf8;
-            --accent-dim: rgba(56,189,248,0.12);
+            --accent-dim: rgba(56, 189, 248, 0.14);
             --green: #22c55e;
             --red: #ef4444;
             --yellow: #f59e0b;
@@ -25,7 +25,7 @@
             --radius-sm: 6px;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -37,9 +37,9 @@
 
         /* ── Sidebar Nav ──────────────────────────────────────────────── */
         .sidebar {
-            width: 220px;
-            min-width: 220px;
-            background: #050810;
+            width: 230px;
+            min-width: 230px;
+            background: #04060d;
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
@@ -54,7 +54,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 0 8px 20px 8px;
+            padding: 0 8px 18px 8px;
             border-bottom: 1px solid var(--border);
             margin-bottom: 12px;
         }
@@ -75,36 +75,34 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 8px 10px;
+            padding: 9px 12px;
             border-radius: var(--radius-sm);
             font-size: 13px;
             font-weight: 500;
             color: var(--text-sub);
             cursor: pointer;
             transition: all 0.12s;
-            user-select: none;
         }
 
         .nav-item:hover { background: rgba(255,255,255,0.04); color: #fff; }
-        .nav-item.active { background: var(--accent-dim); color: var(--accent); }
-        .nav-item svg { opacity: 0.7; flex-shrink: 0; }
-        .nav-item.active svg { opacity: 1; }
+        .nav-item.active { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+        .nav-item-icon { font-size: 14px; width: 18px; text-align: center; }
 
         .nav-section-label {
             font-size: 10px;
             font-weight: 700;
-            letter-spacing: 1px;
+            letter-spacing: 1.2px;
             color: var(--text-muted);
             text-transform: uppercase;
-            padding: 12px 10px 4px 10px;
+            padding: 14px 10px 4px 10px;
         }
 
         /* ── Main Content ─────────────────────────────────────────────── */
         .main {
             flex: 1;
             overflow-y: auto;
-            padding: 36px 48px;
-            max-width: 860px;
+            padding: 40px 54px;
+            max-width: 900px;
         }
 
         .page { display: none; }
@@ -163,7 +161,7 @@
         .setting-info { flex: 1; min-width: 0; }
 
         .setting-label {
-            font-size: 13px;
+            font-size: 13.5px;
             font-weight: 600;
             color: var(--text);
             margin-bottom: 2px;
@@ -181,7 +179,7 @@
         .toggle {
             width: 40px;
             height: 22px;
-            background: rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.12);
             border-radius: 11px;
             position: relative;
             cursor: pointer;
@@ -198,1132 +196,477 @@
             top: 3px;
             left: 3px;
             transition: left 0.2s;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
         }
         .toggle.on::after { left: 21px; }
 
-        /* ── Select Dropdown ──────────────────────────────────────────── */
-        .setting-select {
+        /* ── Inputs & Selects ─────────────────────────────────────────── */
+        .setting-select, .setting-input {
             background: var(--bg-surface-2);
             border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
             color: var(--text);
-            font-size: 12px;
-            padding: 6px 28px 6px 10px;
-            outline: none;
-            cursor: pointer;
-            appearance: none;
-            -webkit-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2364748b'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 9px center;
-        }
-        .setting-select:hover { border-color: var(--border-accent); }
-        .setting-select:focus { border-color: var(--accent); }
-
-        /* ── Range Slider ─────────────────────────────────────────────── */
-        .setting-range {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 140px;
-            height: 4px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 2px;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12.5px;
             outline: none;
             cursor: pointer;
         }
-        .setting-range::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: var(--accent);
-            cursor: pointer;
-            box-shadow: 0 0 0 3px rgba(56,189,248,0.2);
-        }
+        .setting-select:focus, .setting-input:focus { border-color: var(--accent); }
 
-        /* ── Radio Group ──────────────────────────────────────────────── */
-        .radio-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .radio-option {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
-            background: var(--bg-surface-2);
+        .btn-action {
+            background: rgba(255,255,255,0.08);
             border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: all 0.12s;
-        }
-        .radio-option:hover { border-color: var(--border-accent); }
-        .radio-option.selected { border-color: var(--accent); background: var(--accent-dim); }
-
-        .radio-dot {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 2px solid var(--text-muted);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: border-color 0.12s;
-        }
-        .radio-option.selected .radio-dot {
-            border-color: var(--accent);
-        }
-        .radio-dot::after {
-            content: '';
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--accent);
-            display: none;
-        }
-        .radio-option.selected .radio-dot::after { display: block; }
-
-        .radio-label { font-size: 12.5px; font-weight: 500; color: var(--text); }
-        .radio-sub { font-size: 11px; color: var(--text-muted); }
-
-        /* ── Action Buttons ───────────────────────────────────────────── */
-        .btn {
-            border: none;
-            border-radius: var(--radius-sm);
+            color: #fff;
             padding: 6px 14px;
+            border-radius: var(--radius-sm);
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.12s;
         }
-        .btn-primary { background: var(--accent); color: #060913; }
-        .btn-primary:hover { background: #0ea5e9; }
-        .btn-ghost { background: rgba(255,255,255,0.05); color: var(--text-sub); border: 1px solid var(--border); }
-        .btn-ghost:hover { background: rgba(255,255,255,0.09); color: #fff; }
-        .btn-danger { background: rgba(239,68,68,0.1); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
-        .btn-danger:hover { background: rgba(239,68,68,0.2); }
+        .btn-action:hover { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
 
-        /* ── Status Badges ────────────────────────────────────────────── */
-        .badge {
-            display: inline-flex;
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+        .btn-danger:hover { background: #ef4444; color: #fff; }
+
+        /* Theme Cards Grid */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            padding: 16px;
+        }
+        .theme-card {
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 5px;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 3px 8px;
+            gap: 8px;
+            transition: all 0.15s ease;
+        }
+        .theme-card:hover { border-color: var(--accent); }
+        .theme-card.active { border-color: var(--accent); background: var(--accent-dim); }
+        .theme-preview {
+            width: 100%;
+            height: 48px;
             border-radius: 4px;
         }
-        .badge-green { background: rgba(34,197,94,0.12); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
-        .badge-yellow { background: rgba(245,158,11,0.12); color: var(--yellow); border: 1px solid rgba(245,158,11,0.3); }
-        .badge-red { background: rgba(239,68,68,0.12); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
-        .badge-blue { background: rgba(56,189,248,0.12); color: var(--accent); border: 1px solid rgba(56,189,248,0.3); }
+        .theme-name { font-size: 12px; font-weight: 600; }
 
-        /* ── Progress / Meter ─────────────────────────────────────────── */
-        .meter-bar {
-            height: 5px;
-            background: rgba(255,255,255,0.08);
-            border-radius: 3px;
-            overflow: hidden;
-            width: 120px;
-        }
-        .meter-fill {
-            height: 100%;
-            border-radius: 3px;
-            background: linear-gradient(90deg, #38bdf8, #818cf8);
-        }
-
-        /* ── Search in Settings ───────────────────────────────────────── */
-        .settings-search {
+        /* Cheatsheet Table */
+        .shortcut-table {
             width: 100%;
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            color: var(--text);
-            font-size: 13px;
-            padding: 9px 14px;
-            outline: none;
-            margin-bottom: 28px;
-        }
-        .settings-search:focus { border-color: var(--accent); }
-
-        /* ── Divider ──────────────────────────────────────────────────── */
-        .divider { height: 1px; background: var(--border); margin: 8px 0; }
-
-        /* ── Scrollbar ────────────────────────────────────────────────── */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
-
-        /* ── Toast Notification ───────────────────────────────────────── */
-        #toast {
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            background: #0b1120;
-            border: 1px solid var(--border-accent);
-            border-radius: var(--radius-sm);
-            padding: 10px 16px;
+            border-collapse: collapse;
             font-size: 12.5px;
-            color: var(--accent);
-            font-weight: 600;
-            opacity: 0;
-            transform: translateY(8px);
-            transition: all 0.2s;
-            pointer-events: none;
-            z-index: 999;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
         }
-        #toast.show { opacity: 1; transform: translateY(0); }
-
-        /* ── About Section ────────────────────────────────────────────── */
-        .about-box {
-            background: var(--bg-surface);
+        .shortcut-table th, .shortcut-table td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        .shortcut-table th { color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
+        .shortcut-key {
+            background: rgba(255,255,255,0.08);
             border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 28px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .version-number {
-            font-size: 28px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #38bdf8, #818cf8);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 11.5px;
+            color: #38bdf8;
         }
     </style>
 </head>
 <body>
 
-    <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
-    <nav class="sidebar">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
         <div class="sidebar-logo">
             <svg width="22" height="22" viewBox="0 0 64 64" fill="none">
-                <path d="M32 4L4 56H18L32 28L46 56H60L32 4Z" fill="url(#lg1)"/>
-                <path d="M24 42H40L32 26L24 42Z" fill="#fff" opacity="0.9"/>
-                <defs><linearGradient id="lg1" x1="4" y1="4" x2="60" y2="56"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#818cf8"/></linearGradient></defs>
+                <path d="M32 4L4 56H18L32 28L46 56H60L32 4Z" fill="#38bdf8" />
+                <path d="M24 42H40L32 26L24 42Z" fill="#ffffff" />
             </svg>
             <div>
-                <div class="sidebar-logo-title">Titan Browser</div>
-                <div class="sidebar-logo-sub">Settings</div>
+                <div class="sidebar-logo-title">Titan Settings</div>
+                <div class="sidebar-logo-sub">TitanBrowser v1.0.0</div>
             </div>
         </div>
 
-        <div class="nav-section-label">General</div>
-        <div class="nav-item active" onclick="showPage('general', this)">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M19.07 19.07l-1.41-1.41M4.93 19.07l1.41-1.41M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
-            General
-        </div>
-        <div class="nav-item" onclick="showPage('appearance', this)">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M17.66 6.34l-1.41 1.41M6.34 17.66l-1.41 1.41"/></svg>
-            Appearance
-        </div>
-        <div class="nav-item" onclick="showPage('search', this)">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            Search
-        </div>
+        <div class="nav-section-label">Preferences</div>
+        <div class="nav-item active" onclick="switchPage('general')"><span class="nav-item-icon">⚙</span> General</div>
+        <div class="nav-item" onclick="switchPage('appearance')"><span class="nav-item-icon">🎨</span> Appearance & Theme</div>
+        <div class="nav-item" onclick="switchPage('search')"><span class="nav-item-icon">🔍</span> Search Engine</div>
 
-        <div class="nav-section-label">Security & Privacy</div>
-        <div class="nav-item" onclick="showPage('privacy', this)">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            TitanShield
-        </div>
-        <div class="nav-item" onclick="showPage('security', this)">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-            Security
-        </div>
+        <div class="nav-section-label">Security & Engine</div>
+        <div class="nav-item" onclick="switchPage('privacy')"><span class="nav-item-icon">🛡</span> TitanShield Security</div>
+        <div class="nav-item" onclick="switchPage('performance')"><span class="nav-item-icon">⚡</span> Performance & Memory</div>
+        <div class="nav-item" onclick="switchPage('ai')"><span class="nav-item-icon">✦</span> Titan AI Engine</div>
 
-        <div class="nav-section-label">Advanced</div>
-        <div class="nav-item" onclick="showPage('performance', this)">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            Performance
-        </div>
-        <div class="nav-item" onclick="showPage('ai', this)">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a4 4 0 0 1 4 4v1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2V6a4 4 0 0 1 4-4z"/></svg>
-            Titan AI
-        </div>
-        <div class="nav-item" onclick="showPage('downloads', this)">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            Downloads
-        </div>
-        <div class="nav-item" onclick="showPage('about', this)">
-            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-            About
-        </div>
-    </nav>
+        <div class="nav-section-label">System</div>
+        <div class="nav-item" onclick="switchPage('shortcuts')"><span class="nav-item-icon">⌨</span> Keyboard Shortcuts</div>
+        <div class="nav-item" onclick="switchPage('about')"><span class="nav-item-icon">ℹ</span> About Titan</div>
+    </div>
 
-    <!-- ── Main Content ──────────────────────────────────────────────────── -->
+    <!-- Main Content Area -->
     <div class="main">
 
-        <!-- General -->
-        <div id="page-general" class="page active">
+        <!-- 1. General Settings -->
+        <div class="page active" id="page-general">
             <div class="page-header">
-                <div class="page-title">General</div>
-                <div class="page-sub">Startup, homepage, and browser behaviour</div>
+                <h1 class="page-title">General Settings</h1>
+                <p class="page-sub">Configure startup behavior, downloads, and default homepage</p>
             </div>
 
             <div class="settings-group">
-                <div class="group-label">Startup</div>
+                <div class="group-label">Startup Behavior</div>
                 <div class="settings-card">
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">On startup</div>
-                            <div class="setting-desc">What Titan Browser does when launched</div>
+                            <div class="setting-desc">Choose what opens when Titan Browser launches</div>
                         </div>
-                        <select class="setting-select" onchange="save('startup', this.value)">
-                            <option value="new-tab" selected>Open New Tab</option>
-                            <option value="continue">Continue where you left off</option>
-                            <option value="homepage">Open Homepage</option>
-                        </select>
+                        <div class="setting-control">
+                            <select class="setting-select" id="startupSelect" onchange="saveSetting('startup', this.value)">
+                                <option value="newtab">Open New Tab Page (Titan Workspace)</option>
+                                <option value="restore">Restore previous session tabs</option>
+                                <option value="custom">Open custom URL</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Homepage URL</div>
-                            <div class="setting-desc">URL loaded for the home button in the nav bar</div>
+                            <div class="setting-label">Restore closed tabs on crash</div>
+                            <div class="setting-desc">Automatically recover active tabs if the window closes unexpectedly</div>
                         </div>
-                        <input id="homepageUrl" type="text" class="setting-select" style="width:220px;" value="Titan New Tab" onchange="save('homepage', this.value)" />
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Restore tabs on crash</div>
-                            <div class="setting-desc">Automatically restore your session after unexpected shutdowns</div>
+                        <div class="setting-control">
+                            <div class="toggle on" id="toggle-crash-restore" onclick="toggleSwitch(this, 'crash_restore')"></div>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'restore-tabs')"></div>
                     </div>
                 </div>
             </div>
 
             <div class="settings-group">
-                <div class="group-label">Tabs</div>
+                <div class="group-label">Downloads</div>
                 <div class="settings-card">
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Open links in new tab</div>
-                            <div class="setting-desc">Middle-click and Ctrl+Click always open a new tab</div>
+                            <div class="setting-label">Download location</div>
+                            <div class="setting-desc">Files will be saved to ~/Downloads</div>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'links-new-tab')"></div>
+                        <div class="setting-control">
+                            <button class="btn-action" onclick="alert('Download directory: ' + navigator.userAgent)">Change Folder</button>
+                        </div>
                     </div>
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Confirm before closing multiple tabs</div>
-                            <div class="setting-desc">Show a dialog when closing a window with multiple tabs open</div>
+                            <div class="setting-label">Ask where to save each file before downloading</div>
+                            <div class="setting-desc">Show file picker dialog for each download request</div>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'close-confirm')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Show tab favicons</div>
-                            <div class="setting-desc">Display site icons in the tab strip</div>
+                        <div class="setting-control">
+                            <div class="toggle" id="toggle-ask-dl" onclick="toggleSwitch(this, 'ask_download')"></div>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'tab-favicons')"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">Language & Region</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Browser language</div>
-                        </div>
-                        <select class="setting-select" onchange="save('language', this.value)">
-                            <option selected>English (US)</option>
-                            <option>English (UK)</option>
-                            <option>German</option>
-                            <option>French</option>
-                            <option>Spanish</option>
-                            <option>Japanese</option>
-                            <option>Arabic</option>
-                        </select>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Spell check</div>
-                            <div class="setting-desc">Underline misspelled words in editable fields</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'spellcheck')"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Appearance -->
-        <div id="page-appearance" class="page">
+        <!-- 2. Appearance Settings -->
+        <div class="page" id="page-appearance">
             <div class="page-header">
-                <div class="page-title">Appearance</div>
-                <div class="page-sub">Theme, fonts, and visual density</div>
+                <h1 class="page-title">Appearance & Themes</h1>
+                <p class="page-sub">Customize themes, accent colors, and UI density</p>
             </div>
 
             <div class="settings-group">
-                <div class="group-label">Theme</div>
+                <div class="group-label">Theme Palette</div>
                 <div class="settings-card">
-                    <div class="setting-row" style="align-items: flex-start; padding-bottom: 16px;">
-                        <div class="setting-info">
-                            <div class="setting-label">Color scheme</div>
-                            <div class="setting-desc">Choose your preferred Titan interface style</div>
+                    <div class="theme-grid">
+                        <div class="theme-card active" onclick="selectTheme(this, 'obsidian')">
+                            <div class="theme-preview" style="background: #060812; border: 1px solid #38bdf8;"></div>
+                            <div class="theme-name">Obsidian Dark</div>
                         </div>
-                        <div class="radio-group" style="width:240px;">
-                            <div class="radio-option selected" onclick="selectRadio(this, '.radio-option', 'theme', 'dark-navy')">
-                                <div class="radio-dot"></div>
-                                <div>
-                                    <div class="radio-label">Dark Navy</div>
-                                    <div class="radio-sub">Default · Immersive dark workspace</div>
-                                </div>
-                            </div>
-                            <div class="radio-option" onclick="selectRadio(this, '.radio-option', 'theme', 'pure-dark')">
-                                <div class="radio-dot"></div>
-                                <div>
-                                    <div class="radio-label">Pure Black</div>
-                                    <div class="radio-sub">Maximum OLED contrast</div>
-                                </div>
-                            </div>
-                            <div class="radio-option" onclick="selectRadio(this, '.radio-option', 'theme', 'light')">
-                                <div class="radio-dot"></div>
-                                <div>
-                                    <div class="radio-label">Light</div>
-                                    <div class="radio-sub">Professional light workspace</div>
-                                </div>
-                            </div>
+                        <div class="theme-card" onclick="selectTheme(this, 'midnight')">
+                            <div class="theme-preview" style="background: #0a1128; border: 1px solid #818cf8;"></div>
+                            <div class="theme-name">Midnight Neon</div>
+                        </div>
+                        <div class="theme-card" onclick="selectTheme(this, 'amoled')">
+                            <div class="theme-preview" style="background: #000000; border: 1px solid #22c55e;"></div>
+                            <div class="theme-name">AMOLED Black</div>
+                        </div>
+                        <div class="theme-card" onclick="selectTheme(this, 'light')">
+                            <div class="theme-preview" style="background: #f8fafc; border: 1px solid #94a3b8;"></div>
+                            <div class="theme-name">Frost Light</div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="settings-group">
-                <div class="group-label">Typography</div>
+                <div class="group-label">Interface Elements</div>
                 <div class="settings-card">
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Default font size</div>
-                            <div class="setting-desc">Font size for web page content</div>
+                            <div class="setting-label">Compact Navigation Rail</div>
+                            <div class="setting-desc">Show the 46px vertical sidebar on the left</div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="range" class="setting-range" min="10" max="24" value="16" id="fontSize" oninput="updateLabel('fontSizeLabel', this.value + 'px'); save('font-size', this.value)" />
-                            <span id="fontSizeLabel" style="font-size: 12px; color: var(--text-sub); width: 32px; text-align: right;">16px</span>
+                        <div class="setting-control">
+                            <div class="toggle on" id="toggle-rail" onclick="toggleSwitch(this, 'show_rail')"></div>
                         </div>
                     </div>
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Minimum font size</div>
-                            <div class="setting-desc">Smallest text Titan will display on pages</div>
+                            <div class="setting-label">Show Bookmarks Bar</div>
+                            <div class="setting-desc">Display quick bookmarks under the address bar</div>
                         </div>
-                        <select class="setting-select" onchange="save('min-font', this.value)">
-                            <option>No minimum</option>
-                            <option>9px</option>
-                            <option selected>10px</option>
-                            <option>11px</option>
-                            <option>12px</option>
-                        </select>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">System font override</div>
-                            <div class="setting-desc">Use Inter on all pages that don't set their own font</div>
+                        <div class="setting-control">
+                            <div class="toggle" id="toggle-bm-bar" onclick="toggleSwitch(this, 'show_bookmarks_bar')"></div>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'font-override')"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">Browser Chrome</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Show bookmarks bar</div>
-                        </div>
-                        <div class="toggle" onclick="toggleSetting(this, 'bookmarks-bar')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Compact navigation rail</div>
-                            <div class="setting-desc">Use icon-only 48px sidebar instead of expanded panel</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'compact-rail')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Show full URL in address bar</div>
-                            <div class="setting-desc">Display complete URLs including scheme (https://)</div>
-                        </div>
-                        <div class="toggle" onclick="toggleSetting(this, 'full-url')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Page zoom</div>
-                            <div class="setting-desc">Default zoom level for all pages</div>
-                        </div>
-                        <select class="setting-select" onchange="save('zoom', this.value)">
-                            <option>75%</option>
-                            <option>90%</option>
-                            <option selected>100%</option>
-                            <option>110%</option>
-                            <option>125%</option>
-                            <option>150%</option>
-                        </select>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Search -->
-        <div id="page-search" class="page">
+        <!-- 3. Search Engine -->
+        <div class="page" id="page-search">
             <div class="page-header">
-                <div class="page-title">Search</div>
-                <div class="page-sub">Search engine, address bar, and Command Bar behaviour</div>
+                <h1 class="page-title">Search Engine</h1>
+                <p class="page-sub">Manage default omnibox search and keyword prefixes</p>
             </div>
 
             <div class="settings-group">
-                <div class="group-label">Default Search Engine</div>
-                <div class="settings-card">
-                    <div class="setting-row" style="align-items: flex-start; padding-bottom: 16px;">
-                        <div class="setting-info">
-                            <div class="setting-label">Search engine</div>
-                            <div class="setting-desc">Used for address bar and Command Bar queries</div>
-                        </div>
-                        <div class="radio-group" style="width: 260px;">
-                            <div class="radio-option selected" onclick="selectRadio(this, '.radio-option', 'engine', 'ddg')">
-                                <div class="radio-dot"></div>
-                                <div>
-                                    <div class="radio-label">DuckDuckGo</div>
-                                    <div class="radio-sub">Private · No tracking</div>
-                                </div>
-                            </div>
-                            <div class="radio-option" onclick="selectRadio(this, '.radio-option', 'engine', 'google')">
-                                <div class="radio-dot"></div>
-                                <div>
-                                    <div class="radio-label">Google</div>
-                                    <div class="radio-sub">Most relevant results</div>
-                                </div>
-                            </div>
-                            <div class="radio-option" onclick="selectRadio(this, '.radio-option', 'engine', 'bing')">
-                                <div class="radio-dot"></div>
-                                <div>
-                                    <div class="radio-label">Brave Search</div>
-                                    <div class="radio-sub">Privacy-first index</div>
-                                </div>
-                            </div>
-                            <div class="radio-option" onclick="selectRadio(this, '.radio-option', 'engine', 'custom')">
-                                <div class="radio-dot"></div>
-                                <div>
-                                    <div class="radio-label">Custom</div>
-                                    <div class="radio-sub">Use your own search endpoint</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Custom search URL</div>
-                            <div class="setting-desc">Use %s as placeholder for query string</div>
-                        </div>
-                        <input type="text" class="setting-select" style="width:240px;" placeholder="https://example.com/search?q=%s" />
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">Address Bar</div>
+                <div class="group-label">Default Search</div>
                 <div class="settings-card">
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Search suggestions</div>
-                            <div class="setting-desc">Show real-time suggestions as you type in the address bar</div>
+                            <div class="setting-label">Search engine used in address bar</div>
+                            <div class="setting-desc">Query typed in the omnibox will be sent to this provider</div>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'suggestions')"></div>
+                        <div class="setting-control">
+                            <select class="setting-select" id="searchEngineSelect" onchange="saveSetting('search_engine', this.value)">
+                                <option value="duckduckgo">DuckDuckGo (Privacy-First)</option>
+                                <option value="google">Google Search</option>
+                                <option value="brave">Brave Search</option>
+                                <option value="startpage">Startpage</option>
+                                <option value="searxng">SearXNG (Decentralized)</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Browsing history in suggestions</div>
-                            <div class="setting-desc">Show previously visited URLs in address bar dropdown</div>
+                            <div class="setting-label">Quick keyword prefixes</div>
+                            <div class="setting-desc">Type 'gh ' for GitHub, 'yt ' for YouTube, 'wiki ' for Wikipedia in Omnibox</div>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'history-suggestions')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Titan AI suggestions (⌘K)</div>
-                            <div class="setting-desc">Offer Titan AI as an option in the Command Bar</div>
+                        <div class="setting-control">
+                            <div class="toggle on" id="toggle-shortcuts" onclick="toggleSwitch(this, 'search_shortcuts')"></div>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'ai-suggestions')"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- TitanShield Privacy -->
-        <div id="page-privacy" class="page">
+        <!-- 4. TitanShield Privacy -->
+        <div class="page" id="page-privacy">
             <div class="page-header">
-                <div class="page-title">TitanShield</div>
-                <div class="page-sub">Privacy, tracker blocking, and fingerprint protection</div>
+                <h1 class="page-title">TitanShield Security & Privacy</h1>
+                <p class="page-sub">Built-in 20,000+ domain filter rules and active web protections</p>
             </div>
 
             <div class="settings-group">
-                <div class="group-label">Protection Level</div>
+                <div class="group-label">Shield Protections</div>
                 <div class="settings-card">
-                    <div class="setting-row" style="align-items: flex-start; padding-bottom: 16px;">
+                    <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Shield protection level</div>
-                            <div class="setting-desc">Controls aggressiveness of tracker and fingerprint blocking</div>
+                            <div class="setting-label">TitanShield Content Engine</div>
+                            <div class="setting-desc">Block advertisements, tracking beacons, and telemetry requests</div>
                         </div>
-                        <div class="radio-group" style="width:260px;">
-                            <div class="radio-option" onclick="selectRadio(this, '.radio-option', 'shield', 'standard')">
-                                <div class="radio-dot"></div>
-                                <div>
-                                    <div class="radio-label">Standard</div>
-                                    <div class="radio-sub">Blocks known trackers, preserves functionality</div>
-                                </div>
-                            </div>
-                            <div class="radio-option selected" onclick="selectRadio(this, '.radio-option', 'shield', 'strict')">
-                                <div class="radio-dot"></div>
-                                <div>
-                                    <div class="radio-label">Strict <span class="badge badge-green" style="font-size:9px;">Active</span></div>
-                                    <div class="radio-sub">Blocks all third-party trackers and scripts</div>
-                                </div>
-                            </div>
-                            <div class="radio-option" onclick="selectRadio(this, '.radio-option', 'shield', 'maximum')">
-                                <div class="radio-dot"></div>
-                                <div>
-                                    <div class="radio-label">Maximum</div>
-                                    <div class="radio-sub">Full isolation — may break some sites</div>
-                                </div>
-                            </div>
+                        <div class="setting-control">
+                            <div class="toggle on" id="toggle-shield-master" onclick="toggleSwitch(this, 'shield_active')"></div>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-label">Instant Video Ad Skip</div>
+                            <div class="setting-desc">Neutralize video ads and overlays across YouTube & Spotify</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle on" id="toggle-yt-skip" onclick="toggleSwitch(this, 'video_ad_skip')"></div>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-label">Fingerprint & Canvas Defense</div>
+                            <div class="setting-desc">Spoof canvas, audio context, and battery API fingerprinting vectors</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle on" id="toggle-anti-fp" onclick="toggleSwitch(this, 'anti_fingerprint')"></div>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-label">Enforce HTTPS Upgrades</div>
+                            <div class="setting-desc">Automatically upgrade HTTP requests to secure encrypted HTTPS</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle on" id="toggle-https-only" onclick="toggleSwitch(this, 'https_only')"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="settings-group">
-                <div class="group-label">Tracker & Ad Blocking</div>
+                <div class="group-label">Browsing Data</div>
                 <div class="settings-card">
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Block third-party trackers</div>
-                            <div class="setting-desc">Prevents cross-site tracking via cookies and scripts</div>
+                            <div class="setting-label">Clear browsing history and cache</div>
+                            <div class="setting-desc">Purge all local cache files, history records, and session data</div>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'block-trackers')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Block ads</div>
-                            <div class="setting-desc">Remove intrusive display and video advertisements</div>
+                        <div class="setting-control">
+                            <button class="btn-action btn-danger" onclick="clearBrowsingData()">Clear All Data</button>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'block-ads')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Block cookie consent popups</div>
-                            <div class="setting-desc">Suppress GDPR banners automatically</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'block-cookie-banners')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Block social media embeds</div>
-                            <div class="setting-desc">Prevent Facebook/Twitter/YouTube embeds from tracking you</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'block-social')"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">Fingerprint Protection</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Fingerprint randomization</div>
-                            <div class="setting-desc">Randomize canvas, font, and audio fingerprints per session</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'fingerprint-random')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">WebRTC IP leak protection</div>
-                            <div class="setting-desc">Prevents your local IP from leaking via WebRTC</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'webrtc-protection')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">DNS-over-HTTPS</div>
-                            <div class="setting-desc">Encrypt DNS queries to prevent interception</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'doh')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">DoH server</div>
-                        </div>
-                        <select class="setting-select" onchange="save('doh-server', this.value)">
-                            <option selected>Cloudflare (1.1.1.1)</option>
-                            <option>Google (8.8.8.8)</option>
-                            <option>Mullvad</option>
-                            <option>NextDNS</option>
-                            <option>Custom</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">Cookies</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Block third-party cookies</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'block-third-party-cookies')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Clear cookies on close</div>
-                        </div>
-                        <div class="toggle" onclick="toggleSetting(this, 'clear-cookies-on-close')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Clear browsing data</div>
-                            <div class="setting-desc">Cookies, cache, history, site data</div>
-                        </div>
-                        <button class="btn btn-danger" onclick="clearBrowsingData()">Clear Now</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Security -->
-        <div id="page-security" class="page">
+        <!-- 5. Performance & Memory -->
+        <div class="page" id="page-performance">
             <div class="page-header">
-                <div class="page-title">Security</div>
-                <div class="page-sub">HTTPS, permissions, and sandbox isolation</div>
+                <h1 class="page-title">Performance & Optimization</h1>
+                <p class="page-sub">Manage memory saver, smooth scrolling, and hardware acceleration</p>
             </div>
 
             <div class="settings-group">
-                <div class="group-label">HTTPS & Certificates</div>
+                <div class="group-label">Tab Memory Saver</div>
                 <div class="settings-card">
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Upgrade HTTP to HTTPS</div>
-                            <div class="setting-desc">Automatically redirect insecure connections</div>
+                            <div class="setting-label">Smart Tab Suspension</div>
+                            <div class="setting-desc">Frees memory from background tabs inactive for more than 15 minutes</div>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'https-upgrade')"></div>
+                        <div class="setting-control">
+                            <div class="toggle on" id="toggle-mem-saver" onclick="toggleSwitch(this, 'memory_saver')"></div>
+                        </div>
                     </div>
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Strict HTTPS-only mode</div>
-                            <div class="setting-desc">Block all HTTP pages — show an error if unavailable over HTTPS</div>
+                            <div class="setting-label">Smooth Scroll Animation</div>
+                            <div class="setting-desc">Hardware-assisted smooth scrolling across all web pages</div>
                         </div>
-                        <div class="toggle" onclick="toggleSetting(this, 'https-only')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Warn on insecure forms</div>
-                            <div class="setting-desc">Show warning when submitting a form over HTTP</div>
+                        <div class="setting-control">
+                            <div class="toggle on" id="toggle-smooth-scroll" onclick="toggleSwitch(this, 'smooth_scroll')"></div>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'insecure-form-warn')"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">Site Permissions (Default)</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Camera</div>
-                        </div>
-                        <select class="setting-select" onchange="save('perm-camera', this.value)">
-                            <option selected>Ask</option>
-                            <option>Allow</option>
-                            <option>Block</option>
-                        </select>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Microphone</div>
-                        </div>
-                        <select class="setting-select" onchange="save('perm-mic', this.value)">
-                            <option selected>Ask</option>
-                            <option>Allow</option>
-                            <option>Block</option>
-                        </select>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Location</div>
-                        </div>
-                        <select class="setting-select" onchange="save('perm-location', this.value)">
-                            <option>Ask</option>
-                            <option>Allow</option>
-                            <option selected>Block</option>
-                        </select>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Notifications</div>
-                        </div>
-                        <select class="setting-select" onchange="save('perm-notif', this.value)">
-                            <option selected>Ask</option>
-                            <option>Allow</option>
-                            <option>Block</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">Titan Sandbox Isolation</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Process-per-site isolation</div>
-                            <div class="setting-desc">Run each site in its own isolated renderer process</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'site-isolation')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Seccomp sandbox</div>
-                            <div class="setting-desc">Block dangerous system calls in renderer processes</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'seccomp')"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Performance -->
-        <div id="page-performance" class="page">
+        <!-- 6. AI Engine -->
+        <div class="page" id="page-ai">
             <div class="page-header">
-                <div class="page-title">Performance</div>
-                <div class="page-sub">Memory, GPU, and resource management</div>
+                <h1 class="page-title">Titan AI Engine</h1>
+                <p class="page-sub">Configure on-device assistant and developer intelligence</p>
             </div>
 
             <div class="settings-group">
-                <div class="group-label">Current Usage</div>
+                <div class="group-label">AI Configuration</div>
                 <div class="settings-card">
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Memory used</div>
-                            <div class="setting-desc">Titan Browser processes</div>
+                            <div class="setting-label">AI Execution Provider</div>
+                            <div class="setting-desc">Select local execution or custom Ollama / OpenAI compatible endpoint</div>
                         </div>
-                        <div style="display:flex;align-items:center;gap:10px;">
-                            <div class="meter-bar"><div class="meter-fill" style="width:42%;"></div></div>
-                            <span style="font-size:12px;color:var(--text-sub);" id="memUsage">~340 MB</span>
+                        <div class="setting-control">
+                            <select class="setting-select" id="aiProviderSelect" onchange="saveSetting('ai_provider', this.value)">
+                                <option value="local">ArchTitan Native On-Device Engine</option>
+                                <option value="ollama">Ollama Localhost (http://localhost:11434)</option>
+                                <option value="custom">Custom Remote Endpoint</option>
+                            </select>
                         </div>
                     </div>
                     <div class="setting-row">
                         <div class="setting-info">
-                            <div class="setting-label">Rendering engine</div>
+                            <div class="setting-label">Keyboard Shortcut for AI</div>
+                            <div class="setting-desc">Opens the Titan AI sliding assistant drawer</div>
                         </div>
-                        <span class="badge badge-blue">SwiftShader / EGL</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">Memory Saver</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Memory Saver mode</div>
-                            <div class="setting-desc">Automatically sleep inactive tabs to reclaim RAM</div>
+                        <div class="setting-control">
+                            <span class="shortcut-key">Ctrl + K</span>
                         </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'memory-saver')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Sleep tabs after</div>
-                        </div>
-                        <select class="setting-select" onchange="save('tab-sleep-delay', this.value)">
-                            <option>1 minute</option>
-                            <option selected>5 minutes</option>
-                            <option>15 minutes</option>
-                            <option>30 minutes</option>
-                            <option>1 hour</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">Hardware Acceleration</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Hardware acceleration</div>
-                            <div class="setting-desc">Use GPU for compositing and rendering when available</div>
-                        </div>
-                        <div class="toggle" onclick="toggleSetting(this, 'hw-accel')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">SwiftShader fallback</div>
-                            <div class="setting-desc">Use CPU-based rendering if GPU is unavailable (safe default)</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'swiftshader')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">GPU rendering API</div>
-                        </div>
-                        <select class="setting-select" onchange="save('gpu-api', this.value)">
-                            <option selected>Angle (EGL)</option>
-                            <option>OpenGL</option>
-                            <option>Vulkan</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">Network</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Prefetch pages in background</div>
-                            <div class="setting-desc">Pre-load links likely to be clicked to speed up navigation</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'prefetch')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">HTTP/3 (QUIC)</div>
-                            <div class="setting-desc">Use modern QUIC protocol for faster connections</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'quic')"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Titan AI -->
-        <div id="page-ai" class="page">
+        <!-- 7. Keyboard Shortcuts -->
+        <div class="page" id="page-shortcuts">
             <div class="page-header">
-                <div class="page-title">Titan AI</div>
-                <div class="page-sub">Local AI assistant — runs entirely on-device, zero telemetry</div>
+                <h1 class="page-title">Keyboard Shortcuts</h1>
+                <p class="page-sub">Master navigation and productivity with keyboard bindings</p>
             </div>
 
-            <div class="settings-group">
-                <div class="group-label">AI Engine</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Enable Titan AI</div>
-                            <div class="setting-desc">Activate the local AI assistant panel and Command Bar integration</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'ai-enabled')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">AI status</div>
-                        </div>
-                        <span class="badge badge-green">● Active — Local</span>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Active model</div>
-                            <div class="setting-desc">Quantized model running in-process</div>
-                        </div>
-                        <select class="setting-select" onchange="save('ai-model', this.value)">
-                            <option selected>Titan-Nano Q4 (180MB)</option>
-                            <option>Titan-Small Q4 (420MB)</option>
-                            <option>Titan-Medium Q5 (1.1GB)</option>
-                        </select>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">RAM allocation</div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="range" class="setting-range" min="64" max="1024" step="64" value="180" oninput="updateLabel('aiRamLabel', this.value + 'MB'); save('ai-ram', this.value)" />
-                            <span id="aiRamLabel" style="font-size:12px;color:var(--text-sub);width:48px;text-align:right;">180MB</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">AI Features</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Page summarisation</div>
-                            <div class="setting-desc">Summarize any open page via the AI side panel</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'ai-summarize')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Code explanation</div>
-                            <div class="setting-desc">Explain code blocks and developer documentation</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'ai-code')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Inline translation</div>
-                            <div class="setting-desc">Translate selected text via the context menu</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'ai-translate')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">AI writing assistant</div>
-                            <div class="setting-desc">Draft and rewrite selected text in editable areas</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'ai-writing')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">AI suggestions in Command Bar</div>
-                            <div class="setting-desc">Offer AI query as the first option in ⌘K dropdown</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'ai-command-bar')"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">Privacy</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Local processing only</div>
-                            <div class="setting-desc">All AI inference runs entirely on-device — no data is sent to any server</div>
-                        </div>
-                        <span class="badge badge-green">Enforced</span>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">AI conversation history</div>
-                            <div class="setting-desc">Store conversation history across sessions (encrypted locally)</div>
-                        </div>
-                        <div class="toggle" onclick="toggleSetting(this, 'ai-history')"></div>
-                    </div>
-                </div>
+            <div class="settings-card">
+                <table class="shortcut-table">
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th>Shortcut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>New Tab</td><td><span class="shortcut-key">Ctrl + T</span></td></tr>
+                        <tr><td>Close Current Tab</td><td><span class="shortcut-key">Ctrl + W</span></td></tr>
+                        <tr><td>Focus Address Bar (Omnibox)</td><td><span class="shortcut-key">Ctrl + L</span></td></tr>
+                        <tr><td>Open Titan AI Assistant</td><td><span class="shortcut-key">Ctrl + K</span></td></tr>
+                        <tr><td>Find in Page</td><td><span class="shortcut-key">Ctrl + F</span></td></tr>
+                        <tr><td>Bookmarks Manager</td><td><span class="shortcut-key">Ctrl + B</span></td></tr>
+                        <tr><td>Browsing History</td><td><span class="shortcut-key">Ctrl + H</span></td></tr>
+                        <tr><td>Downloads</td><td><span class="shortcut-key">Ctrl + J</span></td></tr>
+                        <tr><td>Settings</td><td><span class="shortcut-key">Ctrl + ,</span></td></tr>
+                        <tr><td>Navigate Back</td><td><span class="shortcut-key">Alt + Left</span></td></tr>
+                        <tr><td>Navigate Forward</td><td><span class="shortcut-key">Alt + Right</span></td></tr>
+                        <tr><td>Go to Home (Titan Workspace)</td><td><span class="shortcut-key">Alt + H</span></td></tr>
+                        <tr><td>Spaces Workspace Switcher</td><td><span class="shortcut-key">Alt + S</span></td></tr>
+                        <tr><td>Zoom In / Out / Reset</td><td><span class="shortcut-key">Ctrl + + / - / 0</span></td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <!-- Downloads -->
-        <div id="page-downloads" class="page">
+        <!-- 8. About -->
+        <div class="page" id="page-about">
             <div class="page-header">
-                <div class="page-title">Downloads</div>
-                <div class="page-sub">Download location and behaviour</div>
+                <h1 class="page-title">About Titan Browser</h1>
+                <p class="page-sub">Architecture, versioning, and system runtime information</p>
             </div>
 
-            <div class="settings-group">
-                <div class="group-label">Download Location</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Default download folder</div>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <input type="text" class="setting-select" style="width: 200px;" value="~/Downloads" id="downloadPath" />
-                            <button class="btn btn-ghost" onclick="save('download-path', document.getElementById('downloadPath').value)">Save</button>
-                        </div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Ask where to save each file</div>
-                        </div>
-                        <div class="toggle" onclick="toggleSetting(this, 'ask-download')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Open files after download</div>
-                        </div>
-                        <div class="toggle" onclick="toggleSetting(this, 'open-after-dl')"></div>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Show downloads panel on start</div>
-                        </div>
-                        <div class="toggle on" onclick="toggleSetting(this, 'show-dl-panel')"></div>
+            <div class="settings-card">
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-label">Titan Browser Version</div>
+                        <div class="setting-desc">v1.0.0 (Release Build)</div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- About -->
-        <div id="page-about" class="page">
-            <div class="page-header">
-                <div class="page-title">About Titan Browser</div>
-            </div>
-
-            <div class="about-box">
-                <svg width="42" height="42" viewBox="0 0 64 64" fill="none">
-                    <path d="M32 4L4 56H18L32 28L46 56H60L32 4Z" fill="url(#lg2)"/>
-                    <path d="M24 42H40L32 26L24 42Z" fill="#fff" opacity="0.9"/>
-                    <defs><linearGradient id="lg2" x1="4" y1="4" x2="60" y2="56"><stop stop-color="#38bdf8"/><stop offset="1" stop-color="#818cf8"/></linearGradient></defs>
-                </svg>
-                <div class="version-number">Titan Browser</div>
-                <div style="font-size: 13px; color: var(--text-sub);">Version 1.0.0 · Qt6 WebEngine · ArchTitan OS</div>
-                <div style="font-size: 12px; color: var(--text-muted);">Built on Chromium 126 · Blink rendering engine</div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">System Info</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info"><div class="setting-label">Browser engine</div></div>
-                        <span style="font-size:12px;color:var(--text-sub);">Qt6 WebEngine 6.7</span>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info"><div class="setting-label">Platform</div></div>
-                        <span style="font-size:12px;color:var(--text-sub);">ArchTitan Linux x86_64</span>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info"><div class="setting-label">Display server</div></div>
-                        <span style="font-size:12px;color:var(--text-sub);">Wayland / XCB</span>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info"><div class="setting-label">GPU rendering</div></div>
-                        <span class="badge badge-yellow">SwiftShader (CPU)</span>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-label">Engine Framework</div>
+                        <div class="setting-desc">Qt 6.7 WebEngine (Chromium Backend) with SwiftShader fallback</div>
                     </div>
                 </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">License</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Open source licenses</div>
-                            <div class="setting-desc">Qt6 (LGPL), Chromium (BSD), Icons (MIT)</div>
-                        </div>
-                        <button class="btn btn-ghost">View Licenses</button>
-                    </div>
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Source code</div>
-                            <div class="setting-desc">github.com/GitGuru29/archtitan-os</div>
-                        </div>
-                        <button class="btn btn-ghost" onclick="window.location='https://github.com/GitGuru29/archtitan-os'">Open GitHub</button>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-label">Target Environment</div>
+                        <div class="setting-desc">ArchTitan OS Linux (Native X11 / Wayland XCB)</div>
                     </div>
                 </div>
-            </div>
-
-            <div class="settings-group">
-                <div class="group-label">Data</div>
-                <div class="settings-card">
-                    <div class="setting-row">
-                        <div class="setting-info">
-                            <div class="setting-label">Reset all settings</div>
-                            <div class="setting-desc">Restore all Titan Browser settings to defaults</div>
-                        </div>
-                        <button class="btn btn-danger" onclick="resetSettings()">Reset Settings</button>
+                <div class="setting-row">
+                    <div class="setting-info">
+                        <div class="setting-label">Security & Telemetry</div>
+                        <div class="setting-desc">Zero external cloud telemetry. 100% private local storage.</div>
                     </div>
                 </div>
             </div>
@@ -1331,79 +674,57 @@
 
     </div>
 
-    <!-- Toast -->
-    <div id="toast">✓ Setting saved</div>
-
     <script>
-        /* ── Navigation ─────────────────────────────────────────────────── */
-        function showPage(id, navEl) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('page-' + id).classList.add('active');
-            if (navEl) navEl.classList.add('active');
+        function switchPage(pageId) {
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+
+            const targetPage = document.getElementById('page-' + pageId);
+            if (targetPage) targetPage.classList.add('active');
+
+            event.currentTarget.classList.add('active');
         }
 
-        /* ── Toggle Switch ──────────────────────────────────────────────── */
-        function toggleSetting(el, key) {
+        function toggleSwitch(el, key) {
             el.classList.toggle('on');
-            const value = el.classList.contains('on');
-            save(key, value);
+            const state = el.classList.contains('on');
+            localStorage.setItem('titan_' + key, state ? 'true' : 'false');
         }
 
-        /* ── Select Radio ───────────────────────────────────────────────── */
-        function selectRadio(el, groupSelector, key, value) {
-            const parent = el.closest('.radio-group');
-            parent.querySelectorAll(groupSelector).forEach(o => o.classList.remove('selected'));
-            el.classList.add('selected');
-            save(key, value);
+        function saveSetting(key, val) {
+            localStorage.setItem('titan_' + key, val);
         }
 
-        /* ── Range label update ─────────────────────────────────────────── */
-        function updateLabel(id, val) {
-            document.getElementById(id).innerText = val;
+        function selectTheme(card, theme) {
+            document.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            localStorage.setItem('titan_theme', theme);
+            if (theme === 'light') {
+                document.body.classList.add('light-mode');
+            } else {
+                document.body.classList.remove('light-mode');
+            }
         }
 
-        /* ── Save setting (persists to localStorage) ────────────────────── */
-        function save(key, value) {
-            localStorage.setItem('titan_setting_' + key, value);
-            showToast('✓ Saved: ' + key.replace(/-/g,' '));
-        }
-
-        /* ── Toast ──────────────────────────────────────────────────────── */
-        let toastTimer;
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.innerText = msg;
-            t.classList.add('show');
-            clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
-        }
-
-        /* ── Clear Browsing Data ────────────────────────────────────────── */
         function clearBrowsingData() {
-            if (confirm('Clear all browsing data, cookies, and cache? This cannot be undone.')) {
-                showToast('✓ Browsing data cleared');
-            }
-        }
-
-        /* ── Reset Settings ─────────────────────────────────────────────── */
-        function resetSettings() {
-            if (confirm('Reset all Titan Browser settings to defaults?')) {
+            if (confirm('Are you sure you want to clear browsing history, cookies, and local cache?')) {
                 localStorage.clear();
-                showToast('✓ Settings reset to defaults');
-                setTimeout(() => window.location.reload(), 800);
+                alert('Browsing data purged successfully.');
             }
         }
 
-        /* ── Restore saved settings on load ─────────────────────────────── */
-        function restoreSettings() {
-            // Toggles restore from localStorage if previously saved
-            document.querySelectorAll('.toggle').forEach(el => {
-                // already set to their defaults in HTML
-            });
-        }
-        restoreSettings();
+        // Initialize saved settings
+        window.addEventListener('DOMContentLoaded', () => {
+            const theme = localStorage.getItem('titan_theme');
+            if (theme) {
+                document.querySelectorAll('.theme-card').forEach(c => {
+                    if (c.innerText.toLowerCase().includes(theme)) {
+                        document.querySelectorAll('.theme-card').forEach(x => x.classList.remove('active'));
+                        c.classList.add('active');
+                    }
+                });
+            }
+        });
     </script>
-
 </body>
 </html>
