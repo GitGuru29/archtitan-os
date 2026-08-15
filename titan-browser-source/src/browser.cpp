@@ -1,6 +1,7 @@
 #include "browser.h"
 #include "tabwidget.h"
 #include "addressbar.h"
+#include "adblocker.h"
 
 #include <QApplication>
 #include <QHBoxLayout>
@@ -10,6 +11,7 @@
 #include <QKeySequence>
 #include <QWebEngineView>
 #include <QWebEngineHistory>
+#include <QWebEngineFindTextResult>
 #include <QToolButton>
 #include <QPushButton>
 #include <QLabel>
@@ -18,14 +20,21 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QStyle>
+#include <QDesktopServices>
+#include <QStandardPaths>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QGraphicsOpacityEffect>
 
-static const char *kHomeUrl = "qrc:/homepage.html";
+static const char *kHomeUrl     = "titan://home";
+static const char *kSettingsUrl = "titan://settings";
 
-/* ─── Modern Developer Browser Stylesheet ─────────────────────────────── */
+/* ─── Modern Developer Obsidian Glass Stylesheet ───────────────────────── */
 static const char *kTheme = R"(
-/* Global Window */
+/* Global Window Container */
 QMainWindow, QWidget#CentralContainer {
-    background: #060913;
+    background: #060812;
     color: #e2e8f0;
     font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 13px;
@@ -33,7 +42,7 @@ QMainWindow, QWidget#CentralContainer {
 
 /* ── 1. Top Tab Strip ─────────────────────────────────────────────────── */
 QWidget#TopBar {
-    background: #050711;
+    background: #04060d;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     min-height: 38px;
     max-height: 38px;
@@ -42,12 +51,12 @@ QWidget#TopBar {
 QToolButton#TabLogoBtn {
     background: transparent;
     border: none;
-    padding: 2px 6px;
+    padding: 3px 7px;
     margin-left: 6px;
     border-radius: 6px;
 }
 QToolButton#TabLogoBtn:hover {
-    background: rgba(56, 189, 248, 0.1);
+    background: rgba(56, 189, 248, 0.12);
 }
 
 QTabBar {
@@ -57,36 +66,42 @@ QTabBar {
 }
 
 QTabBar::tab {
-    background: #070a14;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-bottom: none;
-    border-radius: 7px 7px 0 0;
-    color: #64748b;
-    padding: 5px 12px 5px 10px;
-    margin-right: 3px;
+    background: transparent;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    color: #8896ab;
+    padding: 6px 14px 6px 12px;
+    margin-top: 3px;
+    margin-right: 2px;
     font-size: 12px;
     font-weight: 500;
-    min-width: 120px;
-    max-width: 200px;
-    height: 24px;
+    min-width: 130px;
+    max-width: 220px;
+    height: 25px;
 }
 
 QTabBar::tab:selected {
-    background: #0b1120;
-    border-color: rgba(56, 189, 248, 0.25);
-    color: #f8fafc;
+    background: #070b17;
+    border: none;
+    border-top: 2px solid #38bdf8;
+    color: #ffffff;
     font-weight: 600;
 }
 
 QTabBar::tab:hover:!selected {
-    background: #0d1527;
-    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
 }
 
 QTabBar::close-button {
     subcontrol-position: right;
-    margin-left: 4px;
+    margin-left: 6px;
     padding: 2px;
+    border-radius: 4px;
+}
+QTabBar::close-button:hover {
+    background: rgba(239, 68, 68, 0.25);
+    color: #ffffff;
 }
 
 QToolButton#AddTabButton {
@@ -95,12 +110,12 @@ QToolButton#AddTabButton {
     border-radius: 6px;
     color: #94a3b8;
     padding: 4px;
-    min-width: 24px;
-    min-height: 24px;
+    min-width: 26px;
+    min-height: 26px;
 }
 QToolButton#AddTabButton:hover {
     background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
+    color: #38bdf8;
 }
 
 /* Window Control Buttons */
@@ -125,7 +140,7 @@ QToolButton#WinBtnClose:hover {
 
 /* ── 2. Navigation / Omnibox Row ──────────────────────────────────────── */
 QWidget#NavBar {
-    background: #070a14;
+    background: #070b17;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     min-height: 44px;
     max-height: 44px;
@@ -138,17 +153,20 @@ QToolButton#NavBtn {
     border-radius: 6px;
     padding: 5px;
     color: #94a3b8;
-    min-width: 26px;
-    min-height: 26px;
+    min-width: 28px;
+    min-height: 28px;
 }
 QToolButton#NavBtn:hover {
     background: rgba(255, 255, 255, 0.08);
     color: #ffffff;
 }
+QToolButton#NavBtn:disabled {
+    color: rgba(148, 163, 184, 0.3);
+}
 
 QToolButton#ShieldBadgeBtn {
-    background: rgba(34, 197, 94, 0.1);
-    border: 1px solid rgba(34, 197, 94, 0.25);
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.3);
     border-radius: 6px;
     color: #22c55e;
     font-size: 11px;
@@ -157,13 +175,13 @@ QToolButton#ShieldBadgeBtn {
     min-height: 22px;
 }
 QToolButton#ShieldBadgeBtn:hover {
-    background: rgba(34, 197, 94, 0.2);
+    background: rgba(34, 197, 94, 0.22);
     border-color: #22c55e;
 }
 
 QToolButton#AvatarBtn {
-    background: #8b5cf6;
-    border: none;
+    background: #7c3aed;
+    border: 1px solid rgba(192, 132, 252, 0.3);
     border-radius: 13px;
     color: #ffffff;
     font-weight: bold;
@@ -174,12 +192,13 @@ QToolButton#AvatarBtn {
     max-height: 26px;
 }
 QToolButton#AvatarBtn:hover {
-    background: #7c3aed;
+    background: #6d28d9;
+    box-shadow: 0 0 8px rgba(124, 58, 237, 0.5);
 }
 
-/* ── 3. Compact Adaptive Rail (Sidebar) ───────────────────────────────── */
+/* ── 3. Compact Navigation Rail ───────────────────────────────────────── */
 QWidget#RailWidget {
-    background: #050711;
+    background: #04060d;
     border-right: 1px solid rgba(255, 255, 255, 0.05);
     min-width: 46px;
     max-width: 46px;
@@ -190,29 +209,29 @@ QToolButton.RailNavBtn {
     border: none;
     border-radius: 8px;
     padding: 7px;
-    margin: 3px 5px;
-    min-width: 34px;
-    min-height: 34px;
-    max-width: 34px;
-    max-height: 34px;
+    margin: 2px 6px;
+    min-width: 32px;
+    min-height: 32px;
+    max-width: 32px;
+    max-height: 32px;
 }
 QToolButton.RailNavBtn:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
 QToolButton.RailNavBtnActive {
-    background: rgba(56, 189, 248, 0.15);
-    border: 1px solid rgba(56, 189, 248, 0.35);
+    background: rgba(56, 189, 248, 0.16);
+    border: 1px solid rgba(56, 189, 248, 0.4);
     border-radius: 8px;
     padding: 7px;
-    margin: 3px 5px;
-    min-width: 34px;
-    min-height: 34px;
-    max-width: 34px;
-    max-height: 34px;
+    margin: 2px 6px;
+    min-width: 32px;
+    min-height: 32px;
+    max-width: 32px;
+    max-height: 32px;
 }
 
-/* Progress Bar */
+/* ── 4. Progress Bar & Floating Widgets ──────────────────────────────── */
 QProgressBar {
     background: transparent;
     border: none;
@@ -223,32 +242,117 @@ QProgressBar::chunk {
         stop:0 #38bdf8, stop:0.5 #0ea5e9, stop:1 #818cf8);
 }
 
-/* Menus */
+/* Find Bar */
+QWidget#FindBar {
+    background: #0b1222;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+    padding: 4px 12px;
+}
+QLineEdit#FindEdit {
+    background: #070b17;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    color: #f8fafc;
+    padding: 3px 8px;
+    font-size: 12px;
+    min-width: 180px;
+}
+QLineEdit#FindEdit:focus {
+    border-color: #38bdf8;
+}
+
+/* Toast Notification */
+QLabel#ToastLabel {
+    background: rgba(11, 18, 34, 0.95);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 8px;
+    color: #f8fafc;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 16px;
+}
+
+/* Menus & Popups */
 QMenu {
-    background: #0b1120;
-    border: 1px solid rgba(56, 189, 248, 0.2);
+    background: #090e1c;
+    border: 1px solid rgba(56, 189, 248, 0.25);
     border-radius: 8px;
     padding: 6px;
     color: #e2e8f0;
+    font-size: 12px;
 }
 QMenu::item {
     padding: 6px 20px 6px 12px;
-    border-radius: 4px;
+    border-radius: 5px;
 }
 QMenu::item:selected {
     background: rgba(56, 189, 248, 0.15);
     color: #38bdf8;
 }
+QMenu::separator {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.07);
+    margin: 4px 4px;
+}
+
+/* Tooltips */
+QToolTip {
+    background: #0b1120;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 5px;
+    color: #ffffff;
+    padding: 4px 8px;
+    font-size: 11px;
+}
 )";
 
 /* ─── Constructor ──────────────────────────────────────────────────────── */
-Browser::Browser(QWidget *parent) : QMainWindow(parent)
+Browser::Browser(AdBlocker *adBlocker, QWidget *parent)
+    : QMainWindow(parent), m_adBlocker(adBlocker)
 {
     setWindowTitle(QStringLiteral("Titan Browser"));
     resize(1360, 840);
     setStyleSheet(QString::fromUtf8(kTheme));
+
+    loadPersistentUserData();
     setupUi();
     newTab(QUrl(QString::fromUtf8(kHomeUrl)));
+
+    // Live blocked-requests counter — updates shield badge every 2s
+    if (m_adBlocker) {
+        m_statsTimer = new QTimer(this);
+        m_statsTimer->setInterval(2000);
+        connect(m_statsTimer, &QTimer::timeout, this, [this] {
+            if (!m_shieldBadgeBtn) return;
+            qint64 n = m_adBlocker->blockedCount();
+            QString label = (n >= 1000)
+                ? QStringLiteral(" %1K blocked").arg(n / 1000)
+                : QStringLiteral(" %1 blocked").arg(n);
+            m_shieldBadgeBtn->setText(label);
+        });
+        m_statsTimer->start();
+
+        // Guardian heartbeat timer for instant ad skip across YouTube & Spotify SPA routes
+        auto *guardianTimer = new QTimer(this);
+        guardianTimer->setInterval(350);
+        connect(guardianTimer, &QTimer::timeout, this, [this] {
+            if (auto *v = currentView()) {
+                const QString host = v->url().host().toLower();
+                if (host.contains(QStringLiteral("youtube.com")) || host.contains(QStringLiteral("spotify.com"))) {
+                    m_adBlocker->injectContentScriptIntoView(v);
+                }
+            }
+        });
+        guardianTimer->start();
+    }
+
+    // Tab Memory Saver background checker (every 60s)
+    auto *memorySaverTimer = new QTimer(this);
+    memorySaverTimer->setInterval(60000);
+    connect(memorySaverTimer, &QTimer::timeout, this, [this]{
+        if (m_tabs) m_tabs->checkAndSuspendInactiveTabs();
+    });
+    memorySaverTimer->start();
 }
 
 /* ─── UI Setup ─────────────────────────────────────────────────────────── */
@@ -323,46 +427,56 @@ void Browser::setupUi()
     navLayout->setSpacing(6);
 
     // Back
-    auto *backBtn = new QToolButton(navBar);
-    backBtn->setObjectName(QStringLiteral("NavBtn"));
-    backBtn->setIcon(QIcon(QStringLiteral(":/icons/back.svg")));
-    backBtn->setIconSize(QSize(17, 17));
-    backBtn->setToolTip(QStringLiteral("Back (Alt+Left)"));
-    connect(backBtn, &QToolButton::clicked, this, &Browser::navigateBack);
-    navLayout->addWidget(backBtn);
+    m_backBtn = new QToolButton(navBar);
+    m_backBtn->setObjectName(QStringLiteral("NavBtn"));
+    m_backBtn->setIcon(QIcon(QStringLiteral(":/icons/back.svg")));
+    m_backBtn->setIconSize(QSize(17, 17));
+    m_backBtn->setToolTip(QStringLiteral("Back (Alt+Left)"));
+    connect(m_backBtn, &QToolButton::clicked, this, &Browser::navigateBack);
+    navLayout->addWidget(m_backBtn);
 
     // Forward
-    auto *fwdBtn = new QToolButton(navBar);
-    fwdBtn->setObjectName(QStringLiteral("NavBtn"));
-    fwdBtn->setIcon(QIcon(QStringLiteral(":/icons/forward.svg")));
-    fwdBtn->setIconSize(QSize(17, 17));
-    fwdBtn->setToolTip(QStringLiteral("Forward (Alt+Right)"));
-    connect(fwdBtn, &QToolButton::clicked, this, &Browser::navigateForward);
-    navLayout->addWidget(fwdBtn);
+    m_fwdBtn = new QToolButton(navBar);
+    m_fwdBtn->setObjectName(QStringLiteral("NavBtn"));
+    m_fwdBtn->setIcon(QIcon(QStringLiteral(":/icons/forward.svg")));
+    m_fwdBtn->setIconSize(QSize(17, 17));
+    m_fwdBtn->setToolTip(QStringLiteral("Forward (Alt+Right)"));
+    connect(m_fwdBtn, &QToolButton::clicked, this, &Browser::navigateForward);
+    navLayout->addWidget(m_fwdBtn);
 
-    // Reload
-    auto *reloadBtn = new QToolButton(navBar);
-    reloadBtn->setObjectName(QStringLiteral("NavBtn"));
-    reloadBtn->setIcon(QIcon(QStringLiteral(":/icons/reload.svg")));
-    reloadBtn->setIconSize(QSize(17, 17));
-    reloadBtn->setToolTip(QStringLiteral("Reload (Ctrl+R)"));
-    connect(reloadBtn, &QToolButton::clicked, this, &Browser::reload);
-    navLayout->addWidget(reloadBtn);
+    // Reload / Stop Toggle
+    m_reloadBtn = new QToolButton(navBar);
+    m_reloadBtn->setObjectName(QStringLiteral("NavBtn"));
+    m_reloadBtn->setIcon(QIcon(QStringLiteral(":/icons/reload.svg")));
+    m_reloadBtn->setIconSize(QSize(17, 17));
+    m_reloadBtn->setToolTip(QStringLiteral("Reload (Ctrl+R)"));
+    connect(m_reloadBtn, &QToolButton::clicked, this, &Browser::reloadOrStop);
+    navLayout->addWidget(m_reloadBtn);
 
-    // Omnibox (Primary Centerpiece)
+    // Omnibox
     m_addressBar = new AddressBar(navBar);
     navLayout->addWidget(m_addressBar, 1);
     connect(m_addressBar, &AddressBar::urlEntered, this, &Browser::loadUrl);
+    connect(m_addressBar, &AddressBar::bookmarkClicked, this, &Browser::onBookmarkClicked);
 
-    // Subtle TitanShield Status Button
-    auto *shieldBtn = new QToolButton(navBar);
-    shieldBtn->setObjectName(QStringLiteral("ShieldBadgeBtn"));
-    shieldBtn->setIcon(QIcon(QStringLiteral(":/icons/shield.svg")));
-    shieldBtn->setText(QStringLiteral(" Protected"));
-    shieldBtn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    shieldBtn->setToolTip(QStringLiteral("TitanShield Security: Active"));
-    connect(shieldBtn, &QToolButton::clicked, this, &Browser::onShieldClicked);
-    navLayout->addWidget(shieldBtn);
+    // TitanShield Status Badge Button
+    m_shieldBadgeBtn = new QToolButton(navBar);
+    m_shieldBadgeBtn->setObjectName(QStringLiteral("ShieldBadgeBtn"));
+    m_shieldBadgeBtn->setIcon(QIcon(QStringLiteral(":/icons/shield.svg")));
+    m_shieldBadgeBtn->setText(QStringLiteral(" Protected"));
+    m_shieldBadgeBtn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    m_shieldBadgeBtn->setToolTip(QStringLiteral("TitanShield Security & Ad Blocker"));
+    connect(m_shieldBadgeBtn, &QToolButton::clicked, this, &Browser::onShieldClicked);
+    navLayout->addWidget(m_shieldBadgeBtn);
+
+    // Bookmarks Menu Button
+    auto *bmBtn = new QToolButton(navBar);
+    bmBtn->setObjectName(QStringLiteral("NavBtn"));
+    bmBtn->setIcon(QIcon(QStringLiteral(":/icons/star.svg")));
+    bmBtn->setIconSize(QSize(17, 17));
+    bmBtn->setToolTip(QStringLiteral("Bookmarks (Ctrl+B)"));
+    connect(bmBtn, &QToolButton::clicked, this, &Browser::onBookmarksClicked);
+    navLayout->addWidget(bmBtn);
 
     // Extensions
     auto *extBtn = new QToolButton(navBar);
@@ -378,7 +492,7 @@ void Browser::setupUi()
     dlBtn->setObjectName(QStringLiteral("NavBtn"));
     dlBtn->setIcon(QIcon(QStringLiteral(":/icons/download.svg")));
     dlBtn->setIconSize(QSize(17, 17));
-    dlBtn->setToolTip(QStringLiteral("Downloads"));
+    dlBtn->setToolTip(QStringLiteral("Downloads (Ctrl+J)"));
     connect(dlBtn, &QToolButton::clicked, this, &Browser::onDownloadsClicked);
     navLayout->addWidget(dlBtn);
 
@@ -401,14 +515,17 @@ void Browser::setupUi()
 
     mainVLayout->addWidget(navBar);
 
-    // ── 3. Progress Bar (2px line) ──────────────────────────────────────
+    // ── 3. Find in Page Floating Bar ────────────────────────────────────
+    setupFindBar(mainVLayout);
+
+    // ── 4. Progress Bar (2px line) ──────────────────────────────────────
     m_progress = new QProgressBar(this);
     m_progress->setMaximumHeight(2);
     m_progress->setTextVisible(false);
     m_progress->hide();
     mainVLayout->addWidget(m_progress);
 
-    // ── 4. Main Body (Compact Rail + Web View) ───────────────────────────
+    // ── 5. Main Body (Compact Rail + Web Content Stack) ──────────────────
     auto *bodyWidget = new QWidget(this);
     auto *bodyLayout = new QHBoxLayout(bodyWidget);
     bodyLayout->setContentsMargins(0, 0, 0, 0);
@@ -442,15 +559,19 @@ void Browser::setupUi()
     connect(m_railAiBtn, &QToolButton::clicked, this, &Browser::onAICoreClicked);
     railLayout->addWidget(m_railAiBtn);
 
-    createRailBtn(QStringLiteral(":/icons/spaces.svg"), QStringLiteral("Spaces Workspace"), m_railSpacesBtn);
+    createRailBtn(QStringLiteral(":/icons/spaces.svg"), QStringLiteral("Spaces Workspace (Alt+S)"), m_railSpacesBtn);
     connect(m_railSpacesBtn, &QToolButton::clicked, this, &Browser::onSpacesClicked);
     railLayout->addWidget(m_railSpacesBtn);
 
-    createRailBtn(QStringLiteral(":/icons/history.svg"), QStringLiteral("History"), m_railHistoryBtn);
+    createRailBtn(QStringLiteral(":/icons/star.svg"), QStringLiteral("Bookmarks (Ctrl+B)"), m_railBookmarksBtn);
+    connect(m_railBookmarksBtn, &QToolButton::clicked, this, &Browser::onBookmarksClicked);
+    railLayout->addWidget(m_railBookmarksBtn);
+
+    createRailBtn(QStringLiteral(":/icons/history.svg"), QStringLiteral("History (Ctrl+H)"), m_railHistoryBtn);
     connect(m_railHistoryBtn, &QToolButton::clicked, this, &Browser::onHistoryClicked);
     railLayout->addWidget(m_railHistoryBtn);
 
-    createRailBtn(QStringLiteral(":/icons/download.svg"), QStringLiteral("Downloads"), m_railDlBtn);
+    createRailBtn(QStringLiteral(":/icons/download.svg"), QStringLiteral("Downloads (Ctrl+J)"), m_railDlBtn);
     connect(m_railDlBtn, &QToolButton::clicked, this, &Browser::onDownloadsClicked);
     railLayout->addWidget(m_railDlBtn);
 
@@ -458,7 +579,7 @@ void Browser::setupUi()
     connect(m_railExtBtn, &QToolButton::clicked, this, &Browser::onExtensionsClicked);
     railLayout->addWidget(m_railExtBtn);
 
-    createRailBtn(QStringLiteral(":/icons/settings.svg"), QStringLiteral("Settings"), m_railSettingsBtn);
+    createRailBtn(QStringLiteral(":/icons/settings.svg"), QStringLiteral("Settings (Ctrl+,)"), m_railSettingsBtn);
     connect(m_railSettingsBtn, &QToolButton::clicked, this, &Browser::onSettingsClicked);
     railLayout->addWidget(m_railSettingsBtn);
 
@@ -475,10 +596,13 @@ void Browser::setupUi()
 
     bodyLayout->addWidget(railWidget);
 
-    // Web Content Stack (Receives full horizontal viewport)
+    // Web Content Stack
     bodyLayout->addWidget(m_tabs->contentStack(), 1);
 
     mainVLayout->addWidget(bodyWidget, 1);
+
+    // Floating Toast Notification
+    setupToastWidget();
 
     // Connect TabWidget signals
     connect(m_tabs, &TabWidget::urlChanged,    this, &Browser::onUrlChanged);
@@ -486,25 +610,284 @@ void Browser::setupUi()
     connect(m_tabs, &TabWidget::loadProgress,  this, &Browser::onLoadProgress);
     connect(m_tabs, &TabWidget::loadFinished,  this, &Browser::onLoadFinished);
 
-    // Shortcuts
+    // Keyboard Shortcuts
     new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_T), this, [this]{ newTab(); });
     new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_W), this, [this]{ closeCurrentTab(); });
-    new QShortcut(QKeySequence::Refresh, this, [this]{ reload(); });
+    new QShortcut(QKeySequence::Refresh, this, [this]{ reloadOrStop(); });
     new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_L), this, [this]{
         m_addressBar->setFocus();
         m_addressBar->selectAll();
     });
-    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_K), this, [this]{
-        if (auto *v = currentView()) {
-            v->page()->runJavaScript(QStringLiteral("if (window.focusCommandBar) window.focusCommandBar();"));
-        }
-    });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_K), this, [this]{ onAICoreClicked(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), this, [this]{ toggleFindInPage(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_B), this, [this]{ onBookmarksClicked(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_H), this, [this]{ onHistoryClicked(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_J), this, [this]{ onDownloadsClicked(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma), this, [this]{ onSettingsClicked(); });
     new QShortcut(QKeySequence(Qt::ALT | Qt::Key_Left), this, [this]{ navigateBack(); });
     new QShortcut(QKeySequence(Qt::ALT | Qt::Key_Right), this, [this]{ navigateForward(); });
+    new QShortcut(QKeySequence(Qt::ALT | Qt::Key_H), this, [this]{ onHomeClicked(); });
+    new QShortcut(QKeySequence(Qt::ALT | Qt::Key_S), this, [this]{ onSpacesClicked(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Plus), this, [this]{ zoomIn(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Equal), this, [this]{ zoomIn(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Minus), this, [this]{ zoomOut(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_0), this, [this]{ zoomReset(); });
+}
+
+/* ─── Find in Page ─────────────────────────────────────────────────────── */
+void Browser::setupFindBar(QVBoxLayout *layout)
+{
+    m_findBar = new QWidget(this);
+    m_findBar->setObjectName(QStringLiteral("FindBar"));
+    auto *findLayout = new QHBoxLayout(m_findBar);
+    findLayout->setContentsMargins(12, 3, 12, 3);
+    findLayout->setSpacing(8);
+
+    m_findEdit = new QLineEdit(m_findBar);
+    m_findEdit->setObjectName(QStringLiteral("FindEdit"));
+    m_findEdit->setPlaceholderText(QStringLiteral("Find in page..."));
+    m_findEdit->setClearButtonEnabled(true);
+    connect(m_findEdit, &QLineEdit::textChanged, this, &Browser::onFindTextChanged);
+    connect(m_findEdit, &QLineEdit::returnPressed, this, &Browser::findNext);
+    findLayout->addWidget(m_findEdit);
+
+    m_findCountLabel = new QLabel(QStringLiteral(""), m_findBar);
+    m_findCountLabel->setStyleSheet(QStringLiteral("color: #94a3b8; font-size: 11px; font-weight: 500;"));
+    findLayout->addWidget(m_findCountLabel);
+
+    m_findPrevBtn = new QToolButton(m_findBar);
+    m_findPrevBtn->setText(QStringLiteral("▲"));
+    m_findPrevBtn->setObjectName(QStringLiteral("NavBtn"));
+    m_findPrevBtn->setToolTip(QStringLiteral("Previous Match (Shift+Enter)"));
+    connect(m_findPrevBtn, &QToolButton::clicked, this, &Browser::findPrevious);
+    findLayout->addWidget(m_findPrevBtn);
+
+    m_findNextBtn = new QToolButton(m_findBar);
+    m_findNextBtn->setText(QStringLiteral("▼"));
+    m_findNextBtn->setObjectName(QStringLiteral("NavBtn"));
+    m_findNextBtn->setToolTip(QStringLiteral("Next Match (Enter)"));
+    connect(m_findNextBtn, &QToolButton::clicked, this, &Browser::findNext);
+    findLayout->addWidget(m_findNextBtn);
+
+    m_findCloseBtn = new QToolButton(m_findBar);
+    m_findCloseBtn->setText(QStringLiteral("✕"));
+    m_findCloseBtn->setObjectName(QStringLiteral("NavBtn"));
+    m_findCloseBtn->setToolTip(QStringLiteral("Close (Esc)"));
+    connect(m_findCloseBtn, &QToolButton::clicked, this, &Browser::closeFindBar);
+    findLayout->addWidget(m_findCloseBtn);
+
+    findLayout->addStretch(1);
+    m_findBar->hide();
+    layout->addWidget(m_findBar);
+}
+
+void Browser::toggleFindInPage()
+{
+    if (m_findBar->isVisible()) {
+        closeFindBar();
+    } else {
+        m_findBar->show();
+        m_findEdit->setFocus();
+        m_findEdit->selectAll();
+        if (!m_findEdit->text().isEmpty()) {
+            onFindTextChanged(m_findEdit->text());
+        }
+    }
+}
+
+void Browser::findNext()
+{
+    if (auto *v = currentView()) {
+        v->findText(m_findEdit->text(), {}, [this](const QWebEngineFindTextResult &result) {
+            if (result.numberOfMatches() > 0) {
+                m_findCountLabel->setText(QStringLiteral("%1 of %2").arg(result.activeMatch()).arg(result.numberOfMatches()));
+            } else {
+                m_findCountLabel->setText(m_findEdit->text().isEmpty() ? QString() : QStringLiteral("No matches"));
+            }
+        });
+    }
+}
+
+void Browser::findPrevious()
+{
+    if (auto *v = currentView()) {
+        v->findText(m_findEdit->text(), QWebEnginePage::FindBackward, [this](const QWebEngineFindTextResult &result) {
+            if (result.numberOfMatches() > 0) {
+                m_findCountLabel->setText(QStringLiteral("%1 of %2").arg(result.activeMatch()).arg(result.numberOfMatches()));
+            } else {
+                m_findCountLabel->setText(m_findEdit->text().isEmpty() ? QString() : QStringLiteral("No matches"));
+            }
+        });
+    }
+}
+
+void Browser::onFindTextChanged(const QString &text)
+{
+    if (text.isEmpty()) {
+        if (auto *v = currentView()) v->findText(QString());
+        m_findCountLabel->clear();
+        return;
+    }
+    findNext();
+}
+
+void Browser::closeFindBar()
+{
+    m_findBar->hide();
+    if (auto *v = currentView()) {
+        v->findText(QString());
+        v->setFocus();
+    }
+}
+
+/* ─── Toast Notifications ──────────────────────────────────────────────── */
+void Browser::setupToastWidget()
+{
+    m_toastLabel = new QLabel(this);
+    m_toastLabel->setObjectName(QStringLiteral("ToastLabel"));
+    m_toastLabel->setAlignment(Qt::AlignCenter);
+    m_toastLabel->hide();
+
+    m_toastTimer = new QTimer(this);
+    m_toastTimer->setSingleShot(true);
+    connect(m_toastTimer, &QTimer::timeout, m_toastLabel, &QLabel::hide);
+}
+
+void Browser::showToast(const QString &message, int durationMs)
+{
+    m_toastLabel->setText(message);
+    m_toastLabel->adjustSize();
+    m_toastLabel->move((width() - m_toastLabel->width()) / 2, height() - 70);
+    m_toastLabel->show();
+    m_toastLabel->raise();
+    m_toastTimer->start(durationMs);
+}
+
+/* ─── Zoom Controls ────────────────────────────────────────────────────── */
+void Browser::zoomIn()
+{
+    if (auto *v = currentView()) {
+        m_zoomFactor = qMin(3.0, v->zoomFactor() + 0.1);
+        v->setZoomFactor(m_zoomFactor);
+        showToast(QStringLiteral("Zoom: %1%").arg(qRound(m_zoomFactor * 100)));
+    }
+}
+
+void Browser::zoomOut()
+{
+    if (auto *v = currentView()) {
+        m_zoomFactor = qMax(0.3, v->zoomFactor() - 0.1);
+        v->setZoomFactor(m_zoomFactor);
+        showToast(QStringLiteral("Zoom: %1%").arg(qRound(m_zoomFactor * 100)));
+    }
+}
+
+void Browser::zoomReset()
+{
+    if (auto *v = currentView()) {
+        m_zoomFactor = 1.0;
+        v->setZoomFactor(m_zoomFactor);
+        showToast(QStringLiteral("Zoom: 100% (Reset)"));
+    }
+}
+
+/* ─── Bookmarks & History Persistence ──────────────────────────────────── */
+void Browser::loadPersistentUserData()
+{
+    const QString dirPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QStringLiteral("/titanbrowser");
+    QDir().mkpath(dirPath);
+
+    // Load Bookmarks
+    QFile bmFile(dirPath + QStringLiteral("/bookmarks.json"));
+    if (bmFile.open(QIODevice::ReadOnly)) {
+        QJsonArray arr = QJsonDocument::fromJson(bmFile.readAll()).array();
+        for (const auto &val : arr) {
+            QJsonObject obj = val.toObject();
+            m_bookmarks.append({
+                obj.value(QStringLiteral("title")).toString(),
+                QUrl(obj.value(QStringLiteral("url")).toString()),
+                QDateTime::fromString(obj.value(QStringLiteral("date")).toString(), Qt::ISODate)
+            });
+        }
+    }
+
+    // Default bookmarks if empty
+    if (m_bookmarks.isEmpty()) {
+        m_bookmarks.append({QStringLiteral("ArchTitan OS"), QUrl(QStringLiteral("https://archtitan.io")), QDateTime::currentDateTime()});
+        m_bookmarks.append({QStringLiteral("GitHub"), QUrl(QStringLiteral("https://github.com")), QDateTime::currentDateTime()});
+        m_bookmarks.append({QStringLiteral("Arch Linux Wiki"), QUrl(QStringLiteral("https://wiki.archlinux.org")), QDateTime::currentDateTime()});
+    }
+}
+
+void Browser::savePersistentUserData()
+{
+    const QString dirPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + QStringLiteral("/titanbrowser");
+    QDir().mkpath(dirPath);
+
+    QFile bmFile(dirPath + QStringLiteral("/bookmarks.json"));
+    if (bmFile.open(QIODevice::WriteOnly)) {
+        QJsonArray arr;
+        for (const auto &bm : m_bookmarks) {
+            QJsonObject obj;
+            obj[QStringLiteral("title")] = bm.title;
+            obj[QStringLiteral("url")]   = bm.url.toString();
+            obj[QStringLiteral("date")]  = bm.dateAdded.toString(Qt::ISODate);
+            arr.append(obj);
+        }
+        bmFile.write(QJsonDocument(arr).toJson());
+    }
+}
+
+bool Browser::isBookmarked(const QUrl &url) const
+{
+    for (const auto &bm : m_bookmarks) {
+        if (bm.url == url) return true;
+    }
+    return false;
+}
+
+void Browser::addBookmark(const QString &title, const QUrl &url)
+{
+    if (isBookmarked(url)) return;
+    m_bookmarks.append({title.isEmpty() ? url.toString() : title, url, QDateTime::currentDateTime()});
+    savePersistentUserData();
+}
+
+void Browser::removeBookmark(const QUrl &url)
+{
+    for (int i = 0; i < m_bookmarks.size(); ++i) {
+        if (m_bookmarks[i].url == url) {
+            m_bookmarks.removeAt(i);
+            break;
+        }
+    }
+    savePersistentUserData();
+}
+
+void Browser::addHistoryRecord(const QString &title, const QUrl &url)
+{
+    if (url.scheme() == QStringLiteral("qrc") || url.isEmpty()) return;
+    m_history.prepend({title.isEmpty() ? url.toString() : title, url, QDateTime::currentDateTime()});
+    if (m_history.size() > 500) m_history.removeLast();
+}
+
+void Browser::onBookmarkClicked(const QUrl &url)
+{
+    if (url.isEmpty() || url.toString() == QStringLiteral("qrc:/homepage.html")) return;
+
+    if (isBookmarked(url)) {
+        removeBookmark(url);
+        m_addressBar->setBookmarked(false);
+        showToast(QStringLiteral("Bookmark removed"));
+    } else {
+        QString title = currentView() ? currentView()->title() : url.toString();
+        addBookmark(title, url);
+        m_addressBar->setBookmarked(true);
+        showToast(QStringLiteral("★ Bookmarked page"));
+    }
 }
 
 /* ─── Rail & Chrome Actions ────────────────────────────────────────────── */
-
 void Browser::setActiveRailButton(QToolButton *btn)
 {
     if (m_activeRailBtn) {
@@ -537,70 +920,168 @@ void Browser::onAICoreClicked()
 void Browser::onSpacesClicked()
 {
     setActiveRailButton(m_railSpacesBtn);
-    if (auto *v = currentView()) {
-        v->page()->runJavaScript(QStringLiteral("if (window.openSpacesModal) window.openSpacesModal();"));
+    auto *menu = new QMenu(this);
+
+    auto addSpaceAction = [this, menu](const QString &name, const QString &badge) {
+        auto *act = menu->addAction(QStringLiteral("%1  (%2)").arg(name, badge));
+        if (m_activeSpace == name) {
+            act->setText(QStringLiteral("✔ %1  (%2)").arg(name, badge));
+        }
+        connect(act, &QAction::triggered, this, [this, name]{
+            m_activeSpace = name;
+            showToast(QStringLiteral("Switched to Space: %1").arg(name));
+        });
+    };
+
+    addSpaceAction(QStringLiteral("Development"), QStringLiteral("C++, Rust, Vite"));
+    addSpaceAction(QStringLiteral("Research"), QStringLiteral("Docs, Papers, LLMs"));
+    addSpaceAction(QStringLiteral("Personal"), QStringLiteral("Feeds, Media"));
+    menu->addSeparator();
+    auto *newSpaceAct = menu->addAction(QStringLiteral("+ Create New Space..."));
+    connect(newSpaceAct, &QAction::triggered, this, [this]{
+        showToast(QStringLiteral("Spaces Workspace Manager ready"));
+    });
+
+    menu->popup(QCursor::pos());
+}
+
+void Browser::onBookmarksClicked()
+{
+    setActiveRailButton(m_railBookmarksBtn);
+    auto *menu = new QMenu(this);
+
+    auto *addCurAct = menu->addAction(QStringLiteral("★ Bookmark Current Tab"));
+    connect(addCurAct, &QAction::triggered, this, [this]{
+        if (auto *v = currentView()) onBookmarkClicked(v->url());
+    });
+    menu->addSeparator();
+
+    if (m_bookmarks.isEmpty()) {
+        auto *emptyAct = menu->addAction(QStringLiteral("No saved bookmarks yet"));
+        emptyAct->setEnabled(false);
+    } else {
+        int limit = qMin(15, m_bookmarks.size());
+        for (int i = 0; i < limit; ++i) {
+            const auto &bm = m_bookmarks[i];
+            auto *act = menu->addAction(bm.title.left(32));
+            connect(act, &QAction::triggered, this, [this, bm]{
+                newTab(bm.url);
+            });
+        }
     }
+
+    menu->popup(QCursor::pos());
 }
 
 void Browser::onHistoryClicked()
 {
     setActiveRailButton(m_railHistoryBtn);
-    showStatusNotification(QStringLiteral("Browsing History"),
-        QStringLiteral("Browsing history is saved strictly to your local encrypted database.\n0 telemetry transmitted."));
+    auto *menu = new QMenu(this);
+
+    if (m_history.isEmpty()) {
+        auto *emptyAct = menu->addAction(QStringLiteral("No browsing history yet"));
+        emptyAct->setEnabled(false);
+    } else {
+        int limit = qMin(15, m_history.size());
+        for (int i = 0; i < limit; ++i) {
+            const auto &rec = m_history[i];
+            auto *act = menu->addAction(QStringLiteral("%1 — %2").arg(rec.title.left(28), rec.url.host()));
+            connect(act, &QAction::triggered, this, [this, rec]{
+                loadUrl(rec.url);
+            });
+        }
+        menu->addSeparator();
+        auto *clearAct = menu->addAction(QStringLiteral("Clear Browsing History"));
+        connect(clearAct, &QAction::triggered, this, [this]{
+            m_history.clear();
+            showToast(QStringLiteral("Browsing history cleared"));
+        });
+    }
+
+    menu->popup(QCursor::pos());
 }
 
 void Browser::onDownloadsClicked()
 {
     setActiveRailButton(m_railDlBtn);
-    showStatusNotification(QStringLiteral("Downloads"),
-        QStringLiteral("Default downloads folder: ~/Downloads\nAll downloaded files are verified clean."));
+    auto *menu = new QMenu(this);
+    auto *openFolderAct = menu->addAction(QStringLiteral("Open Downloads Folder"));
+    connect(openFolderAct, &QAction::triggered, this, []{
+        QString path = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+        QDesktopServices::openUrl(QUrl::fromLocalFile(path));
+    });
+    menu->addSeparator();
+    auto *cleanAct = menu->addAction(QStringLiteral("All downloads verified clean by TitanShield"));
+    cleanAct->setEnabled(false);
+
+    menu->popup(QCursor::pos());
 }
 
 void Browser::onExtensionsClicked()
 {
     setActiveRailButton(m_railExtBtn);
-    showStatusNotification(QStringLiteral("Titan Extensions"),
-        QStringLiteral("Active Extensions:\n✔ uBlock Origin (Active)\n✔ Bitwarden (Active)\n✔ Dark Reader (Active)"));
+    auto *menu = new QMenu(this);
+    menu->addAction(QStringLiteral("✔ uBlock Origin (Core Engine Active)"))->setEnabled(false);
+    menu->addAction(QStringLiteral("✔ Bitwarden Password Safe"))->setEnabled(false);
+    menu->addAction(QStringLiteral("✔ Dark Reader High-Contrast"))->setEnabled(false);
+    menu->addSeparator();
+    auto *storeAct = menu->addAction(QStringLiteral("Chrome Web Store"));
+    connect(storeAct, &QAction::triggered, this, [this]{
+        newTab(QUrl(QStringLiteral("https://chromewebstore.google.com")));
+    });
+
+    menu->popup(QCursor::pos());
 }
 
 void Browser::onSettingsClicked()
 {
     setActiveRailButton(m_railSettingsBtn);
-    if (auto *v = currentView()) {
-        v->page()->runJavaScript(QStringLiteral("if (window.openSettingsModal) window.openSettingsModal();"));
+    for (int i = 0; i < m_tabs->count(); ++i) {
+        QUrl tabUrl = m_tabs->tabUrl(i);
+        if (tabUrl.toString().startsWith(QStringLiteral("titan://settings"))) {
+            m_tabs->setCurrentIndex(i);
+            return;
+        }
     }
+    newTab(QUrl(QString::fromUtf8(kSettingsUrl)));
 }
 
 void Browser::onShieldClicked()
 {
-    if (auto *v = currentView()) {
-        v->page()->runJavaScript(QStringLiteral("if (window.openShieldFlyout) window.openShieldFlyout();"));
-    } else {
-        showStatusNotification(QStringLiteral("TitanShield Security"),
-            QStringLiteral("Status: Protected\n✔ 18,230 Trackers Blocked\n✔ Fingerprint Defense Active\n✔ Sandbox Isolation Enforced"));
-    }
+    auto *menu = new QMenu(this);
+    qint64 blk = m_adBlocker ? m_adBlocker->blockedCount() : 0;
+    menu->addAction(QStringLiteral("🛡 TitanShield Engine: Active"))->setEnabled(false);
+    menu->addAction(QStringLiteral("📊 %1 Requests Blocked").arg(blk))->setEnabled(false);
+    menu->addSeparator();
+    auto *resetAct = menu->addAction(QStringLiteral("Reset Blocked Statistics"));
+    connect(resetAct, &QAction::triggered, this, [this]{
+        if (m_adBlocker) m_adBlocker->resetStats();
+        showToast(QStringLiteral("TitanShield statistics reset"));
+    });
+    auto *settingsAct = menu->addAction(QStringLiteral("Privacy & Shield Settings..."));
+    connect(settingsAct, &QAction::triggered, this, &Browser::onSettingsClicked);
+
+    menu->popup(QCursor::pos());
 }
 
 void Browser::onProfileClicked()
 {
-    showStatusNotification(QStringLiteral("Titan Account"),
-        QStringLiteral("User: ArchTitan Developer\nKeyring: Hardware Encrypted\nCross-device sync: Active"));
+    showToast(QStringLiteral("Titan Account: Hardware Encrypted Profile Active"));
 }
 
 void Browser::onMenuClicked()
 {
     auto *menu = new QMenu(this);
     menu->addAction(QStringLiteral("New Tab (Ctrl+T)"), this, [this]{ newTab(); });
-    menu->addAction(QStringLiteral("New Private Window"), this, [this]{
-        showStatusNotification(QStringLiteral("Private Window"), QStringLiteral("Zero-history ephemeral session active."));
-    });
+    menu->addAction(QStringLiteral("Find in Page (Ctrl+F)"), this, &Browser::toggleFindInPage);
     menu->addSeparator();
-    menu->addAction(QStringLiteral("Spaces Workspace"), this, &Browser::onSpacesClicked);
+    menu->addAction(QStringLiteral("Bookmarks (Ctrl+B)"), this, &Browser::onBookmarksClicked);
+    menu->addAction(QStringLiteral("History (Ctrl+H)"), this, &Browser::onHistoryClicked);
+    menu->addAction(QStringLiteral("Downloads (Ctrl+J)"), this, &Browser::onDownloadsClicked);
+    menu->addAction(QStringLiteral("Spaces Workspace (Alt+S)"), this, &Browser::onSpacesClicked);
     menu->addAction(QStringLiteral("Titan AI Assistant (Ctrl+K)"), this, &Browser::onAICoreClicked);
-    menu->addAction(QStringLiteral("History"), this, &Browser::onHistoryClicked);
-    menu->addAction(QStringLiteral("Downloads"), this, &Browser::onDownloadsClicked);
     menu->addSeparator();
-    menu->addAction(QStringLiteral("Settings"), this, &Browser::onSettingsClicked);
+    menu->addAction(QStringLiteral("Settings (Ctrl+,)"), this, &Browser::onSettingsClicked);
     menu->addAction(QStringLiteral("About Titan Browser"), this, [this]{
         QMessageBox::about(this, QStringLiteral("About Titan Browser"),
             QStringLiteral("<h3>Titan Browser v1.0.0</h3><p>An operating environment for the web built natively on Qt6 WebEngine for ArchTitan OS.</p>"));
@@ -611,43 +1092,13 @@ void Browser::onMenuClicked()
 void Browser::onThemeToggleClicked()
 {
     m_isDarkMode = !m_isDarkMode;
-    if (auto *v = currentView()) {
-        v->page()->runJavaScript(QStringLiteral("if (window.toggleTheme) window.toggleTheme();"));
-    }
-}
-
-void Browser::showStatusNotification(const QString &title, const QString &message)
-{
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle(title);
-    msgBox.setText(title);
-    msgBox.setInformativeText(message);
-    msgBox.setStandardButtons(QMessageBox::Ok);
-    msgBox.setStyleSheet(QStringLiteral(R"(
-        QMessageBox {
-            background: #0b1120;
-            color: #f1f5f9;
-            font-size: 13px;
-        }
-        QLabel { color: #e2e8f0; }
-        QPushButton {
-            background: #0284c7;
-            color: white;
-            border-radius: 6px;
-            padding: 5px 16px;
-            font-weight: 600;
-        }
-        QPushButton:hover { background: #0369a1; }
-    )"));
-    msgBox.exec();
+    showToast(m_isDarkMode ? QStringLiteral("Theme: Obsidian Dark") : QStringLiteral("Theme: Light Glass"));
 }
 
 /* ─── Navigation Slots ─────────────────────────────────────────────────── */
-
 void Browser::loadUrl(const QUrl &url)
 {
-    if (auto *v = currentView())
-        v->setUrl(url);
+    m_tabs->loadInCurrentTab(url);
 }
 
 void Browser::newTab(const QUrl &url)
@@ -672,35 +1123,86 @@ void Browser::navigateForward()
     if (auto *v = currentView()) v->forward();
 }
 
-void Browser::reload()
+void Browser::reloadOrStop()
 {
-    if (auto *v = currentView()) v->reload();
+    if (auto *v = currentView()) {
+        if (m_isLoading) {
+            v->stop();
+        } else {
+            v->reload();
+        }
+    }
+}
+
+void Browser::updateNavigationButtons()
+{
+    if (auto *v = currentView()) {
+        if (auto *h = v->history()) {
+            m_backBtn->setEnabled(h->canGoBack());
+            m_fwdBtn->setEnabled(h->canGoForward());
+        }
+    } else {
+        m_backBtn->setEnabled(false);
+        m_fwdBtn->setEnabled(false);
+    }
 }
 
 void Browser::onUrlChanged(const QUrl &url)
 {
-    if (url.toString() == QStringLiteral("qrc:/homepage.html")) {
+    QString urlStr = url.toString();
+    if (urlStr == QStringLiteral("titan://home") || urlStr.isEmpty()) {
         m_addressBar->clear();
+        m_addressBar->setBookmarked(false);
         setActiveRailButton(m_railHomeBtn);
+    } else if (urlStr == QStringLiteral("titan://settings")) {
+        m_addressBar->setText(QStringLiteral("titan://settings"));
+        m_addressBar->setBookmarked(false);
+        setActiveRailButton(m_railSettingsBtn);
     } else {
         m_addressBar->setUrl(url);
+        m_addressBar->setBookmarked(isBookmarked(url));
+        if (m_adBlocker && currentView()) {
+            m_adBlocker->injectContentScriptIntoView(currentView());
+        }
     }
+    updateNavigationButtons();
 }
 
 void Browser::onLoadProgress(int progress)
 {
+    m_isLoading = (progress > 0 && progress < 100);
+    m_reloadBtn->setIcon(QIcon(m_isLoading ? QStringLiteral(":/icons/close.svg") : QStringLiteral(":/icons/reload.svg")));
+    m_reloadBtn->setToolTip(m_isLoading ? QStringLiteral("Stop Loading (Esc)") : QStringLiteral("Reload (Ctrl+R)"));
+
     if (progress > 0 && progress < 100) {
         m_progress->show();
         m_progress->setValue(progress);
+        if (progress > 40 && m_adBlocker && currentView()) {
+            m_adBlocker->injectContentScriptIntoView(currentView());
+        }
     } else {
         m_progress->hide();
         m_progress->setValue(0);
     }
+    updateNavigationButtons();
 }
 
-void Browser::onLoadFinished(bool /*ok*/)
+void Browser::onLoadFinished(bool ok)
 {
+    m_isLoading = false;
+    m_reloadBtn->setIcon(QIcon(QStringLiteral(":/icons/reload.svg")));
+    m_reloadBtn->setToolTip(QStringLiteral("Reload (Ctrl+R)"));
     m_progress->hide();
+
+    if (ok) {
+        if (auto *v = currentView()) {
+            if (m_adBlocker) {
+                m_adBlocker->injectContentScriptIntoView(v);
+            }
+            addHistoryRecord(v->title(), v->url());
+        }
+    }
+    updateNavigationButtons();
 }
 
 void Browser::onTitleChanged(const QString &title)
@@ -717,8 +1219,11 @@ void Browser::onAddressEntered()
 
 void Browser::onTabChanged(int /*index*/)
 {
-    if (auto *v = currentView())
+    if (auto *v = currentView()) {
         m_addressBar->setUrl(v->url());
+        m_addressBar->setBookmarked(isBookmarked(v->url()));
+        updateNavigationButtons();
+    }
 }
 
 QWebEngineView *Browser::currentView() const

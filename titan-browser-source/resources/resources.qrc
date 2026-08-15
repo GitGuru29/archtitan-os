@@ -2,6 +2,8 @@
 <RCC version="1.0">
   <qresource prefix="/">
     <file>homepage.html</file>
+    <file>settings.html</file>
+    <file>titan_shield_content.js</file>
     <file>icons/logo.svg</file>
     <file>icons/back.svg</file>
     <file>icons/forward.svg</file>
@@ -27,5 +29,11 @@
     <file>icons/menu.svg</file>
     <file>icons/plus.svg</file>
     <file>icons/close.svg</file>
+    <file>icons/lock.svg</file>
+    <file>icons/lock-open.svg</file>
+    <file>icons/star.svg</file>
+    <file>icons/star-filled.svg</file>
+    <file>icons/volume.svg</file>
+    <file>icons/volume-mute.svg</file>
   </qresource>
 </RCC>

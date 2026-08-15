@@ -6,12 +6,13 @@
     <title>New Tab — Titan Browser</title>
     <style>
         :root {
-            --bg-base: #060913;
-            --bg-surface: #0b1120;
-            --bg-surface-hover: #10192e;
-            --bg-command: #090e1a;
-            --border-subtle: rgba(255, 255, 255, 0.06);
-            --border-hover: rgba(56, 189, 248, 0.25);
+            --bg-base: #060812;
+            --bg-surface: #0a0f1d;
+            --bg-surface-hover: #10182e;
+            --bg-surface-active: #15223e;
+            --bg-command: #080d1a;
+            --border-subtle: rgba(255, 255, 255, 0.07);
+            --border-hover: rgba(56, 189, 248, 0.35);
             --text-main: #f8fafc;
             --text-sub: #94a3b8;
             --text-muted: #64748b;
@@ -20,8 +21,25 @@
             --accent-purple: #c084fc;
             --accent-indigo: #818cf8;
             --green-active: #22c55e;
-            --radius-md: 8px;
-            --radius-lg: 12px;
+            --amber-active: #f59e0b;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+            --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.4);
+            --shadow-hover: 0 8px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        body.light-mode {
+            --bg-base: #f8fafc;
+            --bg-surface: #ffffff;
+            --bg-surface-hover: #f1f5f9;
+            --bg-surface-active: #e2e8f0;
+            --bg-command: #ffffff;
+            --border-subtle: rgba(0, 0, 0, 0.08);
+            --border-hover: rgba(14, 165, 233, 0.4);
+            --text-main: #0f172a;
+            --text-sub: #475569;
+            --text-muted: #94a3b8;
         }
 
         * {
@@ -38,16 +56,16 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
             align-items: center;
             overflow-x: hidden;
             position: relative;
             background-image: 
-                radial-gradient(circle at 50% 15%, rgba(14, 165, 233, 0.07) 0%, transparent 55%),
-                radial-gradient(circle at 80% 80%, rgba(129, 140, 248, 0.03) 0%, transparent 40%);
+                radial-gradient(circle at 50% 12%, rgba(14, 165, 233, 0.09) 0%, transparent 60%),
+                radial-gradient(circle at 85% 85%, rgba(129, 140, 248, 0.04) 0%, transparent 45%);
+            transition: background-color 0.25s ease, color 0.25s ease;
         }
 
-        /* ─── Ambient Subtle Canvas ───────────────────────────────────── */
+        /* Ambient Performance-Throttled Particle Canvas */
         .ambient-canvas {
             position: fixed;
             top: 0;
@@ -56,73 +74,123 @@
             height: 100vh;
             pointer-events: none;
             z-index: 0;
+            opacity: 0.65;
         }
 
-        /* ─── Workspace Main Container ────────────────────────────────── */
+        /* Top Performance & Widget Ribbon */
+        .top-telemetry-ribbon {
+            position: fixed;
+            top: 14px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 20;
+        }
+
+        .telemetry-chip {
+            background: rgba(10, 15, 29, 0.85);
+            border: 1px solid var(--border-subtle);
+            backdrop-filter: blur(12px);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-sub);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+        .telemetry-chip:hover {
+            border-color: var(--border-hover);
+            color: var(--text-main);
+            transform: translateY(-1px);
+        }
+        .telemetry-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green-active);
+            box-shadow: 0 0 6px var(--green-active);
+        }
+
+        /* Workspace Main Container */
         .workspace-container {
             position: relative;
             z-index: 1;
             width: 100%;
-            max-width: 980px;
+            max-width: 1020px;
             margin: 0 auto;
-            padding: 60px 24px 48px 24px;
+            padding: 48px 24px 60px 24px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 32px;
+            gap: 28px;
         }
 
-        /* ─── Header & Ambient Greeting ───────────────────────────────── */
+        /* Header & Digital Clock */
         .workspace-header {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 10px;
+            gap: 6px;
             text-align: center;
         }
 
         .ambient-logo-wrapper {
             position: relative;
-            width: 52px;
-            height: 52px;
+            width: 56px;
+            height: 56px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
+            cursor: pointer;
         }
 
         .ambient-logo-glow {
             position: absolute;
-            width: 44px;
-            height: 44px;
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(56, 189, 248, 0.3) 0%, transparent 70%);
-            filter: blur(8px);
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.35) 0%, transparent 70%);
+            filter: blur(10px);
             animation: pulseGlow 4s ease-in-out infinite alternate;
         }
 
         @keyframes pulseGlow {
-            0% { transform: scale(0.9); opacity: 0.5; }
-            100% { transform: scale(1.2); opacity: 0.9; }
+            0% { transform: scale(0.92); opacity: 0.5; }
+            100% { transform: scale(1.25); opacity: 0.95; }
+        }
+
+        .digital-clock {
+            font-size: 38px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .workspace-greeting {
-            font-size: 26px;
-            font-weight: 700;
-            letter-spacing: -0.3px;
-            color: #ffffff;
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-main);
+            letter-spacing: -0.2px;
         }
 
         .workspace-sub-greeting {
-            font-size: 13.5px;
+            font-size: 13px;
             color: var(--text-muted);
             font-weight: 400;
         }
 
-        /* ─── Titan Command Bar (Spotlight / Raycast Hybrid) ──────────── */
+        /* Raycast/Spotlight Command Bar */
         .command-bar-wrapper {
             width: 100%;
-            max-width: 680px;
+            max-width: 720px;
             position: relative;
         }
 
@@ -134,21 +202,29 @@
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-lg);
             padding: 12px 18px;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.02);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.02);
             transition: all 0.18s ease;
         }
 
         .command-bar:focus-within, .command-bar.active {
             border-color: var(--accent-cyan);
-            box-shadow: 0 0 0 1px var(--accent-cyan), 0 8px 32px rgba(0, 0, 0, 0.55);
-            background: #0b1222;
+            box-shadow: 0 0 0 1px var(--accent-cyan), 0 8px 36px rgba(0, 0, 0, 0.6);
+            background: #0b1325;
         }
 
-        .command-icon {
-            color: var(--accent-cyan);
-            margin-right: 12px;
+        .command-engine-badge {
             display: flex;
             align-items: center;
+            gap: 5px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-cyan);
+            margin-right: 12px;
+            cursor: pointer;
         }
 
         .command-input {
@@ -157,8 +233,9 @@
             border: none;
             outline: none;
             color: #ffffff;
-            font-size: 14.5px;
+            font-size: 15px;
             font-weight: 400;
+            font-family: inherit;
         }
 
         .command-input::placeholder {
@@ -174,8 +251,8 @@
             color: var(--text-muted);
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border-subtle);
-            padding: 3px 7px;
-            border-radius: 5px;
+            padding: 3px 8px;
+            border-radius: 6px;
         }
 
         /* Command Bar Dropdown Menu */
@@ -184,16 +261,16 @@
             top: calc(100% + 8px);
             left: 0;
             width: 100%;
-            background: #0b1120;
+            background: #090e1c;
             border: 1px solid var(--border-hover);
             border-radius: var(--radius-lg);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 16px 44px rgba(0, 0, 0, 0.75);
             padding: 6px;
             display: none;
             flex-direction: column;
-            gap: 2px;
-            z-index: 50;
-            backdrop-filter: blur(16px);
+            gap: 3px;
+            z-index: 60;
+            backdrop-filter: blur(20px);
         }
 
         .command-dropdown.show {
@@ -204,8 +281,8 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 9px 12px;
-            border-radius: var(--radius-md);
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
             color: var(--text-sub);
             font-size: 13px;
             cursor: pointer;
@@ -213,20 +290,20 @@
         }
 
         .command-item:hover, .command-item.selected {
-            background: rgba(56, 189, 248, 0.12);
+            background: rgba(56, 189, 248, 0.14);
             color: #ffffff;
         }
 
         .command-item-left {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .command-item-icon {
             font-size: 14px;
             color: var(--accent-cyan);
-            width: 18px;
+            width: 20px;
             display: flex;
             justify-content: center;
         }
@@ -236,11 +313,11 @@
             font-weight: 600;
             color: var(--text-muted);
             background: rgba(255, 255, 255, 0.05);
-            padding: 2px 6px;
+            padding: 2px 7px;
             border-radius: 4px;
         }
 
-        /* ─── Titan Spaces Section ────────────────────────────────────── */
+        /* Section Layout */
         .section-box {
             width: 100%;
             display: flex;
@@ -262,6 +339,7 @@
             text-transform: uppercase;
         }
 
+        /* Spaces Workspace Grid */
         .spaces-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -272,7 +350,7 @@
             background: var(--bg-surface);
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-md);
-            padding: 12px 14px;
+            padding: 14px 16px;
             display: flex;
             flex-direction: column;
             gap: 4px;
@@ -283,38 +361,39 @@
         .space-card:hover {
             background: var(--bg-surface-hover);
             border-color: var(--border-hover);
-            transform: translateY(-1px);
+            transform: translateY(-2px);
         }
 
         .space-card.active {
-            background: #0e172a;
-            border-color: rgba(56, 189, 248, 0.4);
-            box-shadow: 0 0 16px rgba(56, 189, 248, 0.08);
+            background: #0d1629;
+            border-color: rgba(56, 189, 248, 0.45);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
         }
 
         .space-header {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 13px;
+            font-size: 13.5px;
             font-weight: 600;
             color: #ffffff;
         }
 
         .space-dot {
-            width: 7px;
-            height: 7px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: var(--accent-cyan);
-            box-shadow: 0 0 6px var(--accent-cyan);
+            box-shadow: 0 0 8px var(--accent-cyan);
         }
-        .space-dot.purple { background: var(--accent-purple); box-shadow: 0 0 6px var(--accent-purple); }
-        .space-dot.green { background: var(--green-active); box-shadow: 0 0 6px var(--green-active); }
+        .space-dot.purple { background: var(--accent-purple); box-shadow: 0 0 8px var(--accent-purple); }
+        .space-dot.green  { background: var(--green-active); box-shadow: 0 0 8px var(--green-active); }
+        .space-dot.amber  { background: var(--amber-active); box-shadow: 0 0 8px var(--amber-active); }
 
         .space-sub {
             font-size: 11px;
             color: var(--text-muted);
-            padding-left: 15px;
+            padding-left: 16px;
         }
 
         .space-card.new-space-btn {
@@ -322,7 +401,7 @@
             align-items: center;
             justify-content: center;
             color: var(--text-muted);
-            font-size: 12px;
+            font-size: 12.5px;
             font-weight: 500;
         }
         .space-card.new-space-btn:hover {
@@ -330,7 +409,7 @@
             color: var(--accent-cyan);
         }
 
-        /* ─── Quick Access Launcher ───────────────────────────────────── */
+        /* Quick Access Launcher Grid */
         .launcher-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
@@ -341,7 +420,7 @@
             background: var(--bg-surface);
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-md);
-            padding: 14px 10px;
+            padding: 16px 12px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -350,18 +429,46 @@
             text-decoration: none;
             cursor: pointer;
             transition: all 0.15s ease;
+            position: relative;
         }
 
         .launcher-card:hover {
             background: var(--bg-surface-hover);
             border-color: var(--border-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .launcher-card:hover .card-del-btn {
+            opacity: 1;
+        }
+
+        .card-del-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: none;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.12s;
+        }
+        .card-del-btn:hover {
+            background: #ef4444;
+            color: #ffffff;
         }
 
         .launcher-icon {
-            width: 32px;
-            height: 32px;
+            width: 34px;
+            height: 34px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -372,11 +479,19 @@
             font-size: 12px;
             font-weight: 600;
             color: var(--text-main);
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .launcher-sub {
             font-size: 10px;
             color: var(--text-muted);
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .launcher-card.add-card {
@@ -386,74 +501,59 @@
             border-color: var(--accent-cyan);
         }
 
-        /* ─── Recent Activity Timeline ────────────────────────────────── */
-        .recent-list {
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
+        /* Developer & Productivity Toolbox */
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
         }
 
-        .recent-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+        .tool-card {
             background: var(--bg-surface);
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-md);
-            padding: 8px 14px;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.12s ease;
-        }
-
-        .recent-row:hover {
-            background: var(--bg-surface-hover);
-            border-color: var(--border-hover);
-        }
-
-        .recent-left {
+            padding: 12px 10px;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
         }
-
-        .recent-icon {
+        .tool-card:hover {
+            background: var(--bg-surface-hover);
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+        }
+        .tool-icon {
+            font-size: 16px;
             color: var(--accent-cyan);
-            display: flex;
         }
-
-        .recent-title {
-            font-size: 12.5px;
-            font-weight: 500;
-            color: #ffffff;
+        .tool-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-main);
         }
-
-        .recent-domain {
-            font-size: 11px;
+        .tool-desc {
+            font-size: 9.5px;
             color: var(--text-muted);
         }
 
-        .recent-time {
-            font-size: 11px;
-            color: var(--text-muted);
-        }
-
-        /* ─── Native AI Side Panel (Flyout Drawer) ────────────────────── */
+        /* Native AI Side Panel */
         .ai-panel {
             position: fixed;
             top: 0;
-            right: -380px;
-            width: 360px;
+            right: -420px;
+            width: 390px;
             height: 100vh;
-            background: #080d1a;
+            background: #080d1c;
             border-left: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6);
+            box-shadow: -10px 0 36px rgba(0, 0, 0, 0.7);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             z-index: 100;
-            transition: right 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-            backdrop-filter: blur(20px);
+            transition: right 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+            backdrop-filter: blur(24px);
         }
 
         .ai-panel.open {
@@ -462,7 +562,7 @@
 
         .ai-panel-header {
             padding: 16px 18px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -481,7 +581,7 @@
             background: transparent;
             border: none;
             color: var(--text-muted);
-            font-size: 16px;
+            font-size: 18px;
             cursor: pointer;
         }
         .ai-panel-close:hover { color: #ffffff; }
@@ -498,23 +598,37 @@
 
         .ai-msg-user {
             align-self: flex-end;
-            background: rgba(14, 165, 233, 0.2);
-            border: 1px solid rgba(14, 165, 233, 0.35);
-            padding: 8px 12px;
-            border-radius: 10px 10px 0 10px;
+            background: rgba(14, 165, 233, 0.22);
+            border: 1px solid rgba(14, 165, 233, 0.4);
+            padding: 9px 14px;
+            border-radius: 12px 12px 2px 12px;
             color: #ffffff;
             max-width: 85%;
+            word-break: break-word;
         }
 
         .ai-msg-bot {
             align-self: flex-start;
-            background: rgba(15, 23, 42, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            padding: 10px 12px;
-            border-radius: 10px 10px 10px 0;
+            background: rgba(15, 23, 42, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            padding: 11px 14px;
+            border-radius: 12px 12px 12px 2px;
             color: #e2e8f0;
-            line-height: 1.5;
-            max-width: 90%;
+            line-height: 1.55;
+            max-width: 92%;
+            word-break: break-word;
+        }
+
+        .ai-msg-bot pre {
+            background: #04060d;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-top: 6px;
+            font-family: monospace;
+            font-size: 12px;
+            color: #38bdf8;
+            overflow-x: auto;
         }
 
         .ai-chips-row {
@@ -525,38 +639,38 @@
         }
 
         .ai-chip {
-            background: rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border-subtle);
             border-radius: 6px;
-            padding: 4px 8px;
+            padding: 5px 9px;
             font-size: 11px;
             color: var(--text-sub);
             cursor: pointer;
             transition: all 0.12s ease;
         }
         .ai-chip:hover {
-            background: rgba(56, 189, 248, 0.12);
+            background: rgba(56, 189, 248, 0.15);
             border-color: var(--border-hover);
             color: #ffffff;
         }
 
         .ai-panel-footer {
             padding: 14px 16px;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
             display: flex;
             align-items: center;
             gap: 8px;
-            background: #060913;
+            background: #050811;
         }
 
         .ai-panel-input {
             flex: 1;
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(15, 23, 42, 0.85);
             border: 1px solid var(--border-subtle);
             border-radius: 8px;
-            padding: 8px 12px;
+            padding: 9px 12px;
             color: #ffffff;
-            font-size: 12.5px;
+            font-size: 13px;
             outline: none;
         }
         .ai-panel-input:focus {
@@ -567,9 +681,9 @@
             background: var(--accent-cyan);
             border: none;
             border-radius: 8px;
-            width: 32px;
-            height: 32px;
-            color: #060913;
+            width: 34px;
+            height: 34px;
+            color: #060812;
             font-weight: bold;
             display: flex;
             align-items: center;
@@ -577,17 +691,17 @@
             cursor: pointer;
         }
 
-        /* ─── TitanShield Security Flyout ─────────────────────────────── */
+        /* Subtle TitanShield Security Flyout */
         .shield-flyout {
             position: fixed;
             top: 50px;
-            right: 180px;
-            width: 280px;
-            background: #0b1120;
-            border: 1px solid rgba(56, 189, 248, 0.25);
+            right: 160px;
+            width: 300px;
+            background: #090e1c;
+            border: 1px solid rgba(56, 189, 248, 0.3);
             border-radius: var(--radius-lg);
-            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
-            padding: 16px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+            padding: 18px;
             display: none;
             flex-direction: column;
             gap: 12px;
@@ -604,15 +718,15 @@
             gap: 6px;
         }
 
-        /* ─── Modal System ────────────────────────────────────────────── */
+        /* Modal System */
         .modal-backdrop {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(6px);
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
             display: none;
             align-items: center;
             justify-content: center;
@@ -621,56 +735,82 @@
         .modal-backdrop.active { display: flex; }
 
         .modal-box {
-            background: #0b1120;
+            background: #090e1c;
             border: 1px solid var(--border-hover);
             border-radius: var(--radius-lg);
             padding: 24px;
             width: 90%;
-            max-width: 420px;
+            max-width: 480px;
             display: flex;
             flex-direction: column;
             gap: 14px;
-            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
         }
 
-        .modal-input {
+        .modal-input, .modal-textarea {
             width: 100%;
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(15, 23, 42, 0.85);
             border: 1px solid var(--border-subtle);
-            border-radius: 6px;
-            padding: 8px 12px;
+            border-radius: 7px;
+            padding: 9px 12px;
             color: #ffffff;
             font-size: 13px;
             outline: none;
+            font-family: inherit;
         }
-        .modal-input:focus { border-color: var(--accent-cyan); }
+        .modal-input:focus, .modal-textarea:focus { border-color: var(--accent-cyan); }
+
+        .modal-textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: monospace;
+        }
 
         .btn-modal-submit {
             background: var(--accent-cyan);
             border: none;
-            border-radius: 6px;
-            padding: 8px 14px;
-            color: #060913;
+            border-radius: 7px;
+            padding: 9px 16px;
+            color: #060812;
             font-weight: 600;
             cursor: pointer;
+            transition: all 0.12s;
+        }
+        .btn-modal-submit:hover {
+            background: #38bdf8;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
         }
     </style>
 </head>
 <body>
 
-    <!-- Ambient Subtle Star / Particle Field -->
+    <!-- Ambient Particle Field -->
     <canvas class="ambient-canvas" id="ambientCanvas"></canvas>
+
+    <!-- Top Telemetry Ribbon -->
+    <div class="top-telemetry-ribbon">
+        <div class="telemetry-chip" onclick="openShieldFlyout()">
+            <span class="telemetry-dot"></span>
+            <span id="shieldChipLabel">TitanShield: 0 Blocked</span>
+        </div>
+        <div class="telemetry-chip" onclick="openToolModal('json')">
+            <span>⚡ Dev Tools</span>
+        </div>
+        <div class="telemetry-chip" onclick="toggleAIPanel(true)">
+            <span>✦ Titan AI</span>
+        </div>
+    </div>
 
     <!-- Workspace Container -->
     <div class="workspace-container">
 
-        <!-- 1. Ambient Greeting & Glyph -->
+        <!-- 1. Ambient Greeting & Digital Clock -->
         <div class="workspace-header">
-            <div class="ambient-logo-wrapper">
+            <div class="ambient-logo-wrapper" onclick="toggleTheme()">
                 <div class="ambient-logo-glow"></div>
-                <svg width="34" height="34" viewBox="0 0 64 64" fill="none">
+                <svg width="36" height="36" viewBox="0 0 64 64" fill="none">
                     <path d="M32 4L4 56H18L32 28L46 56H60L32 4Z" fill="url(#arch-brand-grad)" />
-                    <path d="M24 42H40L32 26L24 42Z" fill="#ffffff" opacity="0.9" />
+                    <path d="M24 42H40L32 26L24 42Z" fill="#ffffff" opacity="0.95" />
                     <defs>
                         <linearGradient id="arch-brand-grad" x1="4" y1="4" x2="60" y2="56">
                             <stop stop-color="#38bdf8" />
@@ -680,21 +820,22 @@
                     </defs>
                 </svg>
             </div>
+            <div class="digital-clock" id="clockText">12:00</div>
             <div class="workspace-greeting" id="greetingText">Good evening, Titan.</div>
-            <div class="workspace-sub-greeting">Search the web, manage spaces, or ask Titan AI</div>
+            <div class="workspace-sub-greeting">Unified operating environment for developer workflows</div>
         </div>
 
-        <!-- 2. Titan Command Bar -->
+        <!-- 2. Raycast/Spotlight Command Bar -->
         <div class="command-bar-wrapper">
             <div class="command-bar" id="commandBarBox">
-                <div class="command-icon">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <div class="command-engine-badge" id="engineBadge" onclick="cycleSearchEngine()">
+                    <span>DDG</span>
                 </div>
-                <input type="text" id="commandInput" class="command-input" placeholder="Search the web, enter URL, or ask Titan AI..." autocomplete="off" />
-                <div class="command-shortcut-badge">⌘K</div>
+                <input type="text" id="commandInput" class="command-input" placeholder="Search the web, compute Math, or ask Titan AI..." autocomplete="off" />
+                <div class="command-shortcut-badge">⌘K / /</div>
             </div>
 
-            <!-- Interactive Suggestions Dropdown -->
+            <!-- Suggestions Dropdown -->
             <div class="command-dropdown" id="commandDropdown">
                 <div class="command-item" onclick="executeCommand('search')">
                     <div class="command-item-left">
@@ -709,6 +850,13 @@
                         <span id="cmdAILabel">Ask Titan AI</span>
                     </div>
                     <span class="command-item-badge">Tab</span>
+                </div>
+                <div class="command-item" onclick="executeCommand('calc')">
+                    <div class="command-item-left">
+                        <div class="command-item-icon">=</div>
+                        <span id="cmdCalcLabel">Quick Calculation</span>
+                    </div>
+                    <span class="command-item-badge">Math</span>
                 </div>
                 <div class="command-item" onclick="executeCommand('tabs')">
                     <div class="command-item-left">
@@ -730,21 +878,21 @@
                         <span class="space-dot"></span>
                         <span>Development</span>
                     </div>
-                    <div class="space-sub">8 tabs · Node, Vite, C++</div>
+                    <div class="space-sub">C++, Rust, Vite, Devtools</div>
                 </div>
                 <div class="space-card" onclick="selectSpace(this, 'Research')">
                     <div class="space-header">
                         <span class="space-dot purple"></span>
                         <span>Research</span>
                     </div>
-                    <div class="space-sub">12 tabs · Papers, Docs</div>
+                    <div class="space-sub">Papers, Docs, AI Models</div>
                 </div>
                 <div class="space-card" onclick="selectSpace(this, 'Personal')">
                     <div class="space-header">
                         <span class="space-dot green"></span>
                         <span>Personal</span>
                     </div>
-                    <div class="space-sub">4 tabs · Feeds, Media</div>
+                    <div class="space-sub">Feeds, Media, Bookmarks</div>
                 </div>
                 <div class="space-card new-space-btn" onclick="openNewSpaceModal()">
                     + New Space
@@ -758,90 +906,58 @@
                 <span class="section-title">QUICK ACCESS</span>
             </div>
             <div class="launcher-grid" id="launcherContainer">
-                
-                <a href="https://archtitan.io" class="launcher-card">
-                    <div class="launcher-icon" style="color: #38bdf8;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 22h5l5-10 5 10h5L12 2z"/></svg>
-                    </div>
-                    <div class="launcher-title">ArchTitan</div>
-                    <div class="launcher-sub">archtitan.io</div>
-                </a>
-
-                <a href="https://github.com" class="launcher-card">
-                    <div class="launcher-icon" style="color: #ffffff;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
-                    </div>
-                    <div class="launcher-title">GitHub</div>
-                    <div class="launcher-sub">github.com</div>
-                </a>
-
-                <a href="https://youtube.com" class="launcher-card">
-                    <div class="launcher-icon" style="color: #ef4444;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                    </div>
-                    <div class="launcher-title">YouTube</div>
-                    <div class="launcher-sub">youtube.com</div>
-                </a>
-
-                <a href="https://google.com" class="launcher-card">
-                    <div class="launcher-icon">
-                        <svg width="19" height="19" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.25 21.3 7.31 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27a7.19 7.19 0 010-4.54V6.58H1.26a11.98 11.98 0 000 10.84l4.02-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.25 2.7 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
-                    </div>
-                    <div class="launcher-title">Google</div>
-                    <div class="launcher-sub">google.com</div>
-                </a>
-
-                <a href="https://reddit.com" class="launcher-card">
-                    <div class="launcher-icon" style="color: #ff4500;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12c0 3.314 1.344 6.315 3.516 8.484l-1.04 3.09 3.284-1.002C7.79 23.36 9.827 24 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm5.01 4.744c.688 0 1.25.56 1.25 1.249a1.25 1.25 0 01-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.362.768-.584 1.277-.584 1.01 0 1.83 0.82 1.83 1.83 0 .783-.497 1.45-1.19 1.706.02.215.03.433.03.655 0 3.33-3.834 6.03-8.56 6.03-4.727 0-8.56-2.7-8.56-6.03 0-.22.01-.438.03-.653C4.256 13.414 3.76 12.748 3.76 11.965c0-1.01.82-1.83 1.83-1.83.51 0 .97.22 1.277.583 1.192-.857 2.846-1.42 4.67-1.488l.898-4.21 3.26.687a1.25 1.25 0 011.315-.963z"/></svg>
-                    </div>
-                    <div class="launcher-title">Reddit</div>
-                    <div class="launcher-sub">reddit.com</div>
-                </a>
-
-                <a href="https://notion.so" class="launcher-card">
-                    <div class="launcher-icon" style="color: #ffffff;">
-                        <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.876c-.466-.373-.933-.653-1.773-.606L3.385 2.25c-.373.046-.466.28-.326.42l1.4 1.538zm-1.073 3.36v13.54c0 .56.374.84.98 1.027l14.428.84c.607.046.934-.234.934-.794V8.406c0-.56-.233-.84-.793-.886L3.999 6.822c-.42 0-.613.233-.613.746zm13.12 1.774v9.565c0 .327-.14.467-.42.467-.187 0-.374-.093-.56-.28l-5.694-8.82v8.587c0 .327-.187.514-.514.514h-1.4c-.327 0-.514-.187-.514-.514V9.669c0-.327.14-.514.42-.514.234 0 .42.093.607.327l5.648 8.727V9.342c0-.327.187-.514.514-.514h1.4c.327 0 .513.234.513.514z"/></svg>
-                    </div>
-                    <div class="launcher-title">Notion</div>
-                    <div class="launcher-sub">notion.so</div>
-                </a>
-
-                <div class="launcher-card add-card" onclick="openAddShortcutModal()">
-                    <div class="launcher-icon" style="color: var(--text-muted);">+</div>
-                    <div class="launcher-title" style="color: var(--text-sub);">Add</div>
-                    <div class="launcher-sub">shortcut</div>
-                </div>
-
+                <!-- Dynamically populated from localStorage -->
             </div>
         </div>
 
-        <!-- 5. Recent Activity Timeline -->
+        <!-- 5. Developer & Productivity Toolbox -->
         <div class="section-box">
             <div class="section-title-row">
-                <span class="section-title">RECENT ACTIVITY</span>
+                <span class="section-title">DEVELOPER TOOLS</span>
             </div>
-            <div class="recent-list">
-                <a href="https://github.com/GitGuru29/archtitan-os" class="recent-row">
-                    <div class="recent-left">
-                        <div class="recent-icon">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                        </div>
-                        <span class="recent-title">GitGuru29 / archtitan-os</span>
-                        <span class="recent-domain">github.com</span>
+            <div class="tools-grid">
+                <div class="tool-card" onclick="openToolModal('json')">
+                    <div class="tool-icon">{}</div>
+                    <div>
+                        <div class="tool-name">JSON Tool</div>
+                        <div class="tool-desc">Beautify & Minify</div>
                     </div>
-                    <span class="recent-time">5m ago</span>
-                </a>
-                <a href="https://wiki.archlinux.org" class="recent-row">
-                    <div class="recent-left">
-                        <div class="recent-icon">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-                        </div>
-                        <span class="recent-title">Arch Linux Documentation</span>
-                        <span class="recent-domain">wiki.archlinux.org</span>
+                </div>
+                <div class="tool-card" onclick="openToolModal('base64')">
+                    <div class="tool-icon">64</div>
+                    <div>
+                        <div class="tool-name">Base64</div>
+                        <div class="tool-desc">Encode / Decode</div>
                     </div>
-                    <span class="recent-time">22m ago</span>
-                </a>
+                </div>
+                <div class="tool-card" onclick="openToolModal('uuid')">
+                    <div class="tool-icon">#</div>
+                    <div>
+                        <div class="tool-name">UUID / Hash</div>
+                        <div class="tool-desc">v4 UUID & SHA256</div>
+                    </div>
+                </div>
+                <div class="tool-card" onclick="openToolModal('regex')">
+                    <div class="tool-icon">.*</div>
+                    <div>
+                        <div class="tool-name">Regex Tester</div>
+                        <div class="tool-desc">Pattern Matcher</div>
+                    </div>
+                </div>
+                <div class="tool-card" onclick="openToolModal('epoch')">
+                    <div class="tool-icon">⏱</div>
+                    <div>
+                        <div class="tool-name">Epoch Converter</div>
+                        <div class="tool-desc">Unix Timestamp</div>
+                    </div>
+                </div>
+                <div class="tool-card" onclick="openToolModal('color')">
+                    <div class="tool-icon">🎨</div>
+                    <div>
+                        <div class="tool-name">Color Picker</div>
+                        <div class="tool-desc">HEX & HSL Converter</div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -852,46 +968,45 @@
         <div class="ai-panel-header">
             <div class="ai-panel-title">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M12 2a4 4 0 0 1 4 4v1a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2V6a4 4 0 0 1 4-4z"/><circle cx="9.5" cy="11.5" r="1.5" fill="#38bdf8"/><circle cx="14.5" cy="11.5" r="1.5" fill="#38bdf8"/></svg>
-                <span>TITAN AI</span>
-                <span style="font-size: 10px; color: var(--text-muted); font-weight: 500;">Local • Private</span>
+                <span>TITAN AI ASSISTANT</span>
             </div>
             <button class="ai-panel-close" onclick="toggleAIPanel(false)">&times;</button>
         </div>
 
         <div class="ai-conversation" id="aiChatStream">
             <div class="ai-msg-bot">
-                What are we working on? I can summarize pages, analyze code, translate, or execute browser actions locally.
+                Hello! I am Titan AI, your on-device browser intelligence. Ask me to explain code, generate shell commands, summarize text, or analyze regex patterns.
             </div>
         </div>
 
         <div>
             <div class="ai-chips-row">
-                <button class="ai-chip" onclick="handleAIQuick('Summarize current page context')">📄 Summarize</button>
-                <button class="ai-chip" onclick="handleAIQuick('Explain code implementation')">💻 Explain Code</button>
-                <button class="ai-chip" onclick="handleAIQuick('Translate text')">🌐 Translate</button>
-                <button class="ai-chip" onclick="handleAIQuick('Draft a response')">✍️ Write</button>
+                <button class="ai-chip" onclick="handleAIQuick('Summarize this web page context')">📄 Summarize</button>
+                <button class="ai-chip" onclick="handleAIQuick('Explain this code snippet in detail')">💻 Explain Code</button>
+                <button class="ai-chip" onclick="handleAIQuick('Generate a bash command for system administration')">⚡ Bash Helper</button>
+                <button class="ai-chip" onclick="handleAIQuick('Write a regular expression pattern for emails and URLs')">🔍 Regex Helper</button>
             </div>
             <div class="ai-panel-footer">
-                <input type="text" id="aiPanelInput" class="ai-panel-input" placeholder="Ask Titan..." onkeydown="if(event.key==='Enter') sendAIMessage()" />
+                <input type="text" id="aiPanelInput" class="ai-panel-input" placeholder="Ask Titan AI anything..." onkeydown="if(event.key==='Enter') sendAIMessage()" />
                 <button class="ai-panel-send" onclick="sendAIMessage()">&uarr;</button>
             </div>
         </div>
     </div>
 
-    <!-- ─── Subtle TitanShield Security Flyout ────────────────────────── -->
+    <!-- ─── TitanShield Security Flyout ────────────────────────────────── -->
     <div class="shield-flyout" id="shieldFlyout">
         <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-subtle); padding-bottom: 8px;">
-            <div style="font-weight: 700; font-size: 13px; color: #ffffff;">TitanShield</div>
-            <span class="shield-stat-badge">● Protected</span>
+            <div style="font-weight: 700; font-size: 13px; color: #ffffff;">TitanShield Defense</div>
+            <span class="shield-stat-badge">● Active</span>
         </div>
-        <div style="font-size: 11.5px; color: var(--text-sub); display: flex; flex-direction: column; gap: 6px;">
-            <div>✔ 18,230 Trackers Blocked</div>
-            <div>✔ Fingerprint Defense Active</div>
-            <div>✔ Sandbox Isolation Enforced</div>
-            <div>✔ DNS-over-HTTPS Active</div>
-            <div>⚡ 42% Memory Optimized</div>
+        <div class="shield-live-stats" style="font-size: 11.5px; color: var(--text-sub); display: flex; flex-direction: column; gap: 6px;">
+            <div>✔ EasyList & EasyPrivacy 20,000+ rules loaded</div>
+            <div>✔ Fingerprint & Canvas Defense Active</div>
+            <div>✔ Zero Cloud Telemetry Transmitted</div>
+            <div>✔ YouTube & Spotify Instant Ad-Skip Engine</div>
+            <div id="shieldFlyoutBlockedCount">⚡ 0 requests blocked in session</div>
         </div>
-        <button class="ai-chip" style="align-self: flex-start;" onclick="toggleShieldFlyout(false)">Close</button>
+        <button class="btn-modal-submit" style="font-size: 11.5px; padding: 6px 12px; align-self: flex-start;" onclick="toggleShieldFlyout(false)">Close</button>
     </div>
 
     <!-- ─── Modals ────────────────────────────────────────────────────── -->
@@ -905,21 +1020,106 @@
 
     <!-- ─── Script Core ───────────────────────────────────────────────── -->
     <script>
-        /* 1. Time-based Greeting */
-        function initGreeting() {
-            const h = new Date().getHours();
+        /* 1. Performance-Throttled Particle Canvas */
+        const canvas = document.getElementById('ambientCanvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+        let particles = [];
+        let animFrameId = null;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initParticles();
+        });
+
+        function initParticles() {
+            particles = [];
+            const count = Math.min(45, Math.floor(width / 35));
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    vx: (Math.random() - 0.5) * 0.35,
+                    vy: (Math.random() - 0.5) * 0.35,
+                    radius: Math.random() * 1.5 + 0.5,
+                    alpha: Math.random() * 0.5 + 0.2
+                });
+            }
+        }
+        initParticles();
+
+        function renderParticles() {
+            if (document.hidden) return; // 0% CPU consumption when inactive!
+            ctx.clearRect(0, 0, width, height);
+
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.x < 0) p.x = width;
+                if (p.x > width) p.x = 0;
+                if (p.y < 0) p.y = height;
+                if (p.y > height) p.y = 0;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(56, 189, 248, ${p.alpha})`;
+                ctx.fill();
+            }
+
+            animFrameId = requestAnimationFrame(renderParticles);
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && !animFrameId) {
+                renderParticles();
+            } else if (document.hidden && animFrameId) {
+                cancelAnimationFrame(animFrameId);
+                animFrameId = null;
+            }
+        });
+        renderParticles();
+
+        /* 2. Real-Time Clock & Greeting */
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('clockText').innerText = `${hours}:${minutes}`;
+
+            const h = now.getHours();
             let period = "Good evening";
             if (h >= 5 && h < 12) period = "Good morning";
             else if (h >= 12 && h < 18) period = "Good afternoon";
             document.getElementById('greetingText').innerText = `${period}, Titan.`;
         }
-        initGreeting();
+        setInterval(updateClock, 1000);
+        updateClock();
 
-        /* 2. Command Bar & Suggestions */
+        /* 3. Search Engine Switcher */
+        const ENGINES = [
+            { id: 'ddg', name: 'DDG', url: 'https://duckduckgo.com/?q=' },
+            { id: 'google', name: 'Google', url: 'https://www.google.com/search?q=' },
+            { id: 'brave', name: 'Brave', url: 'https://search.brave.com/search?q=' },
+            { id: 'startpage', name: 'Startpage', url: 'https://www.startpage.com/sp/search?query=' }
+        ];
+        let currentEngineIdx = 0;
+
+        function cycleSearchEngine() {
+            currentEngineIdx = (currentEngineIdx + 1) % ENGINES.length;
+            document.getElementById('engineBadge').innerText = ENGINES[currentEngineIdx].name;
+            cmdInput.focus();
+        }
+
+        /* 4. Command Bar & Suggestions */
         const cmdInput = document.getElementById('commandInput');
         const cmdDropdown = document.getElementById('commandDropdown');
         const cmdSearchLabel = document.getElementById('cmdSearchLabel');
         const cmdAILabel = document.getElementById('cmdAILabel');
+        const cmdCalcLabel = document.getElementById('cmdCalcLabel');
 
         cmdInput.addEventListener('focus', () => {
             cmdDropdown.classList.add('show');
@@ -928,12 +1128,27 @@
         cmdInput.addEventListener('input', (e) => {
             const val = e.target.value.trim();
             if (val) {
-                cmdSearchLabel.innerText = `Search web for "${val}"`;
+                cmdSearchLabel.innerText = `Search ${ENGINES[currentEngineIdx].name} for "${val}"`;
                 cmdAILabel.innerText = `Ask Titan AI: "${val}"`;
+
+                // Quick Math evaluation
+                try {
+                    if (/^[0-9+\-*/().\s^%]+$/.test(val) && /[0-9]/.test(val)) {
+                        const res = Function(`'use strict'; return (${val})`)();
+                        if (typeof res === 'number' && !isNaN(res)) {
+                            cmdCalcLabel.innerText = `Calculate: ${val} = ${res}`;
+                            cmdDropdown.classList.add('show');
+                            return;
+                        }
+                    }
+                } catch (e) { }
+
+                cmdCalcLabel.innerText = `Quick Calculation`;
                 cmdDropdown.classList.add('show');
             } else {
                 cmdSearchLabel.innerText = `Search web`;
                 cmdAILabel.innerText = `Ask Titan AI`;
+                cmdCalcLabel.innerText = `Quick Calculation`;
             }
         });
 
@@ -943,14 +1158,25 @@
                 if (!val) return;
                 if (val.startsWith('http://') || val.startsWith('https://')) {
                     window.location.href = val;
-                } else if (val.includes('.') && !val.includes(' ')) {
+                } else if (val.includes('.') && !val.includes(' ') && !val.includes('+')) {
                     window.location.href = 'https://' + val;
                 } else {
-                    window.location.href = 'https://duckduckgo.com/?q=' + encodeURIComponent(val);
+                    window.location.href = ENGINES[currentEngineIdx].url + encodeURIComponent(val);
                 }
+            } else if (e.key === 'Tab') {
+                e.preventDefault();
+                executeCommand('ai');
             } else if (e.key === 'Escape') {
                 cmdDropdown.classList.remove('show');
                 cmdInput.blur();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '/' && document.activeElement !== cmdInput && document.activeElement.tagName !== 'INPUT') {
+                e.preventDefault();
+                cmdInput.focus();
+                cmdInput.select();
             }
         });
 
@@ -964,15 +1190,20 @@
             const val = cmdInput.value.trim();
             cmdDropdown.classList.remove('show');
             if (type === 'search') {
-                if (val) window.location.href = 'https://duckduckgo.com/?q=' + encodeURIComponent(val);
+                if (val) window.location.href = ENGINES[currentEngineIdx].url + encodeURIComponent(val);
             } else if (type === 'ai') {
                 toggleAIPanel(true);
                 if (val) {
                     sendAIQuery(val);
                     cmdInput.value = '';
                 }
+            } else if (type === 'calc') {
+                try {
+                    const res = Function(`'use strict'; return (${val})`)();
+                    cmdInput.value = String(res);
+                } catch(e) { }
             } else if (type === 'tabs') {
-                openModal('Open Tabs', '<div style="font-size:12px; color: #94a3b8;">• Tab 1: New Tab (Active)<br>• Tab 2: Development Workspace<br>• Tab 3: Research Notes</div>');
+                openModal('Open Tabs & Spaces', '<div style="font-size:13px; color: #94a3b8; line-height: 1.8;">• Space: <strong>Development</strong> (Active)<br>• Tab 1: New Tab<br>• Tab 2: System Monitor</div>');
             }
         }
 
@@ -981,7 +1212,7 @@
             cmdInput.select();
         };
 
-        /* 3. Spaces Selection */
+        /* 5. Spaces Selection */
         function selectSpace(card, name) {
             document.querySelectorAll('.space-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active');
@@ -989,7 +1220,7 @@
 
         function openNewSpaceModal() {
             openModal('Create New Space', `
-                <input type="text" id="newSpaceName" class="modal-input" placeholder="Space name (e.g., Security Labs)" style="margin-bottom: 8px;" />
+                <input type="text" id="newSpaceName" class="modal-input" placeholder="Space name (e.g., Security Labs, Cloud Dev)" style="margin-bottom: 10px;" />
                 <button class="btn-modal-submit" onclick="createSpaceSubmit()">Create Space</button>
             `);
         }
@@ -1004,7 +1235,7 @@
             card.onclick = function() { selectSpace(this, val); };
             card.innerHTML = `
                 <div class="space-header">
-                    <span class="space-dot"></span>
+                    <span class="space-dot amber"></span>
                     <span>${val}</span>
                 </div>
                 <div class="space-sub">0 tabs · Custom environment</div>
@@ -1013,7 +1244,214 @@
             closeModal();
         }
 
-        /* 4. Native AI Panel */
+        /* 6. Customizable Quick Access Launcher */
+        const DEFAULT_SHORTCUTS = [
+            { name: 'ArchTitan', url: 'https://archtitan.io', color: '#38bdf8' },
+            { name: 'GitHub', url: 'https://github.com', color: '#ffffff' },
+            { name: 'YouTube', url: 'https://youtube.com', color: '#ef4444' },
+            { name: 'Google', url: 'https://google.com', color: '#4285F4' },
+            { name: 'Reddit', url: 'https://reddit.com', color: '#ff4500' },
+            { name: 'Notion', url: 'https://notion.so', color: '#ffffff' }
+        ];
+
+        function getSavedShortcuts() {
+            try {
+                const raw = localStorage.getItem('titan_shortcuts');
+                if (raw) return JSON.parse(raw);
+            } catch (e) { }
+            return DEFAULT_SHORTCUTS;
+        }
+
+        function saveShortcuts(list) {
+            try {
+                localStorage.setItem('titan_shortcuts', JSON.stringify(list));
+            } catch (e) { }
+        }
+
+        function renderShortcuts() {
+            const container = document.getElementById('launcherContainer');
+            container.innerHTML = '';
+            const list = getSavedShortcuts();
+
+            list.forEach((sc, idx) => {
+                const card = document.createElement('div');
+                card.className = 'launcher-card';
+                let host = sc.url;
+                try { host = new URL(sc.url).hostname; } catch(e) {}
+
+                card.innerHTML = `
+                    <button class="card-del-btn" onclick="deleteShortcut(event, ${idx})" title="Remove shortcut">&times;</button>
+                    <div class="launcher-icon" style="color: ${sc.color || '#38bdf8'}; font-weight: bold; font-size: 18px;">
+                        ${sc.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="launcher-title">${sc.name}</div>
+                    <div class="launcher-sub">${host}</div>
+                `;
+                card.onclick = (e) => {
+                    if (e.target.classList.contains('card-del-btn')) return;
+                    window.location.href = sc.url;
+                };
+                container.appendChild(card);
+            });
+
+            // Add button
+            const addCard = document.createElement('div');
+            addCard.className = 'launcher-card add-card';
+            addCard.innerHTML = `
+                <div class="launcher-icon" style="color: var(--text-muted); font-size: 20px;">+</div>
+                <div class="launcher-title" style="color: var(--text-sub);">Add</div>
+                <div class="launcher-sub">shortcut</div>
+            `;
+            addCard.onclick = openAddShortcutModal;
+            container.appendChild(addCard);
+        }
+        renderShortcuts();
+
+        function deleteShortcut(e, idx) {
+            e.stopPropagation();
+            const list = getSavedShortcuts();
+            list.splice(idx, 1);
+            saveShortcuts(list);
+            renderShortcuts();
+        }
+
+        function openAddShortcutModal() {
+            openModal('Add Quick Access Shortcut', `
+                <input type="text" id="shortcutNameInput" class="modal-input" placeholder="Name (e.g., StackOverflow)" style="margin-bottom: 8px;" />
+                <input type="text" id="shortcutUrlInput" class="modal-input" placeholder="URL (e.g., https://stackoverflow.com)" style="margin-bottom: 12px;" />
+                <button class="btn-modal-submit" onclick="submitNewShortcut()">Save Shortcut</button>
+            `);
+        }
+
+        function submitNewShortcut() {
+            const name = document.getElementById('shortcutNameInput').value.trim();
+            let url = document.getElementById('shortcutUrlInput').value.trim();
+            if (!name || !url) return;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+
+            const list = getSavedShortcuts();
+            list.push({ name, url, color: '#38bdf8' });
+            saveShortcuts(list);
+            renderShortcuts();
+            closeModal();
+        }
+
+        /* 7. Developer Tools Dock Handlers */
+        function openToolModal(tool) {
+            if (tool === 'json') {
+                openModal('JSON Beautifier & Validator', `
+                    <textarea id="jsonInputArea" class="modal-textarea" placeholder='{"key":"value","number":42}'></textarea>
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <button class="btn-modal-submit" onclick="formatJson(true)">Beautify</button>
+                        <button class="btn-modal-submit" style="background:#475569; color:#fff;" onclick="formatJson(false)">Minify</button>
+                        <button class="btn-modal-submit" style="background:#10b981; color:#fff;" onclick="copyToolOutput('jsonInputArea')">Copy</button>
+                    </div>
+                `);
+            } else if (tool === 'base64') {
+                openModal('Base64 Encoder / Decoder', `
+                    <textarea id="base64InputArea" class="modal-textarea" placeholder="Enter text or base64 string..."></textarea>
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <button class="btn-modal-submit" onclick="convertBase64(true)">Encode</button>
+                        <button class="btn-modal-submit" style="background:#475569; color:#fff;" onclick="convertBase64(false)">Decode</button>
+                        <button class="btn-modal-submit" style="background:#10b981; color:#fff;" onclick="copyToolOutput('base64InputArea')">Copy</button>
+                    </div>
+                `);
+            } else if (tool === 'uuid') {
+                const u = crypto.randomUUID ? crypto.randomUUID() : 'c84d4839-4ea9-42b9-ae13-875dce37de29';
+                openModal('UUID & Hash Generator', `
+                    <div style="font-size:12px; color:#94a3b8; margin-bottom:4px;">Generated UUID v4:</div>
+                    <input type="text" id="uuidOutput" class="modal-input" value="${u}" readonly />
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <button class="btn-modal-submit" onclick="generateNewUUID()">Regenerate</button>
+                        <button class="btn-modal-submit" style="background:#10b981; color:#fff;" onclick="copyToolOutput('uuidOutput')">Copy</button>
+                    </div>
+                `);
+            } else if (tool === 'regex') {
+                openModal('Regex Pattern Tester', `
+                    <input type="text" id="regexPattern" class="modal-input" placeholder="Regex (e.g., [a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})" style="margin-bottom:6px;" />
+                    <textarea id="regexTestText" class="modal-textarea" placeholder="Test string..."></textarea>
+                    <div id="regexMatchOutput" style="font-size:12px; color:#38bdf8; margin-top:6px;"></div>
+                    <button class="btn-modal-submit" style="margin-top:8px;" onclick="testRegex()">Test Pattern</button>
+                `);
+            } else if (tool === 'epoch') {
+                const now = Math.floor(Date.now() / 1000);
+                openModal('Epoch / Timestamp Converter', `
+                    <div style="font-size:12px; color:#94a3b8; margin-bottom:4px;">Current Unix Timestamp (seconds):</div>
+                    <input type="text" id="epochInput" class="modal-input" value="${now}" style="margin-bottom:6px;" />
+                    <div id="epochHumanOutput" style="font-size:13px; color:#38bdf8; margin-bottom:6px;">${new Date().toUTCString()}</div>
+                    <button class="btn-modal-submit" onclick="convertEpoch()">Convert Timestamp</button>
+                `);
+            } else if (tool === 'color') {
+                openModal('Color Picker & Palette', `
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px;">
+                        <input type="color" id="colorPickerInput" value="#38bdf8" style="width:48px; height:48px; border:none; border-radius:6px; cursor:pointer;" onchange="updateColorDetails()" />
+                        <div id="colorHexText" style="font-size:14px; font-weight:700; color:#38bdf8;">HEX: #38bdf8</div>
+                    </div>
+                    <div id="colorRgbText" style="font-size:12.5px; color:#94a3b8; margin-bottom:4px;">RGB: rgb(56, 189, 248)</div>
+                    <div id="colorHslText" style="font-size:12.5px; color:#94a3b8;">HSL: hsl(198, 93%, 60%)</div>
+                `);
+            }
+        }
+
+        function formatJson(beautify) {
+            const area = document.getElementById('jsonInputArea');
+            try {
+                const parsed = JSON.parse(area.value);
+                area.value = beautify ? JSON.stringify(parsed, null, 2) : JSON.stringify(parsed);
+            } catch (e) {
+                alert('Invalid JSON: ' + e.message);
+            }
+        }
+
+        function convertBase64(encode) {
+            const area = document.getElementById('base64InputArea');
+            try {
+                area.value = encode ? btoa(area.value) : atob(area.value);
+            } catch (e) {
+                alert('Base64 Conversion Error: ' + e.message);
+            }
+        }
+
+        function generateNewUUID() {
+            document.getElementById('uuidOutput').value = crypto.randomUUID ? crypto.randomUUID() : 'c84d4839-4ea9-42b9-ae13-875dce37de29';
+        }
+
+        function testRegex() {
+            const pat = document.getElementById('regexPattern').value;
+            const text = document.getElementById('regexTestText').value;
+            const out = document.getElementById('regexMatchOutput');
+            try {
+                const re = new RegExp(pat, 'g');
+                const matches = text.match(re);
+                out.innerText = matches ? `✔ ${matches.length} matches found: ${matches.join(', ')}` : '✖ No matches found.';
+            } catch (e) {
+                out.innerText = 'Error: ' + e.message;
+            }
+        }
+
+        function convertEpoch() {
+            const ep = parseInt(document.getElementById('epochInput').value.trim(), 10);
+            if (isNaN(ep)) return;
+            const d = new Date(ep * (ep < 10000000000 ? 1000 : 1));
+            document.getElementById('epochHumanOutput').innerText = `${d.toUTCString()} (Local: ${d.toLocaleString()})`;
+        }
+
+        function updateColorDetails() {
+            const hex = document.getElementById('colorPickerInput').value;
+            document.getElementById('colorHexText').innerText = `HEX: ${hex}`;
+            const r = parseInt(hex.slice(1,3), 16), g = parseInt(hex.slice(3,5), 16), b = parseInt(hex.slice(5,7), 16);
+            document.getElementById('colorRgbText').innerText = `RGB: rgb(${r}, ${g}, ${b})`;
+        }
+
+        function copyToolOutput(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.select();
+                navigator.clipboard.writeText(el.value);
+            }
+        }
+
+        /* 8. Native AI Panel */
         function toggleAIPanel(open) {
             document.getElementById('aiSidePanel').classList.toggle('open', open);
             if (open) document.getElementById('aiPanelInput').focus();
@@ -1043,20 +1481,26 @@
             setTimeout(() => {
                 const botBubble = document.createElement('div');
                 botBubble.className = 'ai-msg-bot';
-                let reply = "Titan AI: Processing request locally via ArchTitan engine.";
+                let reply = "Titan AI: Request processed locally on device.";
                 const low = text.toLowerCase();
-                if (low.includes('summarize')) reply = "Summary: Clean, high-performance developer browser focused on speed and zero cloud telemetry.";
-                else if (low.includes('code')) reply = "Code insight: Memory namespace partitioned via cgroups v2 and seccomp system call sandboxing.";
-                else if (low.includes('translate')) reply = "Translation complete: All content processed locally on device.";
-                else if (low.includes('write')) reply = "Draft generated: 'Titan Browser delivers native Linux speed with an integrated operating environment.'";
-                else reply = `Answer: Verified local result for "${text}".`;
-                botBubble.innerText = reply;
+                if (low.includes('summarize')) {
+                    reply = "Summary:\n• Native Qt6 WebEngine runtime built for ArchTitan OS.\n• Built-in 20,000+ domain ad blocker & YouTube/Spotify ad skip.\n• Zero telemetry transmitted to cloud servers.";
+                } else if (low.includes('code') || low.includes('explain')) {
+                    reply = "Code Explanation:\nThe Titan Browser architecture utilizes an asynchronous QWebEngineUrlRequestInterceptor coupled with deep DOM injection for sub-millisecond filtering.";
+                } else if (low.includes('bash') || low.includes('command')) {
+                    reply = "Bash Utility:\n<pre># Inspect network sockets & filter rules\nsudo ss -tulpn | grep titan</pre>";
+                } else if (low.includes('regex')) {
+                    reply = "Regex Pattern:\n<pre>^([a-zA-Z0-9_\\-\\.]+)@([a-zA-Z0-9_\\-\\.]+)\\.([a-zA-Z]{2,5})$</pre>";
+                } else {
+                    reply = `Verified Local Response for: "${text}"\nEnvironment running with 0% cloud dependency.`;
+                }
+                botBubble.innerHTML = reply;
                 stream.appendChild(botBubble);
                 stream.scrollTop = stream.scrollHeight;
-            }, 400);
+            }, 300);
         }
 
-        /* 5. TitanShield Flyout */
+        /* 9. TitanShield Flyout & Stats */
         function toggleShieldFlyout(show) {
             document.getElementById('shieldFlyout').classList.toggle('open', show);
         }
@@ -1065,39 +1509,24 @@
             flyout.classList.toggle('open');
         };
 
-        /* 6. Shortcuts Modal */
-        function openAddShortcutModal() {
-            openModal('Add Quick Access Shortcut', `
-                <input type="text" id="shortcutNameInput" class="modal-input" placeholder="Name (e.g., DuckDuckGo)" style="margin-bottom: 8px;" />
-                <input type="text" id="shortcutUrlInput" class="modal-input" placeholder="URL (e.g., https://duckduckgo.com)" style="margin-bottom: 8px;" />
-                <button class="btn-modal-submit" onclick="submitNewShortcut()">Save Shortcut</button>
-            `);
-        }
+        window.updateShieldStats = function(blocked, requests, pct) {
+            const chip = document.getElementById('shieldChipLabel');
+            if (chip) chip.innerText = `TitanShield: ${blocked.toLocaleString()} Blocked`;
 
-        function submitNewShortcut() {
-            const name = document.getElementById('shortcutNameInput').value.trim();
-            let url = document.getElementById('shortcutUrlInput').value.trim();
-            if (!name || !url) return;
-            if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
-            
-            const container = document.getElementById('launcherContainer');
-            const addBtn = container.querySelector('.add-card');
-            const a = document.createElement('a');
-            a.href = url;
-            a.className = 'launcher-card';
-            a.innerHTML = `
-                <div class="launcher-icon" style="color: #38bdf8;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-                </div>
-                <div class="launcher-title">${name}</div>
-                <div class="launcher-sub">${new URL(url).hostname}</div>
-            `;
-            container.insertBefore(a, addBtn);
-            closeModal();
-        }
+            const flyout = document.getElementById('shieldFlyout');
+            if (!flyout) return;
+            const statsEl = flyout.querySelector('.shield-live-stats');
+            if (!statsEl) return;
+            statsEl.innerHTML =
+                '<div>✔ <strong>' + blocked.toLocaleString() + '</strong> total requests blocked</div>' +
+                '<div>✔ ' + pct + '% of all network traffic prevented</div>' +
+                '<div>✔ ' + requests.toLocaleString() + ' total requests analyzed</div>' +
+                '<div>✔ YouTube & Spotify Instant Ad-Skip Engine</div>' +
+                '<div>✔ Fingerprint & Canvas Defense Active</div>' +
+                '<div>⚡ Sandbox Isolation Enforced</div>';
+        };
 
-        /* 7. Generic Modal */
+        /* 10. Modals & Theme */
         function openModal(title, contentHtml) {
             document.getElementById('modalTitle').innerText = title;
             document.getElementById('modalBody').innerHTML = contentHtml;
@@ -1106,12 +1535,7 @@
         function closeModal() {
             document.getElementById('genericModal').classList.remove('active');
         }
-        window.openSettingsModal = function() {
-            openModal('Titan Settings', '<div style="font-size:12.5px; color:#94a3b8; line-height:1.6;">• Hardware Acceleration: SwiftShader / Ozone EGL<br>• Local AI Model: Active (RAM: 180MB)<br>• Privacy Shield: Maximum<br>• Theme: Dark Navy (Titan Standard)</div>');
-        };
-        window.openSpacesModal = function() {
-            openModal('Manage Spaces', '<div style="font-size:12.5px; color:#94a3b8; line-height:1.6;">Spaces allow you to isolate tabs, cookies, and memory states per project. Click any Space above to switch instantly.</div>');
-        };
+
         window.toggleTheme = function() {
             document.body.classList.toggle('light-mode');
         };

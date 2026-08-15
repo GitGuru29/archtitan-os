@@ -3,34 +3,37 @@
 #include <QKeyEvent>
 #include <QAction>
 #include <QIcon>
+#include <QUrlQuery>
 
 AddressBar::AddressBar(QWidget *parent) : QLineEdit(parent)
 {
-    setPlaceholderText(QStringLiteral("Search the web, enter URL, or ask Titan AI..."));
+    setPlaceholderText(QStringLiteral("Search web (or type 'gh ', 'yt ', 'wiki ')..."));
     setClearButtonEnabled(true);
 
-    // Leading subtle search icon
-    QAction *searchIcon = addAction(QIcon(QStringLiteral(":/icons/search.svg")), QLineEdit::LeadingPosition);
-    searchIcon->setToolTip(QStringLiteral("Search or Command Bar"));
+    // Leading security / search badge
+    m_securityAction = addAction(QIcon(QStringLiteral(":/icons/search.svg")), QLineEdit::LeadingPosition);
+    m_securityAction->setToolTip(QStringLiteral("Search or enter web address"));
 
-    // Trailing subtle bookmark icon
-    QAction *bmIcon = addAction(QIcon(QStringLiteral(":/icons/bookmark.svg")), QLineEdit::TrailingPosition);
-    bmIcon->setToolTip(QStringLiteral("Bookmark this tab"));
+    // Trailing bookmark star action
+    m_bookmarkAction = addAction(QIcon(QStringLiteral(":/icons/star.svg")), QLineEdit::TrailingPosition);
+    m_bookmarkAction->setToolTip(QStringLiteral("Bookmark this page"));
+    connect(m_bookmarkAction, &QAction::triggered, this, &AddressBar::onBookmarkActionTriggered);
 
     setStyleSheet(QStringLiteral(R"(
         QLineEdit {
-            background: #090e1a;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #080d1a;
+            border: 1px solid rgba(255, 255, 255, 0.09);
             border-radius: 8px;
-            color: #f1f5f9;
+            color: #f8fafc;
             padding: 5px 12px 5px 10px;
             font-size: 13px;
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             selection-background-color: rgba(56, 189, 248, 0.35);
-            min-height: 24px;
+            min-height: 26px;
         }
         QLineEdit:hover {
-            background: #0d1527;
-            border-color: rgba(56, 189, 248, 0.25);
+            background: #0c1426;
+            border-color: rgba(56, 189, 248, 0.3);
         }
         QLineEdit:focus {
             background: #0f182d;
@@ -40,17 +43,58 @@ AddressBar::AddressBar(QWidget *parent) : QLineEdit(parent)
     )"));
 
     connect(this, &QLineEdit::returnPressed, this, &AddressBar::onReturnPressed);
+    connect(this, &QLineEdit::textChanged, this, &AddressBar::onTextChanged);
 }
 
 void AddressBar::setUrl(const QUrl &url)
 {
+    m_currentUrl = url;
     if (!hasFocus()) {
-        if (url.toString() == QStringLiteral("qrc:/homepage.html")) {
+        if (url.toString() == QStringLiteral("qrc:/homepage.html") || url.isEmpty()) {
             clear();
+        } else if (url.toString() == QStringLiteral("qrc:/settings.html")) {
+            setText(QStringLiteral("titan://settings"));
         } else {
             setText(url.toString());
         }
     }
+    updateSecurityBadge(url);
+}
+
+void AddressBar::setBookmarked(bool bookmarked)
+{
+    m_isBookmarked = bookmarked;
+    if (m_bookmarkAction) {
+        if (m_isBookmarked) {
+            m_bookmarkAction->setIcon(QIcon(QStringLiteral(":/icons/star-filled.svg")));
+            m_bookmarkAction->setToolTip(QStringLiteral("Bookmarked (click to remove)"));
+        } else {
+            m_bookmarkAction->setIcon(QIcon(QStringLiteral(":/icons/star.svg")));
+            m_bookmarkAction->setToolTip(QStringLiteral("Bookmark this page"));
+        }
+    }
+}
+
+void AddressBar::updateSecurityBadge(const QUrl &url)
+{
+    if (!m_securityAction) return;
+
+    QString scheme = url.scheme().toLower();
+    if (scheme == QStringLiteral("https")) {
+        m_securityAction->setIcon(QIcon(QStringLiteral(":/icons/lock.svg")));
+        m_securityAction->setToolTip(QStringLiteral("Secure Connection (HTTPS verified)"));
+    } else if (scheme == QStringLiteral("http")) {
+        m_securityAction->setIcon(QIcon(QStringLiteral(":/icons/lock-open.svg")));
+        m_securityAction->setToolTip(QStringLiteral("Warning: Not Secure (Unencrypted HTTP connection)"));
+    } else {
+        m_securityAction->setIcon(QIcon(QStringLiteral(":/icons/search.svg")));
+        m_securityAction->setToolTip(QStringLiteral("Search or enter web address"));
+    }
+}
+
+void AddressBar::onBookmarkActionTriggered()
+{
+    emit bookmarkClicked(m_currentUrl);
 }
 
 void AddressBar::focusInEvent(QFocusEvent *e)
@@ -59,13 +103,39 @@ void AddressBar::focusInEvent(QFocusEvent *e)
     selectAll();
 }
 
+void AddressBar::focusOutEvent(QFocusEvent *e)
+{
+    QLineEdit::focusOutEvent(e);
+    if (!m_currentUrl.isEmpty() && m_currentUrl.toString() != QStringLiteral("qrc:/homepage.html")) {
+        setUrl(m_currentUrl);
+    }
+}
+
 void AddressBar::keyPressEvent(QKeyEvent *e)
 {
     if (e->key() == Qt::Key_Escape) {
+        if (!m_currentUrl.isEmpty()) {
+            setUrl(m_currentUrl);
+        }
         clearFocus();
         return;
     }
     QLineEdit::keyPressEvent(e);
+}
+
+void AddressBar::onTextChanged(const QString &text)
+{
+    // If text starts with special search shortcuts, update hint
+    QString trimmed = text.trimmed();
+    if (trimmed.startsWith(QStringLiteral("gh "))) {
+        setPlaceholderText(QStringLiteral("Search GitHub repositories & code..."));
+    } else if (trimmed.startsWith(QStringLiteral("yt "))) {
+        setPlaceholderText(QStringLiteral("Search YouTube videos..."));
+    } else if (trimmed.startsWith(QStringLiteral("wiki "))) {
+        setPlaceholderText(QStringLiteral("Search Wikipedia encyclopedia..."));
+    } else {
+        setPlaceholderText(QStringLiteral("Search web (or type 'gh ', 'yt ', 'wiki ')..."));
+    }
 }
 
 void AddressBar::onReturnPressed()
@@ -74,16 +144,37 @@ void AddressBar::onReturnPressed()
     if (input.isEmpty()) return;
 
     QUrl url;
-    if (!input.contains(QStringLiteral("://")) &&
-        (input.contains(u'.') || input.startsWith(QStringLiteral("localhost"))))
+
+    // Quick command aliases
+    if (input.startsWith(QStringLiteral("gh "))) {
+        QString q = input.mid(3).trimmed();
+        url = QUrl(QStringLiteral("https://github.com/search?q=") + QUrl::toPercentEncoding(q));
+    } else if (input.startsWith(QStringLiteral("yt "))) {
+        QString q = input.mid(3).trimmed();
+        url = QUrl(QStringLiteral("https://www.youtube.com/results?search_query=") + QUrl::toPercentEncoding(q));
+    } else if (input.startsWith(QStringLiteral("wiki "))) {
+        QString q = input.mid(5).trimmed();
+        url = QUrl(QStringLiteral("https://en.wikipedia.org/wiki/Special:Search?search=") + QUrl::toPercentEncoding(q));
+    } else if (input.startsWith(QStringLiteral("g "))) {
+        QString q = input.mid(2).trimmed();
+        url = QUrl(QStringLiteral("https://www.google.com/search?q=") + QUrl::toPercentEncoding(q));
+    } else if (input.startsWith(QStringLiteral("ddg "))) {
+        QString q = input.mid(4).trimmed();
+        url = QUrl(QStringLiteral("https://duckduckgo.com/?q=") + QUrl::toPercentEncoding(q));
+    } else if (input == QStringLiteral("titan://settings") || input == QStringLiteral("settings")) {
+        url = QUrl(QStringLiteral("qrc:/settings.html"));
+    } else if (input == QStringLiteral("titan://home") || input == QStringLiteral("home")) {
+        url = QUrl(QStringLiteral("qrc:/homepage.html"));
+    } else if (!input.contains(QStringLiteral("://")) &&
+               (input.contains(u'.') || input.startsWith(QStringLiteral("localhost")) || input.contains(u':')))
     {
         url = QUrl(QStringLiteral("https://") + input);
     } else if (input.contains(QStringLiteral("://"))) {
         url = QUrl(input);
     } else {
-        url = QUrl(QStringLiteral("https://duckduckgo.com/?q=") +
-                   QUrl::toPercentEncoding(input));
+        url = QUrl(QStringLiteral("https://duckduckgo.com/?q=") + QUrl::toPercentEncoding(input));
     }
 
     emit urlEntered(url);
+    clearFocus();
 }
