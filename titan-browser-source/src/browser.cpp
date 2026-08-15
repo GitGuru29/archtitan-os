@@ -376,139 +376,144 @@ Browser::Browser(AdBlocker *adBlocker, QWidget *parent)
     hudTimer->setProperty("lastCpuTotal", 0ULL);
     hudTimer->setProperty("lastCpuIdle", 0ULL);
     hudTimer->setProperty("lastNetBytes", 0ULL);
-    hudTimer->setProperty("lastNetSpeed", 0.0);
 
     connect(hudTimer, &QTimer::timeout, this, [this, hudTimer] {
+        int cpuPct = 0, ramPct = 0;
+
+        quint64 lastCpuTotal = hudTimer->property("lastCpuTotal").toULongLong();
+        quint64 lastCpuIdle = hudTimer->property("lastCpuIdle").toULongLong();
+        quint64 lastNetBytes = hudTimer->property("lastNetBytes").toULongLong();
+
+        // 1. CPU
+        QFile statFile(QStringLiteral("/proc/stat"));
+        if (statFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QByteArray line = statFile.readLine();
+            QList<QByteArray> parts = line.split(' ');
+            quint64 user = 0, nice = 0, system = 0, idle = 0;
+            int idx = 0;
+            for (const QByteArray &p : parts) {
+                if (p.isEmpty() || p == "cpu") continue;
+                quint64 val = p.toULongLong();
+                if (idx == 0) user = val;
+                else if (idx == 1) nice = val;
+                else if (idx == 2) system = val;
+                else if (idx == 3) idle = val;
+                idx++;
+                if (idx > 3) break;
+            }
+            quint64 total = user + nice + system + idle;
+            if (lastCpuTotal > 0 && total > lastCpuTotal) {
+                quint64 totalDiff = total - lastCpuTotal;
+                quint64 idleDiff = idle - lastCpuIdle;
+                if (totalDiff > 0) cpuPct = (int)((totalDiff - idleDiff) * 100 / totalDiff);
+            }
+            hudTimer->setProperty("lastCpuTotal", total);
+            hudTimer->setProperty("lastCpuIdle", idle);
+        }
+
+        // 2. RAM (Bulletproof readAll regex)
+        QFile memFile(QStringLiteral("/proc/meminfo"));
+        if (memFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QString memData = QString::fromUtf8(memFile.readAll());
+            quint64 memTotal = 0, memAvailable = 0;
+            
+            auto matchTotal = QRegularExpression(QStringLiteral("MemTotal:\\s+(\\d+)")).match(memData);
+            if (matchTotal.hasMatch()) memTotal = matchTotal.captured(1).toULongLong();
+            
+            auto matchAvail = QRegularExpression(QStringLiteral("MemAvailable:\\s+(\\d+)")).match(memData);
+            if (matchAvail.hasMatch()) {
+                memAvailable = matchAvail.captured(1).toULongLong();
+            } else {
+                quint64 mFree = 0, mBuf = 0, mCach = 0;
+                auto mf = QRegularExpression(QStringLiteral("MemFree:\\s+(\\d+)")).match(memData);
+                if (mf.hasMatch()) mFree = mf.captured(1).toULongLong();
+                auto mb = QRegularExpression(QStringLiteral("Buffers:\\s+(\\d+)")).match(memData);
+                if (mb.hasMatch()) mBuf = mb.captured(1).toULongLong();
+                auto mc = QRegularExpression(QStringLiteral("Cached:\\s+(\\d+)")).match(memData);
+                if (mc.hasMatch()) mCach = mc.captured(1).toULongLong();
+                memAvailable = mFree + mBuf + mCach;
+            }
+            
+            if (memTotal > 0 && memTotal >= memAvailable) {
+                ramPct = (int)((memTotal - memAvailable) * 100 / memTotal);
+            }
+        }
+
+        // 3. NET (Reading physical interfaces)
+        quint64 netBytesPerSec = 0;
+        QFile netFile(QStringLiteral("/proc/net/dev"));
+        if (netFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            quint64 totalBytes = 0;
+            QRegularExpression re(QStringLiteral("\\s+"));
+            while (!netFile.atEnd()) {
+                QByteArray line = netFile.readLine();
+                if (line.contains("lo:")) continue;
+                
+                // Skip virtual and container interfaces
+                if (line.contains("veth") || line.contains("docker") || 
+                    line.contains("br-") || line.contains("virbr") ||
+                    line.contains("vmnet") || line.contains("vboxnet")) continue;
+                    
+                int colonIdx = line.indexOf(':');
+                if (colonIdx > 0) {
+                    QString nums = QString::fromUtf8(line.mid(colonIdx + 1)).trimmed();
+                    QStringList parts = nums.split(re, Qt::SkipEmptyParts);
+                    if (parts.size() >= 9) {
+                        totalBytes += parts[0].toULongLong(); // rx bytes
+                        totalBytes += parts[8].toULongLong(); // tx bytes
+                    }
+                }
+            }
+            
+            if (lastNetBytes > 0 && totalBytes >= lastNetBytes) {
+                netBytesPerSec = totalBytes - lastNetBytes;
+            }
+            hudTimer->setProperty("lastNetBytes", totalBytes);
+        }
+
+        // Only inject into the view if the current page is the homepage
         if (auto *v = currentView()) {
             const QString urlStr = v->url().toString();
-            if (!urlStr.contains(QStringLiteral("homepage.html")) && urlStr != QStringLiteral("titan://home") && urlStr != QStringLiteral("about:blank")) {
+            if (!urlStr.contains(QStringLiteral("homepage.html")) && 
+                urlStr != QStringLiteral("titan://home") && 
+                urlStr != QStringLiteral("about:blank")) {
                 return;
             }
 
-            int cpuPct = 0, ramPct = 0;
-            double netMbps = 0.0;
-
-            quint64 lastCpuTotal = hudTimer->property("lastCpuTotal").toULongLong();
-            quint64 lastCpuIdle = hudTimer->property("lastCpuIdle").toULongLong();
-            quint64 lastNetBytes = hudTimer->property("lastNetBytes").toULongLong();
-            double lastNetSpeed = hudTimer->property("lastNetSpeed").toDouble();
-
-            // 1. CPU
-            QFile statFile(QStringLiteral("/proc/stat"));
-            if (statFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                QByteArray line = statFile.readLine();
-                QList<QByteArray> parts = line.split(' ');
-                quint64 user = 0, nice = 0, system = 0, idle = 0;
-                int idx = 0;
-                for (const QByteArray &p : parts) {
-                    if (p.isEmpty() || p == "cpu") continue;
-                    quint64 val = p.toULongLong();
-                    if (idx == 0) user = val;
-                    else if (idx == 1) nice = val;
-                    else if (idx == 2) system = val;
-                    else if (idx == 3) idle = val;
-                    idx++;
-                    if (idx > 3) break;
-                }
-                quint64 total = user + nice + system + idle;
-                if (lastCpuTotal > 0 && total > lastCpuTotal) {
-                    quint64 totalDiff = total - lastCpuTotal;
-                    quint64 idleDiff = idle - lastCpuIdle;
-                    if (totalDiff > 0) cpuPct = (int)((totalDiff - idleDiff) * 100 / totalDiff);
-                }
-                hudTimer->setProperty("lastCpuTotal", total);
-                hudTimer->setProperty("lastCpuIdle", idle);
+            QString netText;
+            double netPct = 0.0;
+            
+            if (netBytesPerSec >= 1048576) {
+                double mb = (double)netBytesPerSec / 1048576.0;
+                netText = QString::number(mb, 'f', 1) + QStringLiteral(" MB/s");
+                netPct = qMin(100.0, (mb / 10.0) * 100.0);
+            } else if (netBytesPerSec >= 1024) {
+                double kb = (double)netBytesPerSec / 1024.0;
+                netText = QString::number(kb, 'f', 1) + QStringLiteral(" KB/s");
+                netPct = qMin(100.0, (kb / 1024.0) * 100.0);
+            } else if (netBytesPerSec > 0) {
+                netText = QString::number(netBytesPerSec) + QStringLiteral(" B/s");
+                netPct = 2.0;
+            } else {
+                netText = QStringLiteral("0 KB/s");
+                netPct = 0.0;
             }
 
-            // 2. RAM (Bulletproof readAll regex)
-            QFile memFile(QStringLiteral("/proc/meminfo"));
-            if (memFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                QString memData = QString::fromUtf8(memFile.readAll());
-                quint64 memTotal = 0, memAvailable = 0;
-                
-                auto matchTotal = QRegularExpression(QStringLiteral("MemTotal:\\s+(\\d+)")).match(memData);
-                if (matchTotal.hasMatch()) memTotal = matchTotal.captured(1).toULongLong();
-                
-                auto matchAvail = QRegularExpression(QStringLiteral("MemAvailable:\\s+(\\d+)")).match(memData);
-                if (matchAvail.hasMatch()) {
-                    memAvailable = matchAvail.captured(1).toULongLong();
-                } else {
-                    quint64 mFree = 0, mBuf = 0, mCach = 0;
-                    auto mf = QRegularExpression(QStringLiteral("MemFree:\\s+(\\d+)")).match(memData);
-                    if (mf.hasMatch()) mFree = mf.captured(1).toULongLong();
-                    auto mb = QRegularExpression(QStringLiteral("Buffers:\\s+(\\d+)")).match(memData);
-                    if (mb.hasMatch()) mBuf = mb.captured(1).toULongLong();
-                    auto mc = QRegularExpression(QStringLiteral("Cached:\\s+(\\d+)")).match(memData);
-                    if (mc.hasMatch()) mCach = mc.captured(1).toULongLong();
-                    memAvailable = mFree + mBuf + mCach;
-                }
-                
-                if (memTotal > 0 && memTotal >= memAvailable) {
-                    ramPct = (int)((memTotal - memAvailable) * 100 / memTotal);
-                }
-            }
-
-            // 3. NET
-            QFile netFile(QStringLiteral("/proc/net/dev"));
-            if (netFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                quint64 totalBytes = 0;
-                QRegularExpression re(QStringLiteral("\\s+"));
-                while (!netFile.atEnd()) {
-                    QByteArray line = netFile.readLine();
-                    if (line.contains("lo:")) continue;
-                    int colonIdx = line.indexOf(':');
-                    if (colonIdx > 0) {
-                        QString nums = QString::fromUtf8(line.mid(colonIdx + 1)).trimmed();
-                        QStringList parts = nums.split(re, Qt::SkipEmptyParts);
-                        if (parts.size() >= 9) {
-                            totalBytes += parts[0].toULongLong(); // rx bytes
-                            totalBytes += parts[8].toULongLong(); // tx bytes
-                        }
-                    }
-                }
-                
-                quint64 netBytesPerSec = 0;
-                if (lastNetBytes > 0 && totalBytes >= lastNetBytes) {
-                    netBytesPerSec = totalBytes - lastNetBytes;
-                }
-                hudTimer->setProperty("lastNetBytes", totalBytes);
-
-                quint64 lastBps = hudTimer->property("lastBps").toULongLong();
-                if (netBytesPerSec < lastBps) {
-                    netBytesPerSec = (quint64)(lastBps * 0.90); // 10% decay per sec
-                    if (netBytesPerSec < 100) netBytesPerSec = 0;
-                }
-                hudTimer->setProperty("lastBps", netBytesPerSec);
-
-                QString netText;
-                double netPct = 0.0;
-                if (netBytesPerSec > 1048576) {
-                    double mbps = (double)netBytesPerSec / 1048576.0;
-                    netText = QString::number(mbps, 'f', 1) + " MB/s";
-                    netPct = qMin(100.0, (mbps / 10.0) * 100.0);
-                } else if (netBytesPerSec > 1024) {
-                    double kbps = (double)netBytesPerSec / 1024.0;
-                    netText = QString::number(kbps, 'f', 1) + " KB/s";
-                    netPct = qMin(100.0, (kbps / 1000.0) * 100.0);
-                } else {
-                    netText = QString::number(netBytesPerSec) + " B/s";
-                    netPct = 2.0;
-                    if (netBytesPerSec == 0) {
-                        netText = "0 KB/s";
-                        netPct = 0.0;
-                    }
-                }
-
-                QString js = "try {"
-                    "  document.getElementById('cpuTrackBar').style.width = '" + QString::number(cpuPct) + "%';"
-                    "  document.getElementById('cpuValueText').innerText = '" + QString::number(cpuPct) + "%';"
-                    "  document.getElementById('ramTrackBar').style.width = '" + QString::number(ramPct) + "%';"
-                    "  document.getElementById('ramValueText').innerText = '" + QString::number(ramPct) + "%';"
-                    "  document.getElementById('netTrackBar').style.width = '" + QString::number(netPct, 'f', 1) + "%';"
-                    "  document.getElementById('netValueText').innerText = '" + netText + "';"
-                    "} catch(e) {}";
-                v->page()->runJavaScript(js);
-            }
+            QString js = QStringLiteral(
+                "try {"
+                "  var cT = document.getElementById('cpuTrackBar'), cV = document.getElementById('cpuValueText');"
+                "  var rT = document.getElementById('ramTrackBar'), rV = document.getElementById('ramValueText');"
+                "  var nT = document.getElementById('netTrackBar'), nV = document.getElementById('netValueText');"
+                "  if(cT) cT.style.width = '%1%';"
+                "  if(cV) cV.innerText = '%1%';"
+                "  if(rT) rT.style.width = '%2%';"
+                "  if(rV) rV.innerText = '%2%';"
+                "  if(nT) nT.style.width = '%3%';"
+                "  if(nV) nV.innerText = '%4';"
+                "} catch(e) {}"
+            ).arg(cpuPct).arg(ramPct).arg(QString::number(netPct, 'f', 1)).arg(netText);
+            
+            v->page()->runJavaScript(js);
         }
     });
     hudTimer->start();
