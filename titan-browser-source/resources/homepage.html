@@ -1012,28 +1012,7 @@
             toastId = setTimeout(() => { t.style.opacity = '0'; }, 2400);
         }
 
-        /* 6. Hardware HUD Live Animation */
-        function tickHardwareHUD() {
-            const cpu = 18 + Math.floor(Math.random() * 8 - 4);
-            const ram = 26 + Math.floor(Math.random() * 4 - 2);
-            const net = 42 + Math.floor(Math.random() * 12 - 6);
-
-            const cpuBar = document.getElementById('cpuTrackBar');
-            const cpuVal = document.getElementById('cpuValueText');
-            if (cpuBar) cpuBar.style.width = cpu + '%';
-            if (cpuVal) cpuVal.innerText = cpu + '%';
-
-            const ramBar = document.getElementById('ramTrackBar');
-            const ramVal = document.getElementById('ramValueText');
-            if (ramBar) ramBar.style.width = ram + '%';
-            if (ramVal) ramVal.innerText = ram + '%';
-
-            const netBar = document.getElementById('netTrackBar');
-            const netVal = document.getElementById('netValueText');
-            if (netBar) netBar.style.width = Math.min(100, Math.floor(net * 1.5)) + '%';
-            if (netVal) netVal.innerText = net + ' Mbps';
-        }
-        setInterval(tickHardwareHUD, 3500);
+        /* 6. Hardware HUD Live Animation (Handled by C++ Bridge) */
 
         /* 7. Ambient Bioluminescent Water Sparkles */
         const canvas = document.getElementById('sparkCanvas');
