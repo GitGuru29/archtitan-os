@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Titan Browser</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
     <style>
         /* ═══════════════════════════════════════════════════════════════════════
            TITAN BROWSER — CINEMATIC OBSIDIAN GLOW DASHBOARD
@@ -45,7 +48,7 @@
         body {
             font-family: 'Outfit', system-ui, -apple-system, sans-serif;
             background-color: #020713;
-            background-image: 
+            background-image:
                 radial-gradient(ellipse at 50% 30%, rgba(14, 165, 233, 0.15) 0%, transparent 65%),
                 radial-gradient(circle at 50% 100%, rgba(2, 6, 23, 0.8) 0%, transparent 60%),
                 url('background.png');
@@ -63,8 +66,10 @@
         /* Ambient Canvas overlay */
         #sparkCanvas {
             position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             pointer-events: none;
             z-index: 1;
         }
@@ -103,17 +108,20 @@
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             text-decoration: none;
         }
+
         .rail-btn-icon svg {
             width: 18px;
             height: 18px;
             stroke: currentColor;
         }
+
         .rail-btn-icon:hover {
             background: rgba(56, 189, 248, 0.15);
             border-color: rgba(56, 189, 248, 0.35);
             color: #ffffff;
             transform: scale(1.05);
         }
+
         .rail-btn-icon.active {
             background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(14, 165, 233, 0.12) 100%);
             border: 1px solid var(--cyan);
@@ -121,7 +129,9 @@
             box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
         }
 
-        .rail-spacer { flex: 1; }
+        .rail-spacer {
+            flex: 1;
+        }
 
         /* ═══════════════════════════════════════════════════════════════════════
            2. MAIN VIEWPORT
@@ -160,6 +170,7 @@
             filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.7));
             transition: transform 0.3s ease;
         }
+
         .brand-block:hover .titan-shield-logo {
             transform: scale(1.08) rotate(2deg);
         }
@@ -169,6 +180,7 @@
             flex-direction: column;
             gap: 2px;
         }
+
         .brand-main-title {
             font-size: 15px;
             font-weight: 800;
@@ -176,12 +188,14 @@
             color: #ffffff;
             line-height: 1.1;
         }
+
         .brand-subtitle-line {
             font-size: 10.5px;
             color: rgba(224, 242, 254, 0.7);
             font-weight: 400;
             letter-spacing: 0.5px;
         }
+
         .brand-accent-bar {
             width: 42px;
             height: 2px;
@@ -203,22 +217,26 @@
             gap: 10px;
             cursor: pointer;
         }
+
         .weather-icon-symbol {
             width: 22px;
             height: 22px;
             color: #38bdf8;
             filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.5));
         }
+
         .weather-text-col {
             display: flex;
             flex-direction: column;
             line-height: 1.15;
         }
+
         .weather-temp-bold {
             font-size: 14px;
             font-weight: 700;
             color: #ffffff;
         }
+
         .weather-sub-desc {
             font-size: 10px;
             color: rgba(224, 242, 254, 0.7);
@@ -230,6 +248,7 @@
             align-items: flex-end;
             line-height: 1.1;
         }
+
         .clock-time-huge {
             font-size: 26px;
             font-weight: 700;
@@ -238,6 +257,7 @@
             display: flex;
             align-items: flex-start;
         }
+
         .clock-ampm-sup {
             font-size: 10px;
             font-weight: 600;
@@ -245,6 +265,7 @@
             margin-left: 3px;
             margin-top: 3px;
         }
+
         .clock-date-line {
             font-size: 10.5px;
             color: rgba(224, 242, 254, 0.75);
@@ -282,10 +303,34 @@
             border-style: solid;
             pointer-events: none;
         }
-        .b-tl { top: 0; left: 0; border-width: 2px 0 0 2px; border-top-left-radius: 4px; }
-        .b-tr { top: 0; right: 0; border-width: 2px 2px 0 0; border-top-right-radius: 4px; }
-        .b-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; border-bottom-left-radius: 4px; }
-        .b-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; border-bottom-right-radius: 4px; }
+
+        .b-tl {
+            top: 0;
+            left: 0;
+            border-width: 2px 0 0 2px;
+            border-top-left-radius: 4px;
+        }
+
+        .b-tr {
+            top: 0;
+            right: 0;
+            border-width: 2px 2px 0 0;
+            border-top-right-radius: 4px;
+        }
+
+        .b-bl {
+            bottom: 0;
+            left: 0;
+            border-width: 0 0 2px 2px;
+            border-bottom-left-radius: 4px;
+        }
+
+        .b-br {
+            bottom: 0;
+            right: 0;
+            border-width: 0 2px 2px 0;
+            border-bottom-right-radius: 4px;
+        }
 
         .slogan-title-text {
             font-size: 24px;
@@ -295,6 +340,7 @@
             text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
             text-transform: uppercase;
         }
+
         .slogan-sub-rules {
             font-size: 13px;
             color: rgba(224, 242, 254, 0.85);
@@ -309,17 +355,20 @@
             align-items: center;
             gap: 6px;
         }
+
         .hero-line-dots {
             display: flex;
             align-items: center;
             gap: 8px;
             width: 140px;
         }
+
         .line-segment {
             flex: 1;
             height: 1px;
             background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.6), transparent);
         }
+
         .center-light-dot {
             width: 4px;
             height: 4px;
@@ -334,9 +383,15 @@
             filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.8));
             animation: floatEmblem 3s ease-in-out infinite alternate;
         }
+
         @keyframes floatEmblem {
-            0% { transform: translateY(0); }
-            100% { transform: translateY(-4px); }
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(-4px);
+            }
         }
 
         /* ── Center Omnibox Search Bar ─────────────────────────────────────── */
@@ -354,6 +409,7 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
             position: relative;
         }
+
         .search-pill-box:focus-within {
             border-color: var(--cyan);
             background: rgba(14, 32, 74, 0.75);
@@ -375,6 +431,7 @@
             font-size: 13.5px;
             font-family: inherit;
         }
+
         .search-input-element::placeholder {
             color: rgba(224, 242, 254, 0.5);
             font-weight: 400;
@@ -390,11 +447,13 @@
             justify-content: center;
             transition: color 0.15s ease;
         }
+
         .search-star-btn svg {
             width: 16px;
             height: 16px;
             stroke: currentColor;
         }
+
         .search-star-btn:hover {
             color: var(--cyan);
         }
@@ -425,6 +484,7 @@
             text-decoration: none;
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
         }
+
         .squircle-card:hover {
             background: var(--bg-glass-card-hover);
             border-color: var(--border-glass-hover);
@@ -439,6 +499,7 @@
             align-items: center;
             justify-content: center;
         }
+
         .squircle-label {
             font-size: 10.5px;
             font-weight: 500;
@@ -470,18 +531,24 @@
             position: relative;
             box-shadow: -4px 8px 24px rgba(0, 0, 0, 0.4);
         }
+
         .cyber-terminal-card::before {
             content: '';
             position: absolute;
-            top: 0; left: 0;
-            width: 10px; height: 2px;
+            top: 0;
+            left: 0;
+            width: 10px;
+            height: 2px;
             background: var(--cyan);
         }
+
         .cyber-terminal-card::after {
             content: '';
             position: absolute;
-            bottom: 0; right: 0;
-            width: 2px; height: 10px;
+            bottom: 0;
+            right: 0;
+            width: 2px;
+            height: 10px;
             background: var(--cyan);
         }
 
@@ -535,7 +602,16 @@
             font-size: 10px;
             font-weight: 700;
             color: var(--cyan);
-            width: 52px;
+            width: 54px;
+            flex-shrink: 0;
+        }
+
+        .metric-svg {
+            width: 14px;
+            height: 14px;
+            stroke: var(--cyan);
+            filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.4));
+            flex-shrink: 0;
         }
 
         .metric-progress-track {
@@ -545,6 +621,7 @@
             border-radius: 2px;
             overflow: hidden;
         }
+
         .metric-progress-fill {
             height: 100%;
             background: linear-gradient(90deg, #0ea5e9, #38bdf8);
@@ -567,8 +644,10 @@
            ═══════════════════════════════════════════════════════════════════════ */
         .modal-shade {
             position: fixed;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             background: rgba(0, 0, 0, 0.75);
             backdrop-filter: blur(12px);
             display: none;
@@ -576,7 +655,11 @@
             justify-content: center;
             z-index: 110;
         }
-        .modal-shade.active { display: flex; }
+
+        .modal-shade.active {
+            display: flex;
+        }
+
         .modal-box-card {
             background: rgba(8, 20, 48, 0.95);
             border: 1px solid var(--border-glass-hover);
@@ -589,6 +672,7 @@
             gap: 12px;
             box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
         }
+
         .modal-input-field {
             width: 100%;
             background: rgba(14, 30, 68, 0.85);
@@ -600,7 +684,11 @@
             outline: none;
             font-family: inherit;
         }
-        .modal-input-field:focus { border-color: var(--cyan); }
+
+        .modal-input-field:focus {
+            border-color: var(--cyan);
+        }
+
         .modal-confirm-btn {
             background: var(--cyan);
             border: none;
@@ -613,12 +701,14 @@
             font-family: inherit;
             align-self: flex-start;
         }
+
         .modal-confirm-btn:hover {
             background: #7dd3fc;
             box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
         }
     </style>
 </head>
+
 <body>
 
     <!-- Ambient Spark Canvas -->
@@ -639,7 +729,9 @@
         <!-- Bookmarks Icon -->
         <button class="rail-btn-icon" title="Bookmarks (Ctrl+B)" onclick="showToast('Bookmarks ready')">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                <polygon
+                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                </polygon>
             </svg>
         </button>
 
@@ -659,14 +751,16 @@
                 <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
         </button>
-        
+
         <div class="rail-spacer"></div>
 
         <!-- Settings Icon -->
         <button class="rail-btn-icon" title="Settings (Ctrl+,)" onclick="window.location.href='titan://settings'">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                </path>
             </svg>
         </button>
     </aside>
@@ -720,7 +814,8 @@
             <!-- Top Right: Weather & Clock -->
             <div class="top-right-meta">
                 <div class="weather-chip-block" onclick="showToast('Weather: Colombo, Sri Lanka')">
-                    <svg class="weather-icon-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <svg class="weather-icon-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
                     </svg>
                     <div class="weather-text-col">
@@ -768,11 +863,20 @@
 
             <!-- Glassmorphic Search Omnibox -->
             <div class="search-pill-box">
-                <svg class="search-loop-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                <input type="text" id="mainSearchInput" class="search-input-element" placeholder="Search the web or type a URL" autocomplete="off" onkeydown="if(event.key==='Enter') executeSearch(this.value)" />
+                <svg class="search-loop-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" />
+                </svg>
+                <input type="text" id="mainSearchInput" class="search-input-element"
+                    placeholder="Search the web or type a URL" autocomplete="off"
+                    onkeydown="if(event.key==='Enter') executeSearch(this.value)" />
                 <button class="search-star-btn" title="Add Bookmark" onclick="showToast('Page bookmarked')">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                        </polygon>
                     </svg>
                 </button>
             </div>
@@ -781,42 +885,62 @@
             <div class="launcher-squircles-row" id="launcherGrid">
                 <a class="squircle-card" href="https://github.com">
                     <div class="squircle-icon-wrap">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff">
+                            <path
+                                d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+                        </svg>
                     </div>
                     <span class="squircle-label">GitHub</span>
                 </a>
 
                 <a class="squircle-card" href="https://youtube.com">
                     <div class="squircle-icon-wrap">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444">
+                            <path
+                                d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                        </svg>
                     </div>
                     <span class="squircle-label">YouTube</span>
                 </a>
 
                 <a class="squircle-card" href="https://wiki.archlinux.org">
                     <div class="squircle-icon-wrap">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                            <polyline points="10 9 9 9 8 9" />
+                        </svg>
                     </div>
                     <span class="squircle-label">Docs</span>
                 </a>
 
                 <a class="squircle-card" href="https://wiki.archlinux.org">
                     <div class="squircle-icon-wrap">
-                        <svg width="20" height="20" viewBox="0 0 64 64" fill="#38bdf8"><path d="M32 4L4 56H18L32 28L46 56H60L32 4Z"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 64 64" fill="#38bdf8">
+                            <path d="M32 4L4 56H18L32 28L46 56H60L32 4Z" />
+                        </svg>
                     </div>
                     <span class="squircle-label">ArchWiki</span>
                 </a>
 
                 <a class="squircle-card" href="https://reddit.com">
                     <div class="squircle-icon-wrap">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff4500"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.702zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.197-2.512-.73a.326.326 0 0 0-.232-.095z"/></svg>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff4500">
+                            <path
+                                d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.702zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.197-2.512-.73a.326.326 0 0 0-.232-.095z" />
+                        </svg>
                     </div>
                     <span class="squircle-label">Reddit</span>
                 </a>
 
                 <a class="squircle-card" href="https://mail.google.com">
                     <div class="squircle-icon-wrap">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
+                        </svg>
                     </div>
                     <span class="squircle-label">Email</span>
                 </a>
@@ -849,7 +973,18 @@
                 <!-- CPU -->
                 <div class="hud-metric-row">
                     <div class="metric-icon-label">
-                        <span>🖥</span>
+                        <svg class="metric-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                            <rect x="9" y="9" width="6" height="6"></rect>
+                            <line x1="9" y1="1" x2="9" y2="4"></line>
+                            <line x1="15" y1="1" x2="15" y2="4"></line>
+                            <line x1="9" y1="20" x2="9" y2="23"></line>
+                            <line x1="15" y1="20" x2="15" y2="23"></line>
+                            <line x1="20" y1="9" x2="23" y2="9"></line>
+                            <line x1="20" y1="14" x2="23" y2="14"></line>
+                            <line x1="1" y1="9" x2="4" y2="9"></line>
+                            <line x1="1" y1="14" x2="4" y2="14"></line>
+                        </svg>
                         <span>CPU</span>
                     </div>
                     <div class="metric-progress-track">
@@ -861,7 +996,16 @@
                 <!-- RAM -->
                 <div class="hud-metric-row">
                     <div class="metric-icon-label">
-                        <span>💾</span>
+                        <svg class="metric-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 19v-3"></path>
+                            <path d="M10 19v-3"></path>
+                            <path d="M14 19v-3"></path>
+                            <path d="M18 19v-3"></path>
+                            <path d="M2 5h20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"></path>
+                            <circle cx="6" cy="10" r="1.5"></circle>
+                            <circle cx="12" cy="10" r="1.5"></circle>
+                            <circle cx="18" cy="10" r="1.5"></circle>
+                        </svg>
                         <span>RAM</span>
                     </div>
                     <div class="metric-progress-track">
@@ -873,7 +1017,12 @@
                 <!-- NET -->
                 <div class="hud-metric-row">
                     <div class="metric-icon-label">
-                        <span>📶</span>
+                        <svg class="metric-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                            <circle cx="12" cy="20" r="1"></circle>
+                        </svg>
                         <span>NET</span>
                     </div>
                     <div class="metric-progress-track">
@@ -1066,13 +1215,14 @@
         renderSparks();
 
         /* 8. Preserved C++ Bridge APIs */
-        window.updateShieldStats = function(b) { showToast(`TitanShield: ${b} blocked`); };
-        window.toggleAIPanel = function() { showToast('Titan AI Assistant Ready'); };
-        window.focusCommandBar = function() {
+        window.updateShieldStats = function (b) { showToast(`TitanShield: ${b} blocked`); };
+        window.toggleAIPanel = function () { showToast('Titan AI Assistant Ready'); };
+        window.focusCommandBar = function () {
             const inp = document.getElementById('mainSearchInput');
             if (inp) { inp.focus(); inp.select(); }
         };
-        window.toggleTheme = function() { showToast('Obsidian Theme Active'); };
+        window.toggleTheme = function () { showToast('Obsidian Theme Active'); };
     </script>
 </body>
+
 </html>
