@@ -9,6 +9,7 @@ This folder contains all subsystems of ArchTitan OS. Each subsystem has an **ide
 | Subsystem | Owner | Status | Folder |
 |---|---|---|---|
 | Titan Hardware Manager | @GitGuru29 | ✅ Active | [`titan-hwm/`](titan-hwm/) |
+| Titan Media HUD | @GitGuru29 | ✅ Active | [`titan-media-hud/`](titan-media-hud/) |
 | TitanFetch | @GitGuru29 | ✅ Active | [`titan-fetch/`](titan-fetch/) |
 | Titan Sandbox | @GitGuru29 | ✅ Active | [`titan-sandbox/`](titan-sandbox/) |
 | Auto GPU Switcher | @GitGuru29 | 🚧 Planned | [`auto-gpu-switcher/`](auto-gpu-switcher/) |
