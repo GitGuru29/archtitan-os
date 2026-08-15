@@ -3,6 +3,8 @@
 #include "addressbar.h"
 #include "adblocker.h"
 
+#include <QFile>
+#include <QTextStream>
 #include <QApplication>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -123,38 +125,52 @@ QToolButton#WinBtn {
     background: transparent;
     border: none;
     color: #64748b;
-    font-size: 13px;
-    min-width: 32px;
-    max-width: 32px;
-    min-height: 32px;
-    max-height: 32px;
+    font-size: 11px;
+    min-width: 26px;
+    max-width: 26px;
+    min-height: 26px;
+    max-height: 26px;
+    border-radius: 4px;
 }
 QToolButton#WinBtn:hover {
     background: rgba(255, 255, 255, 0.08);
     color: #f8fafc;
+}
+QToolButton#WinBtnClose {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 11px;
+    min-width: 26px;
+    max-width: 26px;
+    min-height: 26px;
+    max-height: 26px;
+    border-radius: 4px;
 }
 QToolButton#WinBtnClose:hover {
     background: #ef4444;
     color: #ffffff;
 }
 
-/* ── 2. Navigation / Omnibox Row ──────────────────────────────────────── */
+/* ── 2. Unified Navigation / Omnibox Header (38px) ────────────────────── */
 QWidget#NavBar {
-    background: #070b17;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    min-height: 44px;
-    max-height: 44px;
-    padding: 0 8px;
+    background: #060914;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    min-height: 38px;
+    max-height: 38px;
+    padding: 0 6px;
 }
 
 QToolButton#NavBtn {
     background: transparent;
     border: none;
     border-radius: 6px;
-    padding: 5px;
+    padding: 4px;
     color: #94a3b8;
-    min-width: 28px;
-    min-height: 28px;
+    min-width: 26px;
+    min-height: 26px;
+    max-width: 26px;
+    max-height: 26px;
 }
 QToolButton#NavBtn:hover {
     background: rgba(255, 255, 255, 0.08);
@@ -353,6 +369,149 @@ Browser::Browser(AdBlocker *adBlocker, QWidget *parent)
         if (m_tabs) m_tabs->checkAndSuspendInactiveTabs();
     });
     memorySaverTimer->start();
+
+    // Hardware HUD Updater for Homepage
+    auto *hudTimer = new QTimer(this);
+    hudTimer->setInterval(1000);
+    hudTimer->setProperty("lastCpuTotal", 0ULL);
+    hudTimer->setProperty("lastCpuIdle", 0ULL);
+    hudTimer->setProperty("lastNetBytes", 0ULL);
+    hudTimer->setProperty("lastNetSpeed", 0.0);
+
+    connect(hudTimer, &QTimer::timeout, this, [this, hudTimer] {
+        if (auto *v = currentView()) {
+            const QString urlStr = v->url().toString();
+            if (!urlStr.contains(QStringLiteral("homepage.html")) && urlStr != QStringLiteral("titan://home") && urlStr != QStringLiteral("about:blank")) {
+                return;
+            }
+
+            int cpuPct = 0, ramPct = 0;
+            double netMbps = 0.0;
+
+            quint64 lastCpuTotal = hudTimer->property("lastCpuTotal").toULongLong();
+            quint64 lastCpuIdle = hudTimer->property("lastCpuIdle").toULongLong();
+            quint64 lastNetBytes = hudTimer->property("lastNetBytes").toULongLong();
+            double lastNetSpeed = hudTimer->property("lastNetSpeed").toDouble();
+
+            // 1. CPU
+            QFile statFile(QStringLiteral("/proc/stat"));
+            if (statFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QByteArray line = statFile.readLine();
+                QList<QByteArray> parts = line.split(' ');
+                quint64 user = 0, nice = 0, system = 0, idle = 0;
+                int idx = 0;
+                for (const QByteArray &p : parts) {
+                    if (p.isEmpty() || p == "cpu") continue;
+                    quint64 val = p.toULongLong();
+                    if (idx == 0) user = val;
+                    else if (idx == 1) nice = val;
+                    else if (idx == 2) system = val;
+                    else if (idx == 3) idle = val;
+                    idx++;
+                    if (idx > 3) break;
+                }
+                quint64 total = user + nice + system + idle;
+                if (lastCpuTotal > 0 && total > lastCpuTotal) {
+                    quint64 totalDiff = total - lastCpuTotal;
+                    quint64 idleDiff = idle - lastCpuIdle;
+                    if (totalDiff > 0) cpuPct = (int)((totalDiff - idleDiff) * 100 / totalDiff);
+                }
+                hudTimer->setProperty("lastCpuTotal", total);
+                hudTimer->setProperty("lastCpuIdle", idle);
+            }
+
+            // 2. RAM (Bulletproof readAll regex)
+            QFile memFile(QStringLiteral("/proc/meminfo"));
+            if (memFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QString memData = QString::fromUtf8(memFile.readAll());
+                quint64 memTotal = 0, memAvailable = 0;
+                
+                auto matchTotal = QRegularExpression(QStringLiteral("MemTotal:\\s+(\\d+)")).match(memData);
+                if (matchTotal.hasMatch()) memTotal = matchTotal.captured(1).toULongLong();
+                
+                auto matchAvail = QRegularExpression(QStringLiteral("MemAvailable:\\s+(\\d+)")).match(memData);
+                if (matchAvail.hasMatch()) {
+                    memAvailable = matchAvail.captured(1).toULongLong();
+                } else {
+                    quint64 mFree = 0, mBuf = 0, mCach = 0;
+                    auto mf = QRegularExpression(QStringLiteral("MemFree:\\s+(\\d+)")).match(memData);
+                    if (mf.hasMatch()) mFree = mf.captured(1).toULongLong();
+                    auto mb = QRegularExpression(QStringLiteral("Buffers:\\s+(\\d+)")).match(memData);
+                    if (mb.hasMatch()) mBuf = mb.captured(1).toULongLong();
+                    auto mc = QRegularExpression(QStringLiteral("Cached:\\s+(\\d+)")).match(memData);
+                    if (mc.hasMatch()) mCach = mc.captured(1).toULongLong();
+                    memAvailable = mFree + mBuf + mCach;
+                }
+                
+                if (memTotal > 0 && memTotal >= memAvailable) {
+                    ramPct = (int)((memTotal - memAvailable) * 100 / memTotal);
+                }
+            }
+
+            // 3. NET
+            QFile netFile(QStringLiteral("/proc/net/dev"));
+            if (netFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                quint64 totalBytes = 0;
+                QRegularExpression re(QStringLiteral("\\s+"));
+                while (!netFile.atEnd()) {
+                    QByteArray line = netFile.readLine();
+                    if (line.contains("lo:")) continue;
+                    int colonIdx = line.indexOf(':');
+                    if (colonIdx > 0) {
+                        QString nums = QString::fromUtf8(line.mid(colonIdx + 1)).trimmed();
+                        QStringList parts = nums.split(re, Qt::SkipEmptyParts);
+                        if (parts.size() >= 9) {
+                            totalBytes += parts[0].toULongLong(); // rx bytes
+                            totalBytes += parts[8].toULongLong(); // tx bytes
+                        }
+                    }
+                }
+                
+                quint64 netBytesPerSec = 0;
+                if (lastNetBytes > 0 && totalBytes >= lastNetBytes) {
+                    netBytesPerSec = totalBytes - lastNetBytes;
+                }
+                hudTimer->setProperty("lastNetBytes", totalBytes);
+
+                quint64 lastBps = hudTimer->property("lastBps").toULongLong();
+                if (netBytesPerSec < lastBps) {
+                    netBytesPerSec = (quint64)(lastBps * 0.90); // 10% decay per sec
+                    if (netBytesPerSec < 100) netBytesPerSec = 0;
+                }
+                hudTimer->setProperty("lastBps", netBytesPerSec);
+
+                QString netText;
+                double netPct = 0.0;
+                if (netBytesPerSec > 1048576) {
+                    double mbps = (double)netBytesPerSec / 1048576.0;
+                    netText = QString::number(mbps, 'f', 1) + " MB/s";
+                    netPct = qMin(100.0, (mbps / 10.0) * 100.0);
+                } else if (netBytesPerSec > 1024) {
+                    double kbps = (double)netBytesPerSec / 1024.0;
+                    netText = QString::number(kbps, 'f', 1) + " KB/s";
+                    netPct = qMin(100.0, (kbps / 1000.0) * 100.0);
+                } else {
+                    netText = QString::number(netBytesPerSec) + " B/s";
+                    netPct = 2.0;
+                    if (netBytesPerSec == 0) {
+                        netText = "0 KB/s";
+                        netPct = 0.0;
+                    }
+                }
+
+                QString js = "try {"
+                    "  document.getElementById('cpuTrackBar').style.width = '" + QString::number(cpuPct) + "%';"
+                    "  document.getElementById('cpuValueText').innerText = '" + QString::number(cpuPct) + "%';"
+                    "  document.getElementById('ramTrackBar').style.width = '" + QString::number(ramPct) + "%';"
+                    "  document.getElementById('ramValueText').innerText = '" + QString::number(ramPct) + "%';"
+                    "  document.getElementById('netTrackBar').style.width = '" + QString::number(netPct, 'f', 1) + "%';"
+                    "  document.getElementById('netValueText').innerText = '" + netText + "';"
+                    "} catch(e) {}";
+                v->page()->runJavaScript(js);
+            }
+        }
+    });
+    hudTimer->start();
 }
 
 /* ─── UI Setup ─────────────────────────────────────────────────────────── */
@@ -365,72 +524,21 @@ void Browser::setupUi()
     mainVLayout->setSpacing(0);
     setCentralWidget(centralContainer);
 
-    // ── 1. Top Tab Strip ─────────────────────────────────────────────────
-    auto *topBar = new QWidget(this);
-    topBar->setObjectName(QStringLiteral("TopBar"));
-    auto *topLayout = new QHBoxLayout(topBar);
-    topLayout->setContentsMargins(6, 0, 6, 0);
-    topLayout->setSpacing(4);
+    m_tabs = new TabWidget(this);
 
-    // Titan Logo in Tab Strip
-    auto *tabLogoBtn = new QToolButton(topBar);
-    tabLogoBtn->setObjectName(QStringLiteral("TabLogoBtn"));
-    tabLogoBtn->setIcon(QIcon(QStringLiteral(":/icons/logo.svg")));
-    tabLogoBtn->setIconSize(QSize(18, 18));
-    tabLogoBtn->setToolTip(QStringLiteral("Titan Home"));
-    connect(tabLogoBtn, &QToolButton::clicked, this, &Browser::onHomeClicked);
-    topLayout->addWidget(tabLogoBtn);
-
-    // Tab Widget
-    m_tabs = new TabWidget(topBar);
-    topLayout->addWidget(m_tabs->tabBar(), 0);
-
-    // Add Tab (+) Button
-    auto *addTabBtn = new QToolButton(topBar);
-    addTabBtn->setObjectName(QStringLiteral("AddTabButton"));
-    addTabBtn->setIcon(QIcon(QStringLiteral(":/icons/plus.svg")));
-    addTabBtn->setIconSize(QSize(14, 14));
-    addTabBtn->setToolTip(QStringLiteral("New Tab (Ctrl+T)"));
-    connect(addTabBtn, &QToolButton::clicked, this, [this]{ newTab(); });
-    topLayout->addWidget(addTabBtn);
-
-    topLayout->addStretch(1);
-
-    // Window Controls
-    auto *minBtn = new QToolButton(topBar);
-    minBtn->setObjectName(QStringLiteral("WinBtn"));
-    minBtn->setText(QStringLiteral("—"));
-    connect(minBtn, &QToolButton::clicked, this, &QWidget::showMinimized);
-    topLayout->addWidget(minBtn);
-
-    auto *maxBtn = new QToolButton(topBar);
-    maxBtn->setObjectName(QStringLiteral("WinBtn"));
-    maxBtn->setText(QStringLiteral("☐"));
-    connect(maxBtn, &QToolButton::clicked, this, [this]{
-        if (isMaximized()) showNormal(); else showMaximized();
-    });
-    topLayout->addWidget(maxBtn);
-
-    auto *closeBtn = new QToolButton(topBar);
-    closeBtn->setObjectName(QStringLiteral("WinBtnClose"));
-    closeBtn->setText(QStringLiteral("✕"));
-    connect(closeBtn, &QToolButton::clicked, this, &QWidget::close);
-    topLayout->addWidget(closeBtn);
-
-    mainVLayout->addWidget(topBar);
-
-    // ── 2. Navigation / Omnibox Row ──────────────────────────────────────
+    // ── 1. Single Unified Modern Top Navigation Bar (38px) ───────────────
     auto *navBar = new QWidget(this);
+    m_navBar = navBar;
     navBar->setObjectName(QStringLiteral("NavBar"));
     auto *navLayout = new QHBoxLayout(navBar);
-    navLayout->setContentsMargins(10, 4, 10, 4);
-    navLayout->setSpacing(6);
+    navLayout->setContentsMargins(8, 2, 8, 2);
+    navLayout->setSpacing(5);
 
     // Back
     m_backBtn = new QToolButton(navBar);
     m_backBtn->setObjectName(QStringLiteral("NavBtn"));
     m_backBtn->setIcon(QIcon(QStringLiteral(":/icons/back.svg")));
-    m_backBtn->setIconSize(QSize(17, 17));
+    m_backBtn->setIconSize(QSize(15, 15));
     m_backBtn->setToolTip(QStringLiteral("Back (Alt+Left)"));
     connect(m_backBtn, &QToolButton::clicked, this, &Browser::navigateBack);
     navLayout->addWidget(m_backBtn);
@@ -439,7 +547,7 @@ void Browser::setupUi()
     m_fwdBtn = new QToolButton(navBar);
     m_fwdBtn->setObjectName(QStringLiteral("NavBtn"));
     m_fwdBtn->setIcon(QIcon(QStringLiteral(":/icons/forward.svg")));
-    m_fwdBtn->setIconSize(QSize(17, 17));
+    m_fwdBtn->setIconSize(QSize(15, 15));
     m_fwdBtn->setToolTip(QStringLiteral("Forward (Alt+Right)"));
     connect(m_fwdBtn, &QToolButton::clicked, this, &Browser::navigateForward);
     navLayout->addWidget(m_fwdBtn);
@@ -448,10 +556,19 @@ void Browser::setupUi()
     m_reloadBtn = new QToolButton(navBar);
     m_reloadBtn->setObjectName(QStringLiteral("NavBtn"));
     m_reloadBtn->setIcon(QIcon(QStringLiteral(":/icons/reload.svg")));
-    m_reloadBtn->setIconSize(QSize(17, 17));
+    m_reloadBtn->setIconSize(QSize(15, 15));
     m_reloadBtn->setToolTip(QStringLiteral("Reload (Ctrl+R)"));
     connect(m_reloadBtn, &QToolButton::clicked, this, &Browser::reloadOrStop);
     navLayout->addWidget(m_reloadBtn);
+
+    // New Tab (+) Button
+    auto *addTabNavBtn = new QToolButton(navBar);
+    addTabNavBtn->setObjectName(QStringLiteral("NavBtn"));
+    addTabNavBtn->setIcon(QIcon(QStringLiteral(":/icons/plus.svg")));
+    addTabNavBtn->setIconSize(QSize(15, 15));
+    addTabNavBtn->setToolTip(QStringLiteral("New Tab (Ctrl+T)"));
+    connect(addTabNavBtn, &QToolButton::clicked, this, [this]{ newTab(); });
+    navLayout->addWidget(addTabNavBtn);
 
     // Omnibox
     m_addressBar = new AddressBar(navBar);
@@ -473,7 +590,7 @@ void Browser::setupUi()
     auto *bmBtn = new QToolButton(navBar);
     bmBtn->setObjectName(QStringLiteral("NavBtn"));
     bmBtn->setIcon(QIcon(QStringLiteral(":/icons/star.svg")));
-    bmBtn->setIconSize(QSize(17, 17));
+    bmBtn->setIconSize(QSize(15, 15));
     bmBtn->setToolTip(QStringLiteral("Bookmarks (Ctrl+B)"));
     connect(bmBtn, &QToolButton::clicked, this, &Browser::onBookmarksClicked);
     navLayout->addWidget(bmBtn);
@@ -482,7 +599,7 @@ void Browser::setupUi()
     auto *extBtn = new QToolButton(navBar);
     extBtn->setObjectName(QStringLiteral("NavBtn"));
     extBtn->setIcon(QIcon(QStringLiteral(":/icons/cube.svg")));
-    extBtn->setIconSize(QSize(17, 17));
+    extBtn->setIconSize(QSize(15, 15));
     extBtn->setToolTip(QStringLiteral("Extensions"));
     connect(extBtn, &QToolButton::clicked, this, &Browser::onExtensionsClicked);
     navLayout->addWidget(extBtn);
@@ -491,7 +608,7 @@ void Browser::setupUi()
     auto *dlBtn = new QToolButton(navBar);
     dlBtn->setObjectName(QStringLiteral("NavBtn"));
     dlBtn->setIcon(QIcon(QStringLiteral(":/icons/download.svg")));
-    dlBtn->setIconSize(QSize(17, 17));
+    dlBtn->setIconSize(QSize(15, 15));
     dlBtn->setToolTip(QStringLiteral("Downloads (Ctrl+J)"));
     connect(dlBtn, &QToolButton::clicked, this, &Browser::onDownloadsClicked);
     navLayout->addWidget(dlBtn);
@@ -504,14 +621,26 @@ void Browser::setupUi()
     connect(avatarBtn, &QToolButton::clicked, this, &Browser::onProfileClicked);
     navLayout->addWidget(avatarBtn);
 
-    // Main Menu
-    auto *menuBtn = new QToolButton(navBar);
-    menuBtn->setObjectName(QStringLiteral("NavBtn"));
-    menuBtn->setIcon(QIcon(QStringLiteral(":/icons/menu.svg")));
-    menuBtn->setIconSize(QSize(17, 17));
-    menuBtn->setToolTip(QStringLiteral("Titan Menu"));
-    connect(menuBtn, &QToolButton::clicked, this, &Browser::onMenuClicked);
-    navLayout->addWidget(menuBtn);
+    // Window Controls
+    auto *minBtn = new QToolButton(navBar);
+    minBtn->setObjectName(QStringLiteral("WinBtn"));
+    minBtn->setText(QStringLiteral("—"));
+    connect(minBtn, &QToolButton::clicked, this, &QWidget::showMinimized);
+    navLayout->addWidget(minBtn);
+
+    auto *maxBtn = new QToolButton(navBar);
+    maxBtn->setObjectName(QStringLiteral("WinBtn"));
+    maxBtn->setText(QStringLiteral("☐"));
+    connect(maxBtn, &QToolButton::clicked, this, [this]{
+        if (isMaximized()) showNormal(); else showMaximized();
+    });
+    navLayout->addWidget(maxBtn);
+
+    auto *closeBtn = new QToolButton(navBar);
+    closeBtn->setObjectName(QStringLiteral("WinBtnClose"));
+    closeBtn->setText(QStringLiteral("✕"));
+    connect(closeBtn, &QToolButton::clicked, this, &QWidget::close);
+    navLayout->addWidget(closeBtn);
 
     mainVLayout->addWidget(navBar);
 
@@ -533,6 +662,7 @@ void Browser::setupUi()
 
     // Compact Navigation Rail (46px)
     auto *railWidget = new QWidget(bodyWidget);
+    m_railWidget = railWidget;
     railWidget->setObjectName(QStringLiteral("RailWidget"));
     auto *railLayout = new QVBoxLayout(railWidget);
     railLayout->setContentsMargins(0, 8, 0, 8);
@@ -549,6 +679,17 @@ void Browser::setupUi()
     };
 
     // Rail Items
+    // 1. New Tab (+)
+    auto *railNewTabBtn = new QToolButton(railWidget);
+    railNewTabBtn->setProperty("class", "RailNavBtn");
+    railNewTabBtn->setIcon(QIcon(QStringLiteral(":/icons/plus.svg")));
+    railNewTabBtn->setIconSize(QSize(17, 17));
+    railNewTabBtn->setToolTip(QStringLiteral("New Tab (Ctrl+T)"));
+    railNewTabBtn->setCursor(Qt::PointingHandCursor);
+    connect(railNewTabBtn, &QToolButton::clicked, this, [this]{ newTab(); });
+    railLayout->addWidget(railNewTabBtn);
+
+    // 2. Home
     createRailBtn(QStringLiteral(":/icons/home.svg"), QStringLiteral("Home (Alt+H)"), m_railHomeBtn);
     m_railHomeBtn->setProperty("class", "RailNavBtnActive");
     m_activeRailBtn = m_railHomeBtn;
@@ -600,6 +741,10 @@ void Browser::setupUi()
     bodyLayout->addWidget(m_tabs->contentStack(), 1);
 
     mainVLayout->addWidget(bodyWidget, 1);
+
+    // Start with native chrome hidden for titan://home
+    m_navBar->hide();
+    m_railWidget->hide();
 
     // Floating Toast Notification
     setupToastWidget();
@@ -1105,6 +1250,7 @@ void Browser::newTab(const QUrl &url)
 {
     QUrl target = url.isEmpty() ? QUrl(QString::fromUtf8(kHomeUrl)) : url;
     m_tabs->newTab(target);
+    onUrlChanged(target);
 }
 
 void Browser::closeCurrentTab()
@@ -1150,7 +1296,17 @@ void Browser::updateNavigationButtons()
 void Browser::onUrlChanged(const QUrl &url)
 {
     QString urlStr = url.toString();
-    if (urlStr == QStringLiteral("titan://home") || urlStr.isEmpty()) {
+    bool isHome = urlStr.isEmpty()
+               || urlStr == QStringLiteral("about:blank")
+               || urlStr.contains(QStringLiteral("homepage.html"), Qt::CaseInsensitive)
+               || urlStr.startsWith(QStringLiteral("titan://home"), Qt::CaseInsensitive)
+               || urlStr.startsWith(QStringLiteral("qrc:"), Qt::CaseInsensitive);
+
+    if (m_topBar) m_topBar->setVisible(!isHome);
+    if (m_navBar) m_navBar->setVisible(!isHome);
+    if (m_railWidget) m_railWidget->setVisible(!isHome);
+
+    if (isHome) {
         m_addressBar->clear();
         m_addressBar->setBookmarked(false);
         setActiveRailButton(m_railHomeBtn);

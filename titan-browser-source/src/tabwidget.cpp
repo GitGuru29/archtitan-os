@@ -14,6 +14,7 @@
 TabWidget::TabWidget(QWidget *parent) : QObject(parent)
 {
     m_tabBar = new QTabBar(parent);
+    m_tabBar->hide(); // Hide the native tab bar to prevent floating scroll arrows
     m_tabBar->setTabsClosable(true);
     m_tabBar->setMovable(true);
     m_tabBar->setElideMode(Qt::ElideRight);
@@ -35,9 +36,11 @@ QWidget *TabWidget::newTab(const QUrl &url)
     QUrl finalUrl = url;
 
     if (url.isEmpty() || url.toString() == QStringLiteral("titan://home") || url.toString() == QStringLiteral("qrc:/homepage.html")) {
-        auto *home = new NewTabWidget(m_stack);
-        connect(home, &NewTabWidget::navigateRequested, this, &TabWidget::loadInCurrentTab);
-        tabContent = home;
+        // Load the HTML dashboard via WebEngine instead of native widget
+        auto *view = new QWebEngineView(m_stack);
+        view->setUrl(QUrl(QStringLiteral("qrc:/homepage.html")));
+        connectView(view);
+        tabContent = view;
         finalUrl = QUrl(QStringLiteral("titan://home"));
     } else if (url.toString() == QStringLiteral("titan://settings") || url.toString() == QStringLiteral("qrc:/settings.html")) {
         auto *settings = new SettingsWidget(m_stack);
@@ -63,6 +66,8 @@ QWidget *TabWidget::newTab(const QUrl &url)
     m_tabBar->setCurrentIndex(tabIndex);
     m_stack->setCurrentIndex(stackIndex);
 
+    emit urlChanged(finalUrl);
+    emit titleChanged(title);
     emit tabCountChanged(count());
     return tabContent;
 }
@@ -80,10 +85,15 @@ void TabWidget::loadInTab(int index, const QUrl &url)
     QString urlStr = url.toString();
 
     if (urlStr == QStringLiteral("titan://home") || urlStr == QStringLiteral("qrc:/homepage.html") || url.isEmpty()) {
-        if (qobject_cast<NewTabWidget*>(oldWidget)) return;
+        // If already showing homepage in a WebEngineView, just reload it
+        if (auto *existingView = qobject_cast<QWebEngineView*>(oldWidget)) {
+            QUrl currentUrl = existingView->url();
+            if (currentUrl.toString() == QStringLiteral("qrc:/homepage.html")) return;
+        }
 
-        auto *home = new NewTabWidget(m_stack);
-        connect(home, &NewTabWidget::navigateRequested, this, &TabWidget::loadInCurrentTab);
+        auto *view = new QWebEngineView(m_stack);
+        view->setUrl(QUrl(QStringLiteral("qrc:/homepage.html")));
+        connectView(view);
 
         m_stack->removeWidget(oldWidget);
         m_tabUrls.remove(oldWidget);
@@ -91,8 +101,10 @@ void TabWidget::loadInTab(int index, const QUrl &url)
         m_isSuspended.remove(oldWidget);
         oldWidget->deleteLater();
 
-        m_stack->insertWidget(index, home);
-        m_tabUrls[home] = QUrl(QStringLiteral("titan://home"));
+        m_stack->insertWidget(index, view);
+        m_tabUrls[view] = QUrl(QStringLiteral("titan://home"));
+        m_lastAccessed[view] = QDateTime::currentDateTime();
+        m_isSuspended[view] = false;
         m_tabBar->setTabText(index, QStringLiteral("New Tab"));
         m_tabBar->setTabIcon(index, QIcon(QStringLiteral(":/icons/home.svg")));
         m_stack->setCurrentIndex(index);
@@ -183,8 +195,21 @@ QString TabWidget::tabTitle(int index) const
 void TabWidget::connectView(QWebEngineView *view)
 {
     connect(view, &QWebEngineView::urlChanged, this, [this, view](const QUrl &url) {
-        m_tabUrls[view] = url;
-        if (view == m_stack->currentWidget()) emit urlChanged(url);
+        QString u = url.toString();
+        if (u.startsWith(QStringLiteral("titan://"))) {
+            int idx = m_stack->indexOf(view);
+            if (idx >= 0) {
+                QMetaObject::invokeMethod(this, [this, idx, url]() {
+                    loadInTab(idx, url);
+                }, Qt::QueuedConnection);
+            }
+        } else if (u.contains(QStringLiteral("homepage.html")) || u.startsWith(QStringLiteral("qrc:"))) {
+            m_tabUrls[view] = QUrl(QStringLiteral("titan://home"));
+            if (view == m_stack->currentWidget()) emit urlChanged(QUrl(QStringLiteral("titan://home")));
+        } else {
+            m_tabUrls[view] = url;
+            if (view == m_stack->currentWidget()) emit urlChanged(url);
+        }
     });
 
     connect(view, &QWebEngineView::titleChanged, this, [this, view](const QString &title) {

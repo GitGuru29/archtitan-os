@@ -97,6 +97,11 @@ private:
     void savePersistentUserData();
     QWebEngineView *currentView() const;
 
+    // Main chrome layout containers
+    QWidget        *m_topBar           = nullptr;
+    QWidget        *m_navBar           = nullptr;
+    QWidget        *m_railWidget       = nullptr;
+
     TabWidget      *m_tabs             = nullptr;
     AddressBar     *m_addressBar       = nullptr;
     QProgressBar   *m_progress         = nullptr;
