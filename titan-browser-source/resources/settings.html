@@ -1432,6 +1432,18 @@
                     }
                 });
             }
+
+            const searchEngine = localStorage.getItem('titan_search_engine') || 'google';
+            const searchSelect = document.getElementById('searchSelect');
+            if (searchSelect) searchSelect.value = searchEngine;
+
+            const startup = localStorage.getItem('titan_startup');
+            const startupSelect = document.getElementById('startupSelect');
+            if (startupSelect && startup) startupSelect.value = startup;
+
+            const aiModel = localStorage.getItem('titan_ai_model');
+            const aiSelect = document.getElementById('aiSelect');
+            if (aiSelect && aiModel) aiSelect.value = aiModel;
         });
     </script>
 </body>

@@ -467,6 +467,46 @@
             filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
         }
 
+        /* ── Search Engine Quick Switcher Bar ────────────────────────────── */
+        .search-engines-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+            margin-bottom: 4px;
+        }
+
+        .engine-chip {
+            background: rgba(6, 16, 42, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: var(--radius-full);
+            padding: 4px 12px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: rgba(240, 246, 252, 0.75);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            backdrop-filter: blur(16px);
+            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .engine-chip:hover {
+            border-color: var(--cyan);
+            color: #ffffff;
+            background: rgba(56, 189, 248, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .engine-chip.active {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.12));
+            border-color: var(--cyan);
+            color: var(--cyan);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+        }
+
         /* ── Quick Access Launcher Squircles (Row of 7) ────────────────────── */
         .launcher-squircles-row {
             display: flex;
@@ -899,6 +939,26 @@
                 </button>
             </div>
 
+            <!-- Engine Quick Switcher Chips -->
+            <div class="search-engines-bar" id="searchEnginesBar">
+                <button class="engine-chip active" id="chip-google" onclick="setSearchEngine('google')">
+                    <svg width="12" height="12" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+                    Google
+                </button>
+                <button class="engine-chip" id="chip-duckduckgo" onclick="setSearchEngine('duckduckgo')">
+                    🦆 DuckDuckGo
+                </button>
+                <button class="engine-chip" id="chip-brave" onclick="setSearchEngine('brave')">
+                    🦁 Brave
+                </button>
+                <button class="engine-chip" id="chip-bing" onclick="setSearchEngine('bing')">
+                    ⊞ Bing
+                </button>
+                <button class="engine-chip" id="chip-kagi" onclick="setSearchEngine('kagi')">
+                    ★ Kagi
+                </button>
+            </div>
+
             <!-- Quick Access Launcher (7 Glass Squircles) -->
             <div class="launcher-squircles-row" id="launcherGrid">
                 <a class="squircle-card" href="https://github.com">
@@ -1102,7 +1162,55 @@
         setInterval(updateClock, 1000);
         updateClock();
 
-        /* 2. Omnibox Search Logic */
+        /* 2. Omnibox Search Logic & Engine Switcher */
+        const searchEngines = {
+            google: 'https://www.google.com/search?q=',
+            duckduckgo: 'https://duckduckgo.com/?q=',
+            brave: 'https://search.brave.com/search?q=',
+            bing: 'https://www.bing.com/search?q=',
+            kagi: 'https://kagi.com/search?q=',
+            ecosia: 'https://www.ecosia.org/search?q=',
+            yahoo: 'https://search.yahoo.com/search?p='
+        };
+
+        function setSearchEngine(engine) {
+            localStorage.setItem('titan_search_engine', engine);
+            document.querySelectorAll('.engine-chip').forEach(c => c.classList.remove('active'));
+            const activeChip = document.getElementById('chip-' + engine);
+            if (activeChip) activeChip.classList.add('active');
+
+            const inp = document.getElementById('mainSearchInput');
+            if (inp) {
+                const names = {
+                    google: 'Google',
+                    duckduckgo: 'DuckDuckGo',
+                    brave: 'Brave',
+                    bing: 'Bing',
+                    kagi: 'Kagi'
+                };
+                inp.placeholder = `Search with ${names[engine] || engine} or enter URL...`;
+            }
+        }
+
+        function getSearchUrl(val) {
+            val = (val || '').trim();
+            // Command Aliases / Prefix Shortcuts
+            if (val.startsWith('gh ')) return 'https://github.com/search?q=' + encodeURIComponent(val.substring(3).trim());
+            if (val.startsWith('yt ')) return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(val.substring(3).trim());
+            if (val.startsWith('wiki ')) return 'https://en.wikipedia.org/wiki/Special:Search?search=' + encodeURIComponent(val.substring(5).trim());
+            if (val.startsWith('g ')) return 'https://www.google.com/search?q=' + encodeURIComponent(val.substring(2).trim());
+            if (val.startsWith('ddg ')) return 'https://duckduckgo.com/?q=' + encodeURIComponent(val.substring(4).trim());
+            if (val.startsWith('b ') || val.startsWith('brave ')) {
+                const off = val.startsWith('b ') ? 2 : 6;
+                return 'https://search.brave.com/search?q=' + encodeURIComponent(val.substring(off).trim());
+            }
+            if (val.startsWith('bing ')) return 'https://www.bing.com/search?q=' + encodeURIComponent(val.substring(5).trim());
+
+            const currentEngine = localStorage.getItem('titan_search_engine') || 'google';
+            const base = searchEngines[currentEngine] || searchEngines.google;
+            return base + encodeURIComponent(val);
+        }
+
         function executeSearch(val) {
             val = (val || '').trim();
             if (!val) return;
@@ -1111,9 +1219,15 @@
             } else if (val.includes('.') && !val.includes(' ')) {
                 window.location.href = 'https://' + val;
             } else {
-                window.location.href = 'https://duckduckgo.com/?q=' + encodeURIComponent(val);
+                window.location.href = getSearchUrl(val);
             }
         }
+
+        // Initialize active search engine chip on load
+        window.addEventListener('DOMContentLoaded', () => {
+            const currentEngine = localStorage.getItem('titan_search_engine') || 'google';
+            setSearchEngine(currentEngine);
+        });
 
         document.addEventListener('keydown', (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {

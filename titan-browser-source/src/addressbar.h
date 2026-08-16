@@ -11,6 +11,8 @@ public:
     explicit AddressBar(QWidget *parent = nullptr);
     void setUrl(const QUrl &url);
     void setBookmarked(bool bookmarked);
+    void setSearchEngine(const QString &engine);
+    QString searchEngine() const { return m_searchEngine; }
 
 signals:
     void urlEntered(const QUrl &url);
@@ -28,9 +30,11 @@ private slots:
 
 private:
     void updateSecurityBadge(const QUrl &url);
+    QUrl buildSearchUrl(const QString &query) const;
 
     QAction *m_securityAction = nullptr;
     QAction *m_bookmarkAction = nullptr;
     QUrl     m_currentUrl;
     bool     m_isBookmarked   = false;
+    QString  m_searchEngine   = QStringLiteral("google");
 };

@@ -974,6 +974,16 @@ void Browser::loadPersistentUserData()
         m_bookmarks.append({QStringLiteral("GitHub"), QUrl(QStringLiteral("https://github.com")), QDateTime::currentDateTime()});
         m_bookmarks.append({QStringLiteral("Arch Linux Wiki"), QUrl(QStringLiteral("https://wiki.archlinux.org")), QDateTime::currentDateTime()});
     }
+
+    // Load Config (Default Search Engine, etc.)
+    QFile cfgFile(dirPath + QStringLiteral("/config.json"));
+    if (cfgFile.open(QIODevice::ReadOnly)) {
+        QJsonObject obj = QJsonDocument::fromJson(cfgFile.readAll()).object();
+        QString engine = obj.value(QStringLiteral("search_engine")).toString(QStringLiteral("google"));
+        if (m_addressBar) m_addressBar->setSearchEngine(engine);
+    } else {
+        if (m_addressBar) m_addressBar->setSearchEngine(QStringLiteral("google"));
+    }
 }
 
 void Browser::savePersistentUserData()
@@ -992,6 +1002,14 @@ void Browser::savePersistentUserData()
             arr.append(obj);
         }
         bmFile.write(QJsonDocument(arr).toJson());
+    }
+
+    // Save Config
+    QFile cfgFile(dirPath + QStringLiteral("/config.json"));
+    if (cfgFile.open(QIODevice::WriteOnly)) {
+        QJsonObject obj;
+        obj[QStringLiteral("search_engine")] = m_addressBar ? m_addressBar->searchEngine() : QStringLiteral("google");
+        cfgFile.write(QJsonDocument(obj).toJson());
     }
 }
 
