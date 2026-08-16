@@ -93,6 +93,10 @@ private:
     void setActiveRailButton(QToolButton *btn);
     void showToast(const QString &message, int durationMs = 2800);
     void updateNavigationButtons();
+    void updateProfileAvatar();
+    void switchProfile(const QString &profileId);
+    void showAddProfileDialog();
+    void showEditProfileDialog();
     void loadPersistentUserData();
     void savePersistentUserData();
     QWebEngineView *currentView() const;
@@ -110,6 +114,7 @@ private:
     QToolButton    *m_backBtn          = nullptr;
     QToolButton    *m_fwdBtn           = nullptr;
     QToolButton    *m_reloadBtn        = nullptr;
+    QToolButton    *m_avatarBtn        = nullptr;
 
     // Compact Navigation Rail Buttons
     QToolButton    *m_railHomeBtn      = nullptr;

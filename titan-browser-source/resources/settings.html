@@ -280,6 +280,89 @@
             font-size: 11.5px;
             color: #38bdf8;
         }
+
+        /* Profile Manager Cards */
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 14px;
+            padding: 16px;
+        }
+        .profile-card {
+            background: #0d1528;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+        .profile-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        }
+        .profile-card.active {
+            border-color: var(--accent);
+            background: rgba(56, 189, 248, 0.08);
+        }
+        .profile-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .profile-avatar-circle {
+            width: 38px;
+            height: 38px;
+            border-radius: 19px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 15px;
+            color: #ffffff;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+        }
+        .profile-card-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        .profile-card-sub {
+            font-size: 11px;
+            color: var(--text-sub);
+        }
+        .profile-badge-active {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            font-size: 9.5px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .header-action-btn {
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            color: #38bdf8;
+            padding: 6px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .header-action-btn:hover {
+            background: #38bdf8;
+            color: #060812;
+        }
     </style>
 </head>
 <body>
@@ -298,18 +381,19 @@
         </div>
 
         <div class="nav-section-label">Preferences</div>
-        <div class="nav-item active" onclick="switchPage('general')"><span class="nav-item-icon">⚙</span> General</div>
-        <div class="nav-item" onclick="switchPage('appearance')"><span class="nav-item-icon">🎨</span> Appearance & Theme</div>
-        <div class="nav-item" onclick="switchPage('search')"><span class="nav-item-icon">🔍</span> Search Engine</div>
+        <div class="nav-item active" onclick="switchPage('general', this)"><span class="nav-item-icon">⚙</span> General</div>
+        <div class="nav-item" onclick="switchPage('profiles', this)"><span class="nav-item-icon">👤</span> Profiles & Accounts</div>
+        <div class="nav-item" onclick="switchPage('appearance', this)"><span class="nav-item-icon">🎨</span> Appearance & Theme</div>
+        <div class="nav-item" onclick="switchPage('search', this)"><span class="nav-item-icon">🔍</span> Search Engine</div>
 
         <div class="nav-section-label">Security & Engine</div>
-        <div class="nav-item" onclick="switchPage('privacy')"><span class="nav-item-icon">🛡</span> TitanShield Security</div>
-        <div class="nav-item" onclick="switchPage('performance')"><span class="nav-item-icon">⚡</span> Performance & Memory</div>
-        <div class="nav-item" onclick="switchPage('ai')"><span class="nav-item-icon">✦</span> Titan AI Engine</div>
+        <div class="nav-item" onclick="switchPage('privacy', this)"><span class="nav-item-icon">🛡</span> TitanShield Security</div>
+        <div class="nav-item" onclick="switchPage('performance', this)"><span class="nav-item-icon">⚡</span> Performance & Memory</div>
+        <div class="nav-item" onclick="switchPage('ai', this)"><span class="nav-item-icon">✦</span> Titan AI Engine</div>
 
         <div class="nav-section-label">System</div>
-        <div class="nav-item" onclick="switchPage('shortcuts')"><span class="nav-item-icon">⌨</span> Keyboard Shortcuts</div>
-        <div class="nav-item" onclick="switchPage('about')"><span class="nav-item-icon">ℹ</span> About Titan</div>
+        <div class="nav-item" onclick="switchPage('shortcuts', this)"><span class="nav-item-icon">⌨</span> Keyboard Shortcuts</div>
+        <div class="nav-item" onclick="switchPage('about', this)"><span class="nav-item-icon">ℹ</span> About Titan</div>
     </div>
 
     <!-- Main Content Area -->
@@ -369,6 +453,57 @@
                         </div>
                         <div class="setting-control">
                             <div class="toggle" id="toggle-ask-dl" onclick="toggleSwitch(this, 'ask_download')"></div>
+                        </div>
+                    </div>
+        </div>
+
+        <!-- Profiles & Accounts -->
+        <div class="page" id="page-profiles">
+            <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <h1 class="page-title">Profiles & Google Multi-Account</h1>
+                    <p class="page-sub">Manage isolated browser profiles, cookies, and multi-login Google sessions</p>
+                </div>
+                <button class="header-action-btn" onclick="alert('Click the Profile Avatar icon at the top-right of the navigation bar to add, edit, or switch profiles instantly.')">+ Add Profile</button>
+            </div>
+
+            <!-- Google Account Multi-Login Feature Card -->
+            <div class="settings-group">
+                <div class="group-label">Google Account & Multi-Login System</div>
+                <div class="settings-card">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-label">Google Account Isolated Login</div>
+                            <div class="setting-desc">Each profile maintains completely isolated cookies, cache, and authentication state so you can log into multiple Google / Gmail / Workspace accounts simultaneously.</div>
+                        </div>
+                        <div class="setting-control" style="display: flex; gap: 8px;">
+                            <button class="btn-action" style="border-color: #38bdf8; color: #38bdf8;" onclick="window.location.href='https://accounts.google.com'">Sign In to Google</button>
+                            <button class="btn-action" onclick="window.location.href='https://myaccount.google.com'">Manage Account</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profile Storage Isolation -->
+            <div class="settings-group">
+                <div class="group-label">Active Workspace & Storage Isolation</div>
+                <div class="settings-card">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-label">Strict Cookie & Storage Isolation</div>
+                            <div class="setting-desc">Prevent websites from tracking across different profiles. Each profile uses a dedicated disk directory in ~/.config/titanbrowser/profiles/</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle on" id="toggle-prof-iso" onclick="toggleSwitch(this, 'profile_isolation')"></div>
+                        </div>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-label">Separate Bookmarks per Profile</div>
+                            <div class="setting-desc">Maintain dedicated bookmark sets and quick launcher tiles for each profile</div>
+                        </div>
+                        <div class="setting-control">
+                            <div class="toggle on" id="toggle-prof-bm" onclick="toggleSwitch(this, 'profile_bookmarks')"></div>
                         </div>
                     </div>
                 </div>
@@ -675,14 +810,19 @@
     </div>
 
     <script>
-        function switchPage(pageId) {
+        function switchPage(pageId, navEl) {
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
 
             const targetPage = document.getElementById('page-' + pageId);
             if (targetPage) targetPage.classList.add('active');
 
-            event.currentTarget.classList.add('active');
+            if (navEl) {
+                navEl.classList.add('active');
+            } else {
+                const item = Array.from(document.querySelectorAll('.nav-item')).find(el => el.getAttribute('onclick')?.includes(pageId));
+                if (item) item.classList.add('active');
+            }
         }
 
         function toggleSwitch(el, key) {

@@ -24,6 +24,8 @@ qt_add_executable(titanbrowser
     src/addressbar.h
     src/adblocker.cpp
     src/adblocker.h
+    src/profilemanager.cpp
+    src/profilemanager.h
     resources/resources.qrc
 )
 
