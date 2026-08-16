@@ -138,6 +138,35 @@ void AddressBar::onTextChanged(const QString &text)
     }
 }
 
+void AddressBar::setSearchEngine(const QString &engine)
+{
+    m_searchEngine = engine.trimmed().toLower();
+    if (m_searchEngine.isEmpty()) m_searchEngine = QStringLiteral("google");
+}
+
+QUrl AddressBar::buildSearchUrl(const QString &query) const
+{
+    QString engine = m_searchEngine.toLower();
+    QString encoded = QString::fromUtf8(QUrl::toPercentEncoding(query));
+
+    if (engine == QStringLiteral("duckduckgo") || engine == QStringLiteral("ddg")) {
+        return QUrl(QStringLiteral("https://duckduckgo.com/?q=") + encoded);
+    } else if (engine == QStringLiteral("brave")) {
+        return QUrl(QStringLiteral("https://search.brave.com/search?q=") + encoded);
+    } else if (engine == QStringLiteral("bing")) {
+        return QUrl(QStringLiteral("https://www.bing.com/search?q=") + encoded);
+    } else if (engine == QStringLiteral("kagi")) {
+        return QUrl(QStringLiteral("https://kagi.com/search?q=") + encoded);
+    } else if (engine == QStringLiteral("ecosia")) {
+        return QUrl(QStringLiteral("https://www.ecosia.org/search?q=") + encoded);
+    } else if (engine == QStringLiteral("yahoo")) {
+        return QUrl(QStringLiteral("https://search.yahoo.com/search?p=") + encoded);
+    } else {
+        // Default Google Search
+        return QUrl(QStringLiteral("https://www.google.com/search?q=") + encoded);
+    }
+}
+
 void AddressBar::onReturnPressed()
 {
     QString input = text().trimmed();
@@ -145,7 +174,7 @@ void AddressBar::onReturnPressed()
 
     QUrl url;
 
-    // Quick command aliases
+    // Quick command aliases (Prefix shortcuts)
     if (input.startsWith(QStringLiteral("gh "))) {
         QString q = input.mid(3).trimmed();
         url = QUrl(QStringLiteral("https://github.com/search?q=") + QUrl::toPercentEncoding(q));
@@ -161,18 +190,26 @@ void AddressBar::onReturnPressed()
     } else if (input.startsWith(QStringLiteral("ddg "))) {
         QString q = input.mid(4).trimmed();
         url = QUrl(QStringLiteral("https://duckduckgo.com/?q=") + QUrl::toPercentEncoding(q));
+    } else if (input.startsWith(QStringLiteral("b ")) || input.startsWith(QStringLiteral("brave "))) {
+        int off = input.startsWith(QStringLiteral("b ")) ? 2 : 6;
+        QString q = input.mid(off).trimmed();
+        url = QUrl(QStringLiteral("https://search.brave.com/search?q=") + QUrl::toPercentEncoding(q));
+    } else if (input.startsWith(QStringLiteral("bing "))) {
+        QString q = input.mid(5).trimmed();
+        url = QUrl(QStringLiteral("https://www.bing.com/search?q=") + QUrl::toPercentEncoding(q));
     } else if (input == QStringLiteral("titan://settings") || input == QStringLiteral("settings")) {
         url = QUrl(QStringLiteral("qrc:/settings.html"));
     } else if (input == QStringLiteral("titan://home") || input == QStringLiteral("home")) {
         url = QUrl(QStringLiteral("qrc:/homepage.html"));
     } else if (!input.contains(QStringLiteral("://")) &&
-               (input.contains(u'.') || input.startsWith(QStringLiteral("localhost")) || input.contains(u':')))
+               (input.contains(u'.') || input.startsWith(QStringLiteral("localhost")) || input.contains(u':')) &&
+               !input.contains(u' '))
     {
         url = QUrl(QStringLiteral("https://") + input);
     } else if (input.contains(QStringLiteral("://"))) {
         url = QUrl(input);
     } else {
-        url = QUrl(QStringLiteral("https://duckduckgo.com/?q=") + QUrl::toPercentEncoding(input));
+        url = buildSearchUrl(input);
     }
 
     emit urlEntered(url);
