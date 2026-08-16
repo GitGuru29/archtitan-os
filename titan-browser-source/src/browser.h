@@ -59,6 +59,7 @@ private slots:
     void reloadOrStop();
     void onTabChanged(int index);
     void onBookmarkClicked(const QUrl &url);
+    void onTabSearchClicked();
 
     // Navigation rail & chrome flyouts
     void onHomeClicked();

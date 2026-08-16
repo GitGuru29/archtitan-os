@@ -39,11 +39,14 @@ protected:
 TabWidget::TabWidget(QWidget *parent) : QObject(parent)
 {
     m_tabBar = new QTabBar(parent);
-    m_tabBar->hide(); // Hide the native tab bar to prevent floating scroll arrows
+    m_tabBar->setObjectName(QStringLiteral("BrowserTabBar"));
     m_tabBar->setTabsClosable(true);
     m_tabBar->setMovable(true);
     m_tabBar->setElideMode(Qt::ElideRight);
     m_tabBar->setExpanding(false);
+    m_tabBar->setDrawBase(false);
+    m_tabBar->setDocumentMode(true);
+    m_tabBar->setUsesScrollButtons(true);
     m_tabBar->setContextMenuPolicy(Qt::CustomContextMenu);
 
     m_stack = new QStackedWidget(parent);
