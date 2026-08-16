@@ -190,10 +190,11 @@
         }
 
         .brand-subtitle-line {
-            font-size: 10.5px;
-            color: rgba(224, 242, 254, 0.7);
-            font-weight: 400;
-            letter-spacing: 0.5px;
+            font-size: 11px;
+            color: rgba(224, 242, 254, 0.9);
+            font-weight: 500;
+            letter-spacing: 0.6px;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
         }
 
         .brand-accent-bar {
@@ -398,28 +399,35 @@
         .search-pill-box {
             width: 100%;
             max-width: 600px;
-            background: rgba(10, 24, 56, 0.55);
-            border: 1px solid var(--border-glass);
+            background: rgba(10, 24, 56, 0.68);
+            border: 1px solid rgba(56, 189, 248, 0.35);
             border-radius: var(--radius-full);
-            padding: 10px 20px;
+            padding: 11px 22px;
             display: flex;
             align-items: center;
-            backdrop-filter: blur(20px);
-            transition: all 0.25s ease;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(24px);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.12);
             position: relative;
+        }
+
+        .search-pill-box:hover {
+            border-color: rgba(56, 189, 248, 0.58);
+            background: rgba(14, 30, 68, 0.78);
+            box-shadow: 0 10px 36px rgba(0, 0, 0, 0.6), 0 0 24px rgba(56, 189, 248, 0.22);
         }
 
         .search-pill-box:focus-within {
             border-color: var(--cyan);
-            background: rgba(14, 32, 74, 0.75);
-            box-shadow: 0 0 0 1px var(--cyan), 0 0 30px rgba(56, 189, 248, 0.35);
+            background: rgba(14, 32, 74, 0.88);
+            box-shadow: 0 0 0 1px var(--cyan), 0 0 35px rgba(56, 189, 248, 0.45), 0 12px 40px rgba(0, 0, 0, 0.7);
         }
 
         .search-loop-icon {
-            color: rgba(224, 242, 254, 0.6);
+            color: rgba(56, 189, 248, 0.85);
             margin-right: 12px;
             flex-shrink: 0;
+            filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.4));
         }
 
         .search-input-element {
@@ -433,14 +441,14 @@
         }
 
         .search-input-element::placeholder {
-            color: rgba(224, 242, 254, 0.5);
+            color: rgba(224, 242, 254, 0.55);
             font-weight: 400;
         }
 
         .search-star-btn {
             background: transparent;
             border: none;
-            color: rgba(224, 242, 254, 0.6);
+            color: rgba(224, 242, 254, 0.75);
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -456,6 +464,7 @@
 
         .search-star-btn:hover {
             color: var(--cyan);
+            filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
         }
 
         /* ── Quick Access Launcher Squircles (Row of 7) ────────────────────── */
@@ -468,19 +477,19 @@
         }
 
         .squircle-card {
-            width: 72px;
-            height: 72px;
+            width: 74px;
+            height: 74px;
             border-radius: var(--radius-md);
             background: var(--bg-glass-card);
             border: 1px solid var(--border-glass);
-            backdrop-filter: blur(16px);
+            backdrop-filter: blur(18px);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             gap: 6px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
             text-decoration: none;
             box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
         }
@@ -488,22 +497,27 @@
         .squircle-card:hover {
             background: var(--bg-glass-card-hover);
             border-color: var(--border-glass-hover);
-            transform: translateY(-3px);
-            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.25);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(56, 189, 248, 0.3);
         }
 
         .squircle-icon-wrap {
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
+        .squircle-icon-wrap svg {
+            filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+        }
+
         .squircle-label {
-            font-size: 10.5px;
+            font-size: 11px;
             font-weight: 500;
-            color: rgba(240, 246, 252, 0.85);
+            color: rgba(240, 246, 252, 0.9);
+            letter-spacing: 0.2px;
         }
 
         /* ═══════════════════════════════════════════════════════════════════════
@@ -518,18 +532,18 @@
 
         /* Bottom-Left Cyber Terminal Quote Card */
         .cyber-terminal-card {
-            background: rgba(4, 12, 32, 0.5);
+            background: rgba(4, 12, 32, 0.65);
             border-left: 2px solid var(--cyan);
             border-bottom: 2px solid var(--cyan);
             border-radius: 0 0 0 12px;
             padding: 14px 18px;
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            max-width: 280px;
-            backdrop-filter: blur(16px);
+            gap: 5px;
+            max-width: 290px;
+            backdrop-filter: blur(20px);
             position: relative;
-            box-shadow: -4px 8px 24px rgba(0, 0, 0, 0.4);
+            box-shadow: -4px 8px 28px rgba(0, 0, 0, 0.55);
         }
 
         .cyber-terminal-card::before {
@@ -557,20 +571,24 @@
             font-size: 11px;
             font-weight: 700;
             color: var(--cyan);
+            text-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
         }
 
         .terminal-code-quote {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 10px;
-            color: rgba(224, 242, 254, 0.85);
-            line-height: 1.45;
+            font-size: 10.5px;
+            color: #ffffff;
+            line-height: 1.5;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
         }
 
         .terminal-author-tag {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 9.5px;
+            font-size: 10px;
+            font-weight: 600;
             color: var(--cyan);
             margin-top: 2px;
+            letter-spacing: 0.4px;
         }
 
         /* Bottom-Right System Hardware Monitor HUD */
@@ -905,7 +923,7 @@
 
                 <a class="squircle-card" href="https://wiki.archlinux.org">
                     <div class="squircle-icon-wrap">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                             <polyline points="14 2 14 8 20 8" />
                             <line x1="16" y1="13" x2="8" y2="13" />
@@ -918,8 +936,8 @@
 
                 <a class="squircle-card" href="https://wiki.archlinux.org">
                     <div class="squircle-icon-wrap">
-                        <svg width="20" height="20" viewBox="0 0 64 64" fill="#38bdf8">
-                            <path d="M32 4L4 56H18L32 28L46 56H60L32 4Z" />
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#38bdf8">
+                            <path d="M12 2L2 21.5h4.8l4.8-9.5 4.8 9.5H22L12 2zm0 6.5l2.7 5.5h-5.4L12 8.5z" />
                         </svg>
                     </div>
                     <span class="squircle-label">ArchWiki</span>
@@ -929,7 +947,7 @@
                     <div class="squircle-icon-wrap">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff4500">
                             <path
-                                d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.702zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.197-2.512-.73a.326.326 0 0 0-.232-.095z" />
+                                d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.702zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.688-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.197-2.512-.73a.326.326 0 0 0-.232-.095z" />
                         </svg>
                     </div>
                     <span class="squircle-label">Reddit</span>
@@ -937,7 +955,7 @@
 
                 <a class="squircle-card" href="https://mail.google.com">
                     <div class="squircle-icon-wrap">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                             <polyline points="22,6 12,13 2,6" />
                         </svg>
@@ -946,7 +964,12 @@
                 </a>
 
                 <div class="squircle-card" onclick="openAddShortcutDialog()">
-                    <div class="squircle-icon-wrap" style="font-size: 18px; color: var(--cyan);">+</div>
+                    <div class="squircle-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </div>
                     <span class="squircle-label">Add</span>
                 </div>
             </div>
