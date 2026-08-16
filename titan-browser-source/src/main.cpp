@@ -1,5 +1,6 @@
 #include "browser.h"
 #include "adblocker.h"
+#include "profilemanager.h"
 #include <QApplication>
 #include <QWebEngineProfile>
 #include <QWebEngineSettings>
@@ -84,6 +85,9 @@ int main(int argc, char *argv[])
     const QString userList = QDir::homePath() + QStringLiteral("/.config/titanbrowser/filters.txt");
     if (QFile::exists(userList))
         adBlocker->loadFilterList(userList);
+
+    // ── Initialize Multi-Profile Manager ────────────────────────────────
+    ProfileManager::instance().initialize(adBlocker);
 
     Browser w(adBlocker);
     w.show();

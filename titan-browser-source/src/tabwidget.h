@@ -40,6 +40,9 @@ public:
     void closeTabsToRight(int index);
     void toggleMuteTab(int index);
 
+    // Profile integration
+    void reloadAllTabsForProfile();
+
     // Memory Saver
     void setMemorySaverEnabled(bool enabled) { m_memorySaverEnabled = enabled; }
     bool isMemorySaverEnabled() const { return m_memorySaverEnabled; }

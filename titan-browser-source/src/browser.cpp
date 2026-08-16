@@ -2,8 +2,12 @@
 #include "tabwidget.h"
 #include "addressbar.h"
 #include "adblocker.h"
+#include "profilemanager.h"
 
-#include <QFile>
+#include <QDialog>
+#include <QFormLayout>
+#include <QDialogButtonBox>
+#include <QComboBox>
 #include <QTextStream>
 #include <QApplication>
 #include <QHBoxLayout>
@@ -334,6 +338,10 @@ Browser::Browser(AdBlocker *adBlocker, QWidget *parent)
     setupUi();
     newTab(QUrl(QString::fromUtf8(kHomeUrl)));
 
+    connect(&ProfileManager::instance(), &ProfileManager::activeProfileChanged, this, [this](const UserProfile &) {
+        updateProfileAvatar();
+    });
+
     // Live blocked-requests counter — updates shield badge every 2s
     if (m_adBlocker) {
         m_statsTimer = new QTimer(this);
@@ -619,12 +627,11 @@ void Browser::setupUi()
     navLayout->addWidget(dlBtn);
 
     // Profile Avatar
-    auto *avatarBtn = new QToolButton(navBar);
-    avatarBtn->setObjectName(QStringLiteral("AvatarBtn"));
-    avatarBtn->setText(QStringLiteral("T"));
-    avatarBtn->setToolTip(QStringLiteral("Titan Profile"));
-    connect(avatarBtn, &QToolButton::clicked, this, &Browser::onProfileClicked);
-    navLayout->addWidget(avatarBtn);
+    m_avatarBtn = new QToolButton(navBar);
+    m_avatarBtn->setObjectName(QStringLiteral("AvatarBtn"));
+    connect(m_avatarBtn, &QToolButton::clicked, this, &Browser::onProfileClicked);
+    updateProfileAvatar();
+    navLayout->addWidget(m_avatarBtn);
 
     // Window Controls
     auto *minBtn = new QToolButton(navBar);
@@ -1214,9 +1221,319 @@ void Browser::onShieldClicked()
     menu->popup(QCursor::pos());
 }
 
+void Browser::updateProfileAvatar()
+{
+    if (!m_avatarBtn) return;
+    UserProfile p = ProfileManager::instance().activeProfile();
+    QString initial = p.name.trimmed().isEmpty() ? QStringLiteral("T") : p.name.trimmed().left(1).toUpper();
+    m_avatarBtn->setText(initial);
+    QString tip = QStringLiteral("Profile: %1").arg(p.name);
+    if (!p.email.isEmpty()) tip += QStringLiteral(" (%1)").arg(p.email);
+    m_avatarBtn->setToolTip(tip);
+
+    QString color = p.avatarColor.isEmpty() ? QStringLiteral("#38bdf8") : p.avatarColor;
+    m_avatarBtn->setStyleSheet(QStringLiteral(R"(
+        QToolButton#AvatarBtn {
+            background-color: %1;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 11px;
+            border-radius: 12px;
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
+            min-width: 24px;
+            max-width: 24px;
+            min-height: 24px;
+            max-height: 24px;
+            padding: 0;
+            margin: 0 4px;
+        }
+        QToolButton#AvatarBtn:hover {
+            border: 1.5px solid #ffffff;
+        }
+    )").arg(color));
+}
+
+void Browser::switchProfile(const QString &profileId)
+{
+    if (ProfileManager::instance().setActiveProfile(profileId)) {
+        updateProfileAvatar();
+        m_tabs->reloadAllTabsForProfile();
+        UserProfile p = ProfileManager::instance().activeProfile();
+        showToast(QStringLiteral("Switched to Profile: %1").arg(p.name));
+    }
+}
+
+void Browser::showAddProfileDialog()
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(QStringLiteral("Add New Profile"));
+    dlg.setFixedSize(360, 240);
+    dlg.setStyleSheet(QStringLiteral(R"(
+        QDialog {
+            background: #090e1c;
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+        }
+        QLabel { color: #94a3b8; font-size: 12px; }
+        QLineEdit {
+            background: #0e172e;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 6px;
+            color: #ffffff;
+            padding: 6px 10px;
+            font-size: 13px;
+        }
+        QLineEdit:focus { border-color: #38bdf8; }
+        QComboBox {
+            background: #0e172e;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 6px;
+            color: #ffffff;
+            padding: 6px 10px;
+        }
+        QPushButton {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 6px;
+            color: #38bdf8;
+            padding: 6px 14px;
+            font-weight: 600;
+        }
+        QPushButton:hover {
+            background: #38bdf8;
+            color: #060812;
+        }
+    )"));
+
+    auto *layout = new QVBoxLayout(&dlg);
+    layout->setSpacing(12);
+
+    auto *form = new QFormLayout();
+    auto *nameEdit = new QLineEdit(&dlg);
+    nameEdit->setPlaceholderText(QStringLiteral("e.g. Work, Personal, School"));
+    form->addRow(QStringLiteral("Profile Name:"), nameEdit);
+
+    auto *colorCombo = new QComboBox(&dlg);
+    colorCombo->addItem(QStringLiteral("Cyan (#38bdf8)"), QStringLiteral("#38bdf8"));
+    colorCombo->addItem(QStringLiteral("Emerald Green (#22c55e)"), QStringLiteral("#22c55e"));
+    colorCombo->addItem(QStringLiteral("Rose Red (#ef4444)"), QStringLiteral("#ef4444"));
+    colorCombo->addItem(QStringLiteral("Purple (#a78bfa)"), QStringLiteral("#a78bfa"));
+    colorCombo->addItem(QStringLiteral("Amber (#f59e0b)"), QStringLiteral("#f59e0b"));
+    colorCombo->addItem(QStringLiteral("Sky Blue (#0ea5e9)"), QStringLiteral("#0ea5e9"));
+    form->addRow(QStringLiteral("Avatar Color:"), colorCombo);
+
+    auto *emailEdit = new QLineEdit(&dlg);
+    emailEdit->setPlaceholderText(QStringLiteral("Optional: user@gmail.com"));
+    form->addRow(QStringLiteral("Google/Account:"), emailEdit);
+
+    layout->addLayout(form);
+
+    auto *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    layout->addWidget(btnBox);
+
+    connect(btnBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btnBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    if (dlg.exec() == QDialog::Accepted) {
+        QString name = nameEdit->text().trimmed();
+        if (name.isEmpty()) name = QStringLiteral("Profile %1").arg(ProfileManager::instance().profiles().size() + 1);
+        QString color = colorCombo->currentData().toString();
+        QString email = emailEdit->text().trimmed();
+        UserProfile newProf = ProfileManager::instance().createProfile(name, color, QStringLiteral("user"), email);
+        switchProfile(newProf.id);
+    }
+}
+
+void Browser::showEditProfileDialog()
+{
+    UserProfile cur = ProfileManager::instance().activeProfile();
+    QDialog dlg(this);
+    dlg.setWindowTitle(QStringLiteral("Edit Profile"));
+    dlg.setFixedSize(360, 240);
+    dlg.setStyleSheet(QStringLiteral(R"(
+        QDialog {
+            background: #090e1c;
+            color: #f1f5f9;
+            font-family: 'Inter', sans-serif;
+        }
+        QLabel { color: #94a3b8; font-size: 12px; }
+        QLineEdit {
+            background: #0e172e;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 6px;
+            color: #ffffff;
+            padding: 6px 10px;
+            font-size: 13px;
+        }
+        QLineEdit:focus { border-color: #38bdf8; }
+        QComboBox {
+            background: #0e172e;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 6px;
+            color: #ffffff;
+            padding: 6px 10px;
+        }
+        QPushButton {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 6px;
+            color: #38bdf8;
+            padding: 6px 14px;
+            font-weight: 600;
+        }
+        QPushButton:hover {
+            background: #38bdf8;
+            color: #060812;
+        }
+    )"));
+
+    auto *layout = new QVBoxLayout(&dlg);
+    layout->setSpacing(12);
+
+    auto *form = new QFormLayout();
+    auto *nameEdit = new QLineEdit(&dlg);
+    nameEdit->setText(cur.name);
+    form->addRow(QStringLiteral("Profile Name:"), nameEdit);
+
+    auto *colorCombo = new QComboBox(&dlg);
+    colorCombo->addItem(QStringLiteral("Cyan (#38bdf8)"), QStringLiteral("#38bdf8"));
+    colorCombo->addItem(QStringLiteral("Emerald Green (#22c55e)"), QStringLiteral("#22c55e"));
+    colorCombo->addItem(QStringLiteral("Rose Red (#ef4444)"), QStringLiteral("#ef4444"));
+    colorCombo->addItem(QStringLiteral("Purple (#a78bfa)"), QStringLiteral("#a78bfa"));
+    colorCombo->addItem(QStringLiteral("Amber (#f59e0b)"), QStringLiteral("#f59e0b"));
+    colorCombo->addItem(QStringLiteral("Sky Blue (#0ea5e9)"), QStringLiteral("#0ea5e9"));
+    for (int i = 0; i < colorCombo->count(); ++i) {
+        if (colorCombo->itemData(i).toString() == cur.avatarColor) {
+            colorCombo->setCurrentIndex(i);
+            break;
+        }
+    }
+    form->addRow(QStringLiteral("Avatar Color:"), colorCombo);
+
+    auto *emailEdit = new QLineEdit(&dlg);
+    emailEdit->setText(cur.email);
+    emailEdit->setPlaceholderText(QStringLiteral("Optional: user@gmail.com"));
+    form->addRow(QStringLiteral("Google/Account:"), emailEdit);
+
+    layout->addLayout(form);
+
+    auto *btnBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    layout->addWidget(btnBox);
+
+    connect(btnBox, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(btnBox, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    if (dlg.exec() == QDialog::Accepted) {
+        QString name = nameEdit->text().trimmed();
+        if (!name.isEmpty()) {
+            QString color = colorCombo->currentData().toString();
+            QString email = emailEdit->text().trimmed();
+            ProfileManager::instance().updateProfile(cur.id, name, color, cur.avatarIcon, email);
+            updateProfileAvatar();
+            showToast(QStringLiteral("Profile updated: %1").arg(name));
+        }
+    }
+}
+
 void Browser::onProfileClicked()
 {
-    showToast(QStringLiteral("Titan Account: Hardware Encrypted Profile Active"));
+    UserProfile active = ProfileManager::instance().activeProfile();
+    auto *menu = new QMenu(this);
+    menu->setStyleSheet(QStringLiteral(R"(
+        QMenu {
+            background: #090e1c;
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 10px;
+            padding: 8px;
+            color: #e2e8f0;
+            font-size: 12.5px;
+            font-family: 'Inter', sans-serif;
+        }
+        QMenu::item {
+            padding: 8px 20px 8px 12px;
+            border-radius: 6px;
+        }
+        QMenu::item:selected {
+            background: rgba(56, 189, 248, 0.16);
+            color: #38bdf8;
+        }
+        QMenu::separator {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+            margin: 6px 4px;
+        }
+    )"));
+
+    // Header: Active Profile
+    QString activeTitle = QStringLiteral("👤 Current: %1").arg(active.name);
+    if (!active.email.isEmpty()) activeTitle += QStringLiteral(" • %1").arg(active.email);
+    auto *hdrAct = menu->addAction(activeTitle);
+    hdrAct->setEnabled(false);
+
+    // Quick Google Account Shortcuts
+    auto *googleAct = menu->addAction(QStringLiteral("🔑 Sign in to Google Account..."));
+    connect(googleAct, &QAction::triggered, this, [this]{
+        newTab(QUrl(QStringLiteral("https://accounts.google.com")));
+    });
+
+    auto *googleAccAct = menu->addAction(QStringLiteral("🌐 Manage Google Account..."));
+    connect(googleAccAct, &QAction::triggered, this, [this]{
+        newTab(QUrl(QStringLiteral("https://myaccount.google.com")));
+    });
+
+    menu->addSeparator();
+
+    // Profiles List (Switch Profile)
+    auto *secTitle = menu->addAction(QStringLiteral("Switch Profile:"));
+    secTitle->setEnabled(false);
+
+    auto allProfiles = ProfileManager::instance().profiles();
+    for (const auto &p : allProfiles) {
+        bool isCur = (p.id == active.id);
+        QString label = QStringLiteral("%1 %2").arg(isCur ? QStringLiteral("●") : QStringLiteral("○"), p.name);
+        if (!p.email.isEmpty()) label += QStringLiteral(" (%1)").arg(p.email);
+        auto *pAct = menu->addAction(label);
+        if (isCur) {
+            QFont f = pAct->font();
+            f.setBold(true);
+            pAct->setFont(f);
+        }
+        connect(pAct, &QAction::triggered, this, [this, p]{
+            if (p.id != ProfileManager::instance().activeProfileId()) {
+                switchProfile(p.id);
+            }
+        });
+    }
+
+    menu->addSeparator();
+
+    // Management Actions
+    auto *addProfAct = menu->addAction(QStringLiteral("➕ Add New Profile..."));
+    connect(addProfAct, &QAction::triggered, this, &Browser::showAddProfileDialog);
+
+    auto *editProfAct = menu->addAction(QStringLiteral("✏ Edit Current Profile..."));
+    connect(editProfAct, &QAction::triggered, this, &Browser::showEditProfileDialog);
+
+    if (allProfiles.size() > 1) {
+        auto *delProfAct = menu->addAction(QStringLiteral("🗑 Delete Current Profile"));
+        connect(delProfAct, &QAction::triggered, this, [this, active]{
+            auto res = QMessageBox::question(this, QStringLiteral("Delete Profile"),
+                QStringLiteral("Are you sure you want to delete profile \"%1\" and all its isolated data?").arg(active.name),
+                QMessageBox::Yes | QMessageBox::No);
+            if (res == QMessageBox::Yes) {
+                ProfileManager::instance().deleteProfile(active.id);
+                updateProfileAvatar();
+                m_tabs->reloadAllTabsForProfile();
+                showToast(QStringLiteral("Profile deleted"));
+            }
+        });
+    }
+
+    menu->addSeparator();
+    auto *settingsProfAct = menu->addAction(QStringLiteral("⚙ Manage Profiles in Settings..."));
+    connect(settingsProfAct, &QAction::triggered, this, &Browser::onSettingsClicked);
+
+    menu->popup(m_avatarBtn ? m_avatarBtn->mapToGlobal(QPoint(0, m_avatarBtn->height() + 4)) : QCursor::pos());
 }
 
 void Browser::onMenuClicked()
