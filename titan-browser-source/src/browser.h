@@ -60,6 +60,8 @@ private slots:
     void onTabChanged(int index);
     void onBookmarkClicked(const QUrl &url);
     void onTabSearchClicked();
+    void toggleSidebar();
+    void syncSidebarTabs();
 
     // Navigation rail & chrome flyouts
     void onHomeClicked();
@@ -103,6 +105,12 @@ private:
     QWebEngineView *currentView() const;
 
     // Main chrome layout containers
+    QWidget        *m_sidebar          = nullptr;
+    QWidget        *m_tabListWidget    = nullptr;
+    QVBoxLayout    *m_tabListLayout    = nullptr;
+    QToolButton    *m_sidebarToggleBtn = nullptr;
+    bool            m_sidebarCollapsed = false;
+
     QWidget        *m_topBar           = nullptr;
     QWidget        *m_navBar           = nullptr;
     QWidget        *m_railWidget       = nullptr;
