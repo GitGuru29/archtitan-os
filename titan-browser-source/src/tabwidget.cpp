@@ -59,7 +59,7 @@ TabWidget::TabWidget(QWidget *parent) : QObject(parent)
 QWidget *TabWidget::newTab(const QUrl &url)
 {
     QString title = QStringLiteral("New Tab");
-    QIcon icon = QIcon(QStringLiteral(":/icons/home.svg"));
+    QIcon icon = QIcon(QStringLiteral(":/icons/logo.svg"));
     QUrl finalUrl = url;
 
     auto *profile = ProfileManager::instance().activeWebEngineProfile();
@@ -132,7 +132,7 @@ void TabWidget::loadInTab(int index, const QUrl &url)
         m_tabUrls[view] = QUrl(QStringLiteral("titan://home"));
         view->setUrl(QUrl(QStringLiteral("qrc:/homepage.html")));
         m_tabBar->setTabText(index, QStringLiteral("New Tab"));
-        m_tabBar->setTabIcon(index, QIcon(QStringLiteral(":/icons/home.svg")));
+        m_tabBar->setTabIcon(index, QIcon(QStringLiteral(":/icons/logo.svg")));
         m_stack->setCurrentIndex(index);
         emit urlChanged(QUrl(QStringLiteral("titan://home")));
         emit titleChanged(QStringLiteral("New Tab"));
@@ -149,7 +149,7 @@ void TabWidget::loadInTab(int index, const QUrl &url)
         view->setUrl(url);
         m_stack->setCurrentIndex(index);
         m_tabBar->setTabText(index, QStringLiteral("Loading..."));
-        m_tabBar->setTabIcon(index, QIcon(QStringLiteral(":/icons/home.svg")));
+        m_tabBar->setTabIcon(index, QIcon(QStringLiteral(":/icons/logo.svg")));
         emit urlChanged(url);
     }
 
@@ -259,7 +259,7 @@ void TabWidget::connectView(QWebEngineView *view)
             if (u.toString() == QStringLiteral("titan://settings") || u.toString().contains("settings.html")) {
                 m_tabBar->setTabIcon(idx, QIcon(QStringLiteral(":/icons/settings.svg")));
             } else if (u.toString() == QStringLiteral("titan://home") || u.toString().contains("homepage.html")) {
-                m_tabBar->setTabIcon(idx, QIcon(QStringLiteral(":/icons/home.svg")));
+                m_tabBar->setTabIcon(idx, QIcon(QStringLiteral(":/icons/logo.svg")));
             } else if (!icon.isNull()) {
                 m_tabBar->setTabIcon(idx, icon);
             }
@@ -290,7 +290,7 @@ void TabWidget::updateTabAudioIcon(int index, bool audible, bool muted)
         if (v && !v->icon().isNull()) {
             m_tabBar->setTabIcon(index, v->icon());
         } else {
-            m_tabBar->setTabIcon(index, QIcon(QStringLiteral(":/icons/home.svg")));
+            m_tabBar->setTabIcon(index, QIcon(QStringLiteral(":/icons/logo.svg")));
         }
     }
 }
