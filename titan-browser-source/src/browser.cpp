@@ -55,31 +55,39 @@ QWidget#TopChrome {
     border-bottom: 1px solid rgba(56, 189, 248, 0.16);
 }
 
-/* ── Top Tab Strip Bar (36px) ── */
+QToolTip {
+    background: #091022;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 6px;
+    color: #f1f5f9;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-family: "Inter", sans-serif;
+}
+
+/* ── Top Tab Strip Bar (38px) ── */
 QWidget#TopBar {
     background: #060913;
-    min-height: 36px;
-    max-height: 36px;
-    padding: 0 8px 0 8px;
+    min-height: 38px;
+    max-height: 38px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 QLabel#LogoIcon {
-    padding: 2px 4px 2px 2px;
+    margin: 0;
+    padding: 0;
 }
 
 QLabel#SpaceChip {
     background: rgba(56, 189, 248, 0.08);
     border: 1px solid rgba(56, 189, 248, 0.22);
-    border-radius: 6px;
+    border-radius: 4px;
     color: #38bdf8;
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.5px;
     padding: 2px 6px;
-    margin-right: 6px;
-    margin-top: 6px;
-    margin-bottom: 6px;
+    margin: 0;
 }
 
 QTabBar {
@@ -92,17 +100,15 @@ QTabBar::tab {
     background: rgba(12, 19, 36, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-top: 2px solid transparent;
-    border-radius: 8px;
+    border-radius: 6px;
     color: #94a3b8;
-    padding: 4px 10px 4px 8px;
-    margin-top: 4px;
-    margin-bottom: 4px;
-    margin-right: 3px;
+    padding: 0 10px;
+    margin: 0 2px;
     font-size: 12px;
     font-weight: 500;
     min-width: 120px;
     max-width: 220px;
-    height: 22px;
+    height: 28px;
 }
 
 QTabBar::tab:selected {
@@ -121,9 +127,9 @@ QTabBar::tab:hover:!selected {
 
 QTabBar::close-button {
     subcontrol-position: right;
-    margin-left: 4px;
+    margin: 0 2px 0 6px;
     padding: 2px;
-    border-radius: 4px;
+    border-radius: 3px;
 }
 QTabBar::close-button:hover {
     background: rgba(239, 68, 68, 0.35);
@@ -135,12 +141,12 @@ QToolButton#AddTabButton {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 6px;
     color: #94a3b8;
-    padding: 3px;
-    margin: 6px 4px;
-    min-width: 22px;
-    max-width: 22px;
-    min-height: 22px;
-    max-height: 22px;
+    padding: 0;
+    margin: 0;
+    min-width: 26px;
+    max-width: 26px;
+    min-height: 26px;
+    max-height: 26px;
 }
 QToolButton#AddTabButton:hover {
     background: rgba(56, 189, 248, 0.15);
@@ -154,12 +160,13 @@ QToolButton#WinBtn {
     border: none;
     color: #64748b;
     font-size: 11px;
-    min-width: 26px;
-    max-width: 26px;
-    min-height: 24px;
-    max-height: 24px;
+    min-width: 28px;
+    max-width: 28px;
+    min-height: 26px;
+    max-height: 26px;
     border-radius: 4px;
-    margin-top: 4px;
+    margin: 0;
+    padding: 0;
 }
 QToolButton#WinBtn:hover {
     background: rgba(255, 255, 255, 0.08);
@@ -170,36 +177,37 @@ QToolButton#WinBtnClose {
     border: none;
     color: #64748b;
     font-size: 11px;
-    min-width: 26px;
-    max-width: 26px;
-    min-height: 24px;
-    max-height: 24px;
+    min-width: 28px;
+    max-width: 28px;
+    min-height: 26px;
+    max-height: 26px;
     border-radius: 4px;
-    margin-top: 4px;
+    margin: 0;
+    padding: 0;
 }
 QToolButton#WinBtnClose:hover {
     background: #ef4444;
     color: #ffffff;
 }
 
-/* ── 2. Unified Navigation Toolbar (40px) ──────────────────────────────── */
+/* ── 2. Unified Navigation Toolbar (42px) ──────────────────────────────── */
 QWidget#NavBar {
     background: #070b14;
-    min-height: 40px;
-    max-height: 40px;
-    padding: 0 8px;
+    min-height: 42px;
+    max-height: 42px;
 }
 
 QToolButton#NavBtn {
     background: transparent;
     border: none;
     border-radius: 6px;
-    padding: 4px;
+    padding: 0;
+    margin: 0;
     color: #94a3b8;
-    min-width: 28px;
-    min-height: 28px;
-    max-width: 28px;
-    max-height: 28px;
+    min-width: 30px;
+    min-height: 30px;
+    max-width: 30px;
+    max-height: 30px;
 }
 QToolButton#NavBtn:hover {
     background: rgba(56, 189, 248, 0.12);
@@ -215,10 +223,12 @@ QLineEdit#AddressBar {
     border: 1px solid rgba(56, 189, 248, 0.18);
     border-radius: 8px;
     color: #f1f5f9;
-    padding: 5px 12px;
-    font-size: 12px;
+    padding: 0 10px;
+    font-size: 13px;
     selection-background-color: #0284c7;
-    min-height: 26px;
+    min-height: 32px;
+    max-height: 32px;
+    height: 32px;
 }
 QLineEdit#AddressBar:hover {
     background: #0c1428;
@@ -238,9 +248,11 @@ QToolButton#ShieldBadgeBtn {
     color: #22c55e;
     font-size: 11px;
     font-weight: 600;
-    padding: 3px 8px;
-    min-height: 26px;
-    max-height: 26px;
+    padding: 0 10px;
+    min-height: 30px;
+    max-height: 30px;
+    height: 30px;
+    margin: 0;
 }
 QToolButton#ShieldBadgeBtn:hover {
     background: rgba(34, 197, 94, 0.2);
@@ -254,9 +266,11 @@ QToolButton#DevBadgeBtn {
     color: #38bdf8;
     font-size: 11px;
     font-weight: 600;
-    padding: 3px 6px;
-    min-height: 26px;
-    max-height: 26px;
+    padding: 0 10px;
+    min-height: 30px;
+    max-height: 30px;
+    height: 30px;
+    margin: 0;
 }
 QToolButton#DevBadgeBtn:hover {
     background: rgba(56, 189, 248, 0.18);
@@ -266,14 +280,16 @@ QToolButton#DevBadgeBtn:hover {
 QToolButton#AvatarBtn {
     background: qlineargradient(x1:0,y1:0,x2:1,y2:1, stop:0 #7c3aed, stop:1 #4f46e5);
     border: 1px solid rgba(192, 132, 252, 0.3);
-    border-radius: 13px;
+    border-radius: 14px;
     color: #ffffff;
     font-weight: 700;
     font-size: 11px;
-    min-width: 26px;
-    min-height: 26px;
-    max-width: 26px;
-    max-height: 26px;
+    min-width: 28px;
+    min-height: 28px;
+    max-width: 28px;
+    max-height: 28px;
+    margin: 0;
+    padding: 0;
 }
 QToolButton#AvatarBtn:hover {
     border-color: #a855f7;
@@ -578,58 +594,67 @@ void Browser::setupUi()
     auto *topBar = new QWidget(m_topChrome);
     m_topBar = topBar;
     topBar->setObjectName(QStringLiteral("TopBar"));
+    topBar->setFixedHeight(38);
     auto *topLayout = new QHBoxLayout(topBar);
-    topLayout->setContentsMargins(8, 2, 8, 0);
-    topLayout->setSpacing(4);
+    topLayout->setContentsMargins(10, 0, 8, 0);
+    topLayout->setSpacing(6);
+    topLayout->setAlignment(Qt::AlignVCenter);
 
     // Minimalist Titan Logo Icon
     auto *logoIcon = new QLabel(topBar);
     logoIcon->setObjectName(QStringLiteral("LogoIcon"));
-    logoIcon->setPixmap(QIcon(QStringLiteral(":/icons/logo.svg")).pixmap(16, 16));
+    logoIcon->setFixedSize(18, 18);
+    logoIcon->setPixmap(QIcon(QStringLiteral(":/icons/logo.svg")).pixmap(18, 18));
     logoIcon->setToolTip(QStringLiteral("Titan Browser — Fast · Private · Developer-focused"));
-    topLayout->addWidget(logoIcon);
+    topLayout->addWidget(logoIcon, 0, Qt::AlignVCenter);
 
     // Active Space / Workspace Pill
     m_spaceChip = new QLabel(QStringLiteral("DEV"), topBar);
     m_spaceChip->setObjectName(QStringLiteral("SpaceChip"));
+    m_spaceChip->setFixedHeight(22);
     m_spaceChip->setCursor(Qt::PointingHandCursor);
     m_spaceChip->setToolTip(QStringLiteral("Active Workspace: Development (Click to switch)"));
-    topLayout->addWidget(m_spaceChip);
+    topLayout->addWidget(m_spaceChip, 0, Qt::AlignVCenter);
 
     // The Visible Tab Bar Strip
-    topLayout->addWidget(m_tabs->tabBar());
+    m_tabs->tabBar()->setFixedHeight(32);
+    topLayout->addWidget(m_tabs->tabBar(), 0, Qt::AlignVCenter);
 
     // Add Tab (+) Button on Tab Strip
     auto *addTabTopBtn = new QToolButton(topBar);
     addTabTopBtn->setObjectName(QStringLiteral("AddTabButton"));
+    addTabTopBtn->setFixedSize(26, 26);
     addTabTopBtn->setIcon(QIcon(QStringLiteral(":/icons/plus.svg")));
     addTabTopBtn->setIconSize(QSize(12, 12));
     addTabTopBtn->setToolTip(QStringLiteral("New Tab (Ctrl+T)"));
     connect(addTabTopBtn, &QToolButton::clicked, this, [this]{ newTab(); });
-    topLayout->addWidget(addTabTopBtn);
+    topLayout->addWidget(addTabTopBtn, 0, Qt::AlignVCenter);
 
     topLayout->addStretch(1);
 
     // Window Controls (—, ☐, ✕) in top-right corner
     auto *minBtn = new QToolButton(topBar);
     minBtn->setObjectName(QStringLiteral("WinBtn"));
+    minBtn->setFixedSize(28, 26);
     minBtn->setText(QStringLiteral("—"));
     connect(minBtn, &QToolButton::clicked, this, &QWidget::showMinimized);
-    topLayout->addWidget(minBtn);
+    topLayout->addWidget(minBtn, 0, Qt::AlignVCenter);
 
     auto *maxBtn = new QToolButton(topBar);
     maxBtn->setObjectName(QStringLiteral("WinBtn"));
+    maxBtn->setFixedSize(28, 26);
     maxBtn->setText(QStringLiteral("☐"));
     connect(maxBtn, &QToolButton::clicked, this, [this]{
         if (isMaximized()) showNormal(); else showMaximized();
     });
-    topLayout->addWidget(maxBtn);
+    topLayout->addWidget(maxBtn, 0, Qt::AlignVCenter);
 
     auto *closeBtn = new QToolButton(topBar);
     closeBtn->setObjectName(QStringLiteral("WinBtnClose"));
+    closeBtn->setFixedSize(28, 26);
     closeBtn->setText(QStringLiteral("✕"));
     connect(closeBtn, &QToolButton::clicked, this, &QWidget::close);
-    topLayout->addWidget(closeBtn);
+    topLayout->addWidget(closeBtn, 0, Qt::AlignVCenter);
 
     topChromeLayout->addWidget(topBar);
 
@@ -637,118 +662,132 @@ void Browser::setupUi()
     auto *navBar = new QWidget(m_topChrome);
     m_navBar = navBar;
     navBar->setObjectName(QStringLiteral("NavBar"));
+    navBar->setFixedHeight(42);
     auto *navLayout = new QHBoxLayout(navBar);
-    navLayout->setContentsMargins(8, 0, 8, 4);
-    navLayout->setSpacing(5);
+    navLayout->setContentsMargins(10, 0, 10, 0);
+    navLayout->setSpacing(6);
+    navLayout->setAlignment(Qt::AlignVCenter);
 
     // Back
     m_backBtn = new QToolButton(navBar);
     m_backBtn->setObjectName(QStringLiteral("NavBtn"));
+    m_backBtn->setFixedSize(30, 30);
     m_backBtn->setIcon(QIcon(QStringLiteral(":/icons/back.svg")));
-    m_backBtn->setIconSize(QSize(14, 14));
+    m_backBtn->setIconSize(QSize(15, 15));
     m_backBtn->setToolTip(QStringLiteral("Back (Alt+Left)"));
     connect(m_backBtn, &QToolButton::clicked, this, &Browser::navigateBack);
-    navLayout->addWidget(m_backBtn);
+    navLayout->addWidget(m_backBtn, 0, Qt::AlignVCenter);
 
     // Forward
     m_fwdBtn = new QToolButton(navBar);
     m_fwdBtn->setObjectName(QStringLiteral("NavBtn"));
+    m_fwdBtn->setFixedSize(30, 30);
     m_fwdBtn->setIcon(QIcon(QStringLiteral(":/icons/forward.svg")));
-    m_fwdBtn->setIconSize(QSize(14, 14));
+    m_fwdBtn->setIconSize(QSize(15, 15));
     m_fwdBtn->setToolTip(QStringLiteral("Forward (Alt+Right)"));
     connect(m_fwdBtn, &QToolButton::clicked, this, &Browser::navigateForward);
-    navLayout->addWidget(m_fwdBtn);
+    navLayout->addWidget(m_fwdBtn, 0, Qt::AlignVCenter);
 
     // Reload / Stop Toggle
     m_reloadBtn = new QToolButton(navBar);
     m_reloadBtn->setObjectName(QStringLiteral("NavBtn"));
+    m_reloadBtn->setFixedSize(30, 30);
     m_reloadBtn->setIcon(QIcon(QStringLiteral(":/icons/reload.svg")));
-    m_reloadBtn->setIconSize(QSize(14, 14));
+    m_reloadBtn->setIconSize(QSize(15, 15));
     m_reloadBtn->setToolTip(QStringLiteral("Reload (Ctrl+R)"));
     connect(m_reloadBtn, &QToolButton::clicked, this, &Browser::reloadOrStop);
-    navLayout->addWidget(m_reloadBtn);
+    navLayout->addWidget(m_reloadBtn, 0, Qt::AlignVCenter);
 
     // Omnibox
     m_addressBar = new AddressBar(navBar);
     m_addressBar->setObjectName(QStringLiteral("AddressBar"));
-    navLayout->addWidget(m_addressBar, 1);
+    m_addressBar->setFixedHeight(32);
+    navLayout->addWidget(m_addressBar, 1, Qt::AlignVCenter);
     connect(m_addressBar, &AddressBar::urlEntered, this, &Browser::loadUrl);
     connect(m_addressBar, &AddressBar::bookmarkClicked, this, &Browser::onBookmarkClicked);
 
     // Developer Tools Button
     m_devToolsBtn = new QToolButton(navBar);
     m_devToolsBtn->setObjectName(QStringLiteral("DevBadgeBtn"));
+    m_devToolsBtn->setFixedHeight(30);
     m_devToolsBtn->setIcon(QIcon(QStringLiteral(":/icons/code.svg")));
-    m_devToolsBtn->setIconSize(QSize(13, 13));
+    m_devToolsBtn->setIconSize(QSize(14, 14));
     m_devToolsBtn->setText(QStringLiteral(" DevTools"));
     m_devToolsBtn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     m_devToolsBtn->setToolTip(QStringLiteral("Developer Tools (F12 / Ctrl+Shift+I)"));
     connect(m_devToolsBtn, &QToolButton::clicked, this, &Browser::onDevToolsClicked);
-    navLayout->addWidget(m_devToolsBtn);
+    navLayout->addWidget(m_devToolsBtn, 0, Qt::AlignVCenter);
 
     // Command Palette Trigger Button
     m_commandPaletteBtn = new QToolButton(navBar);
     m_commandPaletteBtn->setObjectName(QStringLiteral("NavBtn"));
+    m_commandPaletteBtn->setFixedSize(30, 30);
     m_commandPaletteBtn->setIcon(QIcon(QStringLiteral(":/icons/terminal.svg")));
-    m_commandPaletteBtn->setIconSize(QSize(14, 14));
+    m_commandPaletteBtn->setIconSize(QSize(15, 15));
     m_commandPaletteBtn->setToolTip(QStringLiteral("Command Palette (Ctrl+K)"));
     connect(m_commandPaletteBtn, &QToolButton::clicked, this, &Browser::onCommandPaletteClicked);
-    navLayout->addWidget(m_commandPaletteBtn);
+    navLayout->addWidget(m_commandPaletteBtn, 0, Qt::AlignVCenter);
 
     // TitanShield Status Badge Button
     m_shieldBadgeBtn = new QToolButton(navBar);
     m_shieldBadgeBtn->setObjectName(QStringLiteral("ShieldBadgeBtn"));
+    m_shieldBadgeBtn->setFixedHeight(30);
     m_shieldBadgeBtn->setIcon(QIcon(QStringLiteral(":/icons/shield.svg")));
-    m_shieldBadgeBtn->setIconSize(QSize(13, 13));
+    m_shieldBadgeBtn->setIconSize(QSize(14, 14));
     m_shieldBadgeBtn->setText(QStringLiteral(" Protected"));
     m_shieldBadgeBtn->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     m_shieldBadgeBtn->setToolTip(QStringLiteral("TitanShield Security & Ad Blocker"));
     connect(m_shieldBadgeBtn, &QToolButton::clicked, this, &Browser::onShieldClicked);
-    navLayout->addWidget(m_shieldBadgeBtn);
+    navLayout->addWidget(m_shieldBadgeBtn, 0, Qt::AlignVCenter);
 
     // Bookmarks Menu Button
     auto *bmBtn = new QToolButton(navBar);
     bmBtn->setObjectName(QStringLiteral("NavBtn"));
+    bmBtn->setFixedSize(30, 30);
     bmBtn->setIcon(QIcon(QStringLiteral(":/icons/star.svg")));
-    bmBtn->setIconSize(QSize(14, 14));
+    bmBtn->setIconSize(QSize(15, 15));
     bmBtn->setToolTip(QStringLiteral("Bookmarks (Ctrl+B)"));
     connect(bmBtn, &QToolButton::clicked, this, &Browser::onBookmarksClicked);
-    navLayout->addWidget(bmBtn);
+    navLayout->addWidget(bmBtn, 0, Qt::AlignVCenter);
 
     // Downloads
     auto *dlBtn = new QToolButton(navBar);
     dlBtn->setObjectName(QStringLiteral("NavBtn"));
+    dlBtn->setFixedSize(30, 30);
     dlBtn->setIcon(QIcon(QStringLiteral(":/icons/download.svg")));
-    dlBtn->setIconSize(QSize(14, 14));
+    dlBtn->setIconSize(QSize(15, 15));
     dlBtn->setToolTip(QStringLiteral("Downloads (Ctrl+J)"));
     connect(dlBtn, &QToolButton::clicked, this, &Browser::onDownloadsClicked);
-    navLayout->addWidget(dlBtn);
+    navLayout->addWidget(dlBtn, 0, Qt::AlignVCenter);
 
     // Extensions
     m_extBtn = new QToolButton(navBar);
     m_extBtn->setObjectName(QStringLiteral("NavBtn"));
+    m_extBtn->setFixedSize(30, 30);
     m_extBtn->setIcon(QIcon(QStringLiteral(":/icons/extension.svg")));
-    m_extBtn->setIconSize(QSize(14, 14));
+    m_extBtn->setIconSize(QSize(15, 15));
     m_extBtn->setToolTip(QStringLiteral("Extensions"));
     connect(m_extBtn, &QToolButton::clicked, this, &Browser::onExtensionsClicked);
-    navLayout->addWidget(m_extBtn);
+    navLayout->addWidget(m_extBtn, 0, Qt::AlignVCenter);
 
     // Settings
     auto *settBtn = new QToolButton(navBar);
     settBtn->setObjectName(QStringLiteral("NavBtn"));
+    settBtn->setFixedSize(30, 30);
     settBtn->setIcon(QIcon(QStringLiteral(":/icons/settings.svg")));
-    settBtn->setIconSize(QSize(14, 14));
+    settBtn->setIconSize(QSize(15, 15));
     settBtn->setToolTip(QStringLiteral("Settings (Ctrl+,)"));
     connect(settBtn, &QToolButton::clicked, this, &Browser::onSettingsClicked);
-    navLayout->addWidget(settBtn);
+    navLayout->addWidget(settBtn, 0, Qt::AlignVCenter);
 
     // Profile Avatar
     m_avatarBtn = new QToolButton(navBar);
     m_avatarBtn->setObjectName(QStringLiteral("AvatarBtn"));
+    m_avatarBtn->setFixedSize(28, 28);
     m_avatarBtn->setToolTip(QStringLiteral("User Profiles"));
     connect(m_avatarBtn, &QToolButton::clicked, this, &Browser::onProfileClicked);
     updateProfileAvatar();
-    navLayout->addWidget(m_avatarBtn);
+    navLayout->addWidget(m_avatarBtn, 0, Qt::AlignVCenter);
 
     topChromeLayout->addWidget(navBar);
 
