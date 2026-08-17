@@ -36,5 +36,7 @@
     <file>icons/star-filled.svg</file>
     <file>icons/volume.svg</file>
     <file>icons/volume-mute.svg</file>
+    <file>icons/code.svg</file>
+    <file>icons/terminal.svg</file>
   </qresource>
 </RCC>
