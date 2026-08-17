@@ -775,6 +775,7 @@ void Browser::setupUi()
     mainVLayout->addWidget(bodyWidget, 1);
 
     // Start with native chrome hidden for titan://home
+    m_topBar->hide();
     m_navBar->hide();
     m_railWidget->hide();
 
@@ -782,10 +783,20 @@ void Browser::setupUi()
     setupToastWidget();
 
     // Connect TabWidget signals
-    connect(m_tabs, &TabWidget::urlChanged,    this, &Browser::onUrlChanged);
-    connect(m_tabs, &TabWidget::titleChanged,  this, &Browser::onTitleChanged);
-    connect(m_tabs, &TabWidget::loadProgress,  this, &Browser::onLoadProgress);
-    connect(m_tabs, &TabWidget::loadFinished,  this, &Browser::onLoadFinished);
+    connect(m_tabs, &TabWidget::urlChanged,       this, &Browser::onUrlChanged);
+    connect(m_tabs, &TabWidget::titleChanged,     this, &Browser::onTitleChanged);
+    connect(m_tabs, &TabWidget::loadProgress,     this, &Browser::onLoadProgress);
+    connect(m_tabs, &TabWidget::loadFinished,     this, &Browser::onLoadFinished);
+    connect(m_tabs, &TabWidget::tabCountChanged,  this, [this](int count) {
+        bool isHome = currentView() && (
+            currentView()->url().isEmpty()
+            || currentView()->url().toString() == QStringLiteral("about:blank")
+            || currentView()->url().toString().contains(QStringLiteral("homepage.html"), Qt::CaseInsensitive)
+            || currentView()->url().toString().startsWith(QStringLiteral("titan://home"), Qt::CaseInsensitive)
+            || currentView()->url().toString().startsWith(QStringLiteral("qrc:"), Qt::CaseInsensitive)
+        );
+        if (m_topBar) m_topBar->setVisible(!isHome || count > 1);
+    });
 
     // Keyboard Shortcuts
     new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_T), this, [this]{ newTab(); });
@@ -1746,7 +1757,8 @@ void Browser::onUrlChanged(const QUrl &url)
                || urlStr.startsWith(QStringLiteral("titan://home"), Qt::CaseInsensitive)
                || urlStr.startsWith(QStringLiteral("qrc:"), Qt::CaseInsensitive);
 
-    if (m_topBar) m_topBar->setVisible(true); // Tab strip always visible so users can switch tabs visually at all times
+    bool showTopBar = (!isHome) || (m_tabs && m_tabs->count() > 1);
+    if (m_topBar) m_topBar->setVisible(showTopBar);
     if (m_navBar) m_navBar->setVisible(!isHome);
     if (m_railWidget) m_railWidget->setVisible(!isHome);
 
