@@ -13,9 +13,12 @@
    and Peter Lowe's blocklist. Covers ads, trackers, telemetry, and malware.
    ─────────────────────────────────────────────────────────────────────── */
 static const char * const kBuiltinDomains[] = {
-    /* ── YouTube Ad & Telemetry Endpoints ─────────────────────────────── */
+    /* ── YouTube & YouTube Music Ad & Telemetry Endpoints ──────────────── */
     "googleads.g.doubleclick.net", "pagead2.googleadservices.com",
     "ad.youtube.com", "ads.youtube.com",
+    "static.doubleclick.net",           /* YT in-stream ad status scripts */
+    "imasdk.googleapis.com",            /* YouTube IMA SDK — serves all video ads */
+
 
     /* ── Spotify Ad & Telemetry Endpoints ──────────────────────────────────── */
     /* NOTE: these MUST be pure hostnames — no paths allowed here */
@@ -183,17 +186,25 @@ static const char * const kBuiltinDomains[] = {
 
 /* URL-pattern rules (EasyList-compatible subset) */
 static const char * const kBuiltinUrlRules[] = {
-    /* ── YouTube In-Stream Ads & Tracking ───────────────────────────────── */
+    /* ── YouTube & YouTube Music In-Stream Ads & Tracking ───────────────── */
     "||youtube.com/api/stats/ads",
     "||youtube.com/pagead/",
     "||youtube.com/ptracking",
     "||youtube.com/youtubei/v1/player/ad_break",
+    "||youtube.com/youtubei/v1/player?*adformat*",
     "||youtube.com/get_midroll_info",
     "||youtube.com/api/stats/qoe?*adformat*",
     "||youtube.com/api/stats/atr",
     "||youtube.com/api/stats/watchtime?*adformat*",
+    "||youtube.com/api/stats/ads?",
+    "||googlevideo.com/videoplayback?*adt=*",    /* YTM audio ad streams */
     "||googleads.g.doubleclick.net/pagead/",
     "||static.doubleclick.net/instream/ad_status.js",
+    "||imasdk.googleapis.com/js/sdkloader/",    /* IMA SDK loader */
+    "||imasdk.googleapis.com/pal/",             /* IMA PAL (Programmatic Access Library) */
+    "||pagead2.googlesyndication.com/pagead/",
+    "||ad.doubleclick.net/",
+
 
     /* ── Spotify Ads & Tracking ─────────────────────────────────────────────── */
     "||spclient.wg.spotify.com/ads/",
