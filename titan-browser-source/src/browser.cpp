@@ -12,6 +12,8 @@
 #include <QApplication>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QScrollArea>
+#include <QMouseEvent>
 #include <QProgressBar>
 #include <QShortcut>
 #include <QKeySequence>
@@ -32,6 +34,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QGraphicsOpacityEffect>
+#include <functional>
 
 static const char *kHomeUrl     = "titan://home";
 static const char *kSettingsUrl = "titan://settings";
@@ -46,11 +49,15 @@ QMainWindow, QWidget#CentralContainer {
     font-size: 13px;
 }
 
-/* ── 1. Top Tab Strip ─────────────────────────────────────────────────── */
-/* ── 1. Top Tab Strip Bar (Sleek Frosted Glass Layout - 38px) ───────── */
+/* ── 1. Top Chrome Auto-Hide Container ──────────────────────────────────── */
+QWidget#TopChrome {
+    background: rgba(3, 7, 20, 0.94);
+    border-bottom: 1px solid rgba(56, 189, 248, 0.22);
+}
+
+/* ── Top Tab Strip Bar ── */
 QWidget#TopBar {
-    background: rgba(3, 6, 17, 0.75);
-    border-bottom: 1px solid rgba(56, 189, 248, 0.12);
+    background: transparent;
     min-height: 38px;
     max-height: 38px;
     padding: 0 8px;
@@ -63,7 +70,7 @@ QTabBar {
 }
 
 QTabBar::tab {
-    background: rgba(8, 18, 44, 0.6);
+    background: rgba(10, 20, 48, 0.6);
     border: 1px solid rgba(56, 189, 248, 0.16);
     border-radius: 8px;
     color: #94a3b8;
@@ -73,13 +80,13 @@ QTabBar::tab {
     margin-right: 4px;
     font-size: 12px;
     font-weight: 500;
-    min-width: 140px;
+    min-width: 130px;
     max-width: 220px;
     height: 24px;
 }
 
 QTabBar::tab:selected {
-    background: rgba(14, 32, 74, 0.85);
+    background: rgba(14, 34, 78, 0.9);
     border: 1px solid rgba(56, 189, 248, 0.55);
     color: #ffffff;
     font-weight: 600;
@@ -103,7 +110,7 @@ QTabBar::close-button:hover {
 }
 
 QToolButton#AddTabButton {
-    background: rgba(8, 18, 44, 0.6);
+    background: rgba(10, 20, 48, 0.6);
     border: 1px solid rgba(56, 189, 248, 0.22);
     border-radius: 12px;
     color: #94a3b8;
@@ -153,21 +160,13 @@ QToolButton#WinBtnClose:hover {
     background: #ef4444;
     color: #ffffff;
 }
-    max-height: 26px;
-    border-radius: 4px;
-}
-QToolButton#WinBtnClose:hover {
-    background: #ef4444;
-    color: #ffffff;
-}
 
-/* ── 2. Unified Navigation / Omnibox Header (38px) ────────────────────── */
+/* ── 2. Unified Navigation & Omnibox Bar ───────────────────────────────── */
 QWidget#NavBar {
-    background: #060914;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: transparent;
     min-height: 38px;
     max-height: 38px;
-    padding: 0 6px;
+    padding: 0 8px 4px 8px;
 }
 
 QToolButton#NavBtn {
@@ -182,11 +181,26 @@ QToolButton#NavBtn {
     max-height: 26px;
 }
 QToolButton#NavBtn:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(56, 189, 248, 0.15);
     color: #ffffff;
 }
 QToolButton#NavBtn:disabled {
-    color: rgba(148, 163, 184, 0.3);
+    color: rgba(148, 163, 184, 0.25);
+}
+
+/* Omnibox / Search Capsule */
+QLineEdit#AddressBar {
+    background: rgba(8, 18, 44, 0.7);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 8px;
+    color: #ffffff;
+    padding: 5px 12px;
+    font-size: 12px;
+    selection-background-color: #0284c7;
+}
+QLineEdit#AddressBar:focus {
+    background: rgba(14, 30, 72, 0.95);
+    border-color: #38bdf8;
 }
 
 QToolButton#ShieldBadgeBtn {
@@ -196,8 +210,8 @@ QToolButton#ShieldBadgeBtn {
     color: #22c55e;
     font-size: 11px;
     font-weight: 700;
-    padding: 4px 8px;
-    min-height: 22px;
+    padding: 3px 8px;
+    min-height: 24px;
 }
 QToolButton#ShieldBadgeBtn:hover {
     background: rgba(34, 197, 94, 0.22);
@@ -218,42 +232,35 @@ QToolButton#AvatarBtn {
 }
 QToolButton#AvatarBtn:hover {
     background: #6d28d9;
-    box-shadow: 0 0 8px rgba(124, 58, 237, 0.5);
 }
-
-/* ── 3. Compact Navigation Rail ───────────────────────────────────────── */
-QWidget#RailWidget {
-    background: #04060d;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
-    min-width: 46px;
-    max-width: 46px;
+QToolButton#ShieldBadgeBtn {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 6px;
+    color: #22c55e;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 6px;
+    min-height: 22px;
 }
-
-QToolButton.RailNavBtn {
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    padding: 7px;
-    margin: 2px 6px;
-    min-width: 32px;
-    min-height: 32px;
-    max-width: 32px;
-    max-height: 32px;
+QToolButton#ShieldBadgeBtn:hover {
+    background: rgba(34, 197, 94, 0.22);
+    border-color: #22c55e;
 }
-QToolButton.RailNavBtn:hover {
-    background: rgba(255, 255, 255, 0.08);
+QToolButton#AvatarBtn {
+    background: #7c3aed;
+    border: 1px solid rgba(192, 132, 252, 0.3);
+    border-radius: 13px;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 11px;
+    min-width: 26px;
+    min-height: 26px;
+    max-width: 26px;
+    max-height: 26px;
 }
-
-QToolButton.RailNavBtnActive {
-    background: rgba(56, 189, 248, 0.16);
-    border: 1px solid rgba(56, 189, 248, 0.4);
-    border-radius: 8px;
-    padding: 7px;
-    margin: 2px 6px;
-    min-width: 32px;
-    min-height: 32px;
-    max-width: 32px;
-    max-height: 32px;
+QToolButton#AvatarBtn:hover {
+    background: #6d28d9;
 }
 
 /* ── 4. Progress Bar & Floating Widgets ──────────────────────────────── */
@@ -532,7 +539,7 @@ Browser::Browser(AdBlocker *adBlocker, QWidget *parent)
     hudTimer->start();
 }
 
-/* ─── UI Setup ─────────────────────────────────────────────────────────── */
+/* ─── UI Setup (Pure Minimalist Auto-Hide Top Chrome) ──────────────────── */
 void Browser::setupUi()
 {
     auto *centralContainer = new QWidget(this);
@@ -544,18 +551,30 @@ void Browser::setupUi()
 
     m_tabs = new TabWidget(this);
 
-    // ── 1. Top Tab Strip Bar (Sleek Frosted Glass Layout - 38px) ─────────
-    auto *topBar = new QWidget(this);
+    // ── 1. Unified Top Chrome Container (Auto-Hides on Startpage) ──────────
+    m_topChrome = new QWidget(centralContainer);
+    m_topChrome->setObjectName(QStringLiteral("TopChrome"));
+    auto *topChromeLayout = new QVBoxLayout(m_topChrome);
+    topChromeLayout->setContentsMargins(0, 0, 0, 0);
+    topChromeLayout->setSpacing(0);
+
+    // ── Row 1: Sleek Tab Strip Bar ──
+    auto *topBar = new QWidget(m_topChrome);
     m_topBar = topBar;
     topBar->setObjectName(QStringLiteral("TopBar"));
     auto *topLayout = new QHBoxLayout(topBar);
     topLayout->setContentsMargins(8, 2, 8, 0);
     topLayout->setSpacing(4);
 
+    // Logo Icon
+    auto *logoIcon = new QLabel(topBar);
+    logoIcon->setPixmap(QIcon(QStringLiteral(":/icons/logo.svg")).pixmap(18, 18));
+    topLayout->addWidget(logoIcon);
+
     // The Visible Tab Bar Strip
     topLayout->addWidget(m_tabs->tabBar());
 
-    // Add Tab (+) Button on the Tab Strip
+    // Add Tab (+) Button on Tab Strip
     auto *addTabTopBtn = new QToolButton(topBar);
     addTabTopBtn->setObjectName(QStringLiteral("AddTabButton"));
     addTabTopBtn->setIcon(QIcon(QStringLiteral(":/icons/plus.svg")));
@@ -587,14 +606,14 @@ void Browser::setupUi()
     connect(closeBtn, &QToolButton::clicked, this, &QWidget::close);
     topLayout->addWidget(closeBtn);
 
-    mainVLayout->addWidget(topBar);
+    topChromeLayout->addWidget(topBar);
 
-    // ── 2. Unified Navigation / Omnibox Bar (38px) ───────────────────────
-    auto *navBar = new QWidget(this);
+    // ── Row 2: Unified Navigation & Omnibox Bar ──
+    auto *navBar = new QWidget(m_topChrome);
     m_navBar = navBar;
     navBar->setObjectName(QStringLiteral("NavBar"));
     auto *navLayout = new QHBoxLayout(navBar);
-    navLayout->setContentsMargins(8, 2, 8, 2);
+    navLayout->setContentsMargins(8, 0, 8, 4);
     navLayout->setSpacing(5);
 
     // Back
@@ -626,6 +645,7 @@ void Browser::setupUi()
 
     // Omnibox
     m_addressBar = new AddressBar(navBar);
+    m_addressBar->setObjectName(QStringLiteral("AddressBar"));
     navLayout->addWidget(m_addressBar, 1);
     connect(m_addressBar, &AddressBar::urlEntered, this, &Browser::loadUrl);
     connect(m_addressBar, &AddressBar::bookmarkClicked, this, &Browser::onBookmarkClicked);
@@ -649,15 +669,6 @@ void Browser::setupUi()
     connect(bmBtn, &QToolButton::clicked, this, &Browser::onBookmarksClicked);
     navLayout->addWidget(bmBtn);
 
-    // Extensions
-    auto *extBtn = new QToolButton(navBar);
-    extBtn->setObjectName(QStringLiteral("NavBtn"));
-    extBtn->setIcon(QIcon(QStringLiteral(":/icons/cube.svg")));
-    extBtn->setIconSize(QSize(15, 15));
-    extBtn->setToolTip(QStringLiteral("Extensions"));
-    connect(extBtn, &QToolButton::clicked, this, &Browser::onExtensionsClicked);
-    navLayout->addWidget(extBtn);
-
     // Downloads
     auto *dlBtn = new QToolButton(navBar);
     dlBtn->setObjectName(QStringLiteral("NavBtn"));
@@ -674,137 +685,103 @@ void Browser::setupUi()
     updateProfileAvatar();
     navLayout->addWidget(m_avatarBtn);
 
-    mainVLayout->addWidget(navBar);
+    topChromeLayout->addWidget(navBar);
 
-    // ── 3. Find in Page Floating Bar ────────────────────────────────────
+    mainVLayout->addWidget(m_topChrome);
+
+    // ── 2. Find in Page Floating Bar ────────────────────────────────────
     setupFindBar(mainVLayout);
 
-    // ── 4. Progress Bar (2px line) ──────────────────────────────────────
+    // ── 3. Progress Bar (2px line) ──────────────────────────────────────
     m_progress = new QProgressBar(this);
     m_progress->setMaximumHeight(2);
     m_progress->setTextVisible(false);
     m_progress->hide();
     mainVLayout->addWidget(m_progress);
 
-    // ── 5. Main Body (Compact Rail + Web Content Stack) ──────────────────
-    auto *bodyWidget = new QWidget(this);
-    auto *bodyLayout = new QHBoxLayout(bodyWidget);
-    bodyLayout->setContentsMargins(0, 0, 0, 0);
-    bodyLayout->setSpacing(0);
-
-    // Compact Navigation Rail (46px)
-    auto *railWidget = new QWidget(bodyWidget);
-    m_railWidget = railWidget;
-    railWidget->setObjectName(QStringLiteral("RailWidget"));
-    auto *railLayout = new QVBoxLayout(railWidget);
-    railLayout->setContentsMargins(0, 8, 0, 8);
-    railLayout->setSpacing(4);
-
-    auto createRailBtn = [this, railWidget](const QString &iconPath, const QString &tooltip, QToolButton*& target) {
-        target = new QToolButton(railWidget);
-        target->setProperty("class", "RailNavBtn");
-        target->setIcon(QIcon(iconPath));
-        target->setIconSize(QSize(18, 18));
-        target->setToolTip(tooltip);
-        target->setCursor(Qt::PointingHandCursor);
-        return target;
-    };
-
-    // Rail Items
-    // 1. New Tab (+)
-    auto *railNewTabBtn = new QToolButton(railWidget);
-    railNewTabBtn->setProperty("class", "RailNavBtn");
-    railNewTabBtn->setIcon(QIcon(QStringLiteral(":/icons/plus.svg")));
-    railNewTabBtn->setIconSize(QSize(17, 17));
-    railNewTabBtn->setToolTip(QStringLiteral("New Tab (Ctrl+T)"));
-    railNewTabBtn->setCursor(Qt::PointingHandCursor);
-    connect(railNewTabBtn, &QToolButton::clicked, this, [this]{ newTab(); });
-    railLayout->addWidget(railNewTabBtn);
-
-    // 2. Home
-    createRailBtn(QStringLiteral(":/icons/home.svg"), QStringLiteral("Home (Alt+H)"), m_railHomeBtn);
-    m_railHomeBtn->setProperty("class", "RailNavBtnActive");
-    m_activeRailBtn = m_railHomeBtn;
-    connect(m_railHomeBtn, &QToolButton::clicked, this, &Browser::onHomeClicked);
-    railLayout->addWidget(m_railHomeBtn);
-
-    createRailBtn(QStringLiteral(":/icons/ai.svg"), QStringLiteral("Titan AI Assistant (⌘K)"), m_railAiBtn);
-    connect(m_railAiBtn, &QToolButton::clicked, this, &Browser::onAICoreClicked);
-    railLayout->addWidget(m_railAiBtn);
-
-    createRailBtn(QStringLiteral(":/icons/spaces.svg"), QStringLiteral("Spaces Workspace (Alt+S)"), m_railSpacesBtn);
-    connect(m_railSpacesBtn, &QToolButton::clicked, this, &Browser::onSpacesClicked);
-    railLayout->addWidget(m_railSpacesBtn);
-
-    createRailBtn(QStringLiteral(":/icons/star.svg"), QStringLiteral("Bookmarks (Ctrl+B)"), m_railBookmarksBtn);
-    connect(m_railBookmarksBtn, &QToolButton::clicked, this, &Browser::onBookmarksClicked);
-    railLayout->addWidget(m_railBookmarksBtn);
-
-    createRailBtn(QStringLiteral(":/icons/history.svg"), QStringLiteral("History (Ctrl+H)"), m_railHistoryBtn);
-    connect(m_railHistoryBtn, &QToolButton::clicked, this, &Browser::onHistoryClicked);
-    railLayout->addWidget(m_railHistoryBtn);
-
-    createRailBtn(QStringLiteral(":/icons/download.svg"), QStringLiteral("Downloads (Ctrl+J)"), m_railDlBtn);
-    connect(m_railDlBtn, &QToolButton::clicked, this, &Browser::onDownloadsClicked);
-    railLayout->addWidget(m_railDlBtn);
-
-    createRailBtn(QStringLiteral(":/icons/extension.svg"), QStringLiteral("Extensions"), m_railExtBtn);
-    connect(m_railExtBtn, &QToolButton::clicked, this, &Browser::onExtensionsClicked);
-    railLayout->addWidget(m_railExtBtn);
-
-    createRailBtn(QStringLiteral(":/icons/settings.svg"), QStringLiteral("Settings (Ctrl+,)"), m_railSettingsBtn);
-    connect(m_railSettingsBtn, &QToolButton::clicked, this, &Browser::onSettingsClicked);
-    railLayout->addWidget(m_railSettingsBtn);
-
-    railLayout->addStretch(1);
-
-    // Theme Toggle at bottom of rail
-    auto *moonBtn = new QToolButton(railWidget);
-    moonBtn->setProperty("class", "RailNavBtn");
-    moonBtn->setIcon(QIcon(QStringLiteral(":/icons/moon.svg")));
-    moonBtn->setIconSize(QSize(18, 18));
-    moonBtn->setToolTip(QStringLiteral("Toggle Theme"));
-    connect(moonBtn, &QToolButton::clicked, this, &Browser::onThemeToggleClicked);
-    railLayout->addWidget(moonBtn);
-
-    bodyLayout->addWidget(railWidget);
-
-    // Web Content Stack
-    bodyLayout->addWidget(m_tabs->contentStack(), 1);
-
-    mainVLayout->addWidget(bodyWidget, 1);
-
-    // Start with native chrome hidden for titan://home
-    m_topBar->hide();
-    m_navBar->hide();
-    m_railWidget->hide();
+    // ── 4. Web Content Stack (Full 100% Height) ─────────────────────────
+    mainVLayout->addWidget(m_tabs->contentStack(), 1);
 
     // Floating Toast Notification
     setupToastWidget();
+
+    // Enable mouse tracking for auto-hide hover reveal
+    centralContainer->setMouseTracking(true);
+    setMouseTracking(true);
+    m_topChrome->installEventFilter(this);
+    centralContainer->installEventFilter(this);
 
     // Connect TabWidget signals
     connect(m_tabs, &TabWidget::urlChanged,       this, &Browser::onUrlChanged);
     connect(m_tabs, &TabWidget::titleChanged,     this, &Browser::onTitleChanged);
     connect(m_tabs, &TabWidget::loadProgress,     this, &Browser::onLoadProgress);
     connect(m_tabs, &TabWidget::loadFinished,     this, &Browser::onLoadFinished);
-    connect(m_tabs, &TabWidget::tabCountChanged,  this, [this](int count) {
-        bool isHome = currentView() && (
-            currentView()->url().isEmpty()
-            || currentView()->url().toString() == QStringLiteral("about:blank")
-            || currentView()->url().toString().contains(QStringLiteral("homepage.html"), Qt::CaseInsensitive)
-            || currentView()->url().toString().startsWith(QStringLiteral("titan://home"), Qt::CaseInsensitive)
-            || currentView()->url().toString().startsWith(QStringLiteral("qrc:"), Qt::CaseInsensitive)
-        );
-        if (m_topBar) m_topBar->setVisible(!isHome || count > 1);
-    });
+    connect(m_tabs, &TabWidget::tabCountChanged,  this, [this](int) { updateChromeVisibility(); });
+    connect(m_tabs->tabBar(), &QTabBar::currentChanged, this, [this](int) { updateChromeVisibility(); });
+
+    // Initial visibility check
+    updateChromeVisibility();
 
     // Keyboard Shortcuts
     new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_T), this, [this]{ newTab(); });
     new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_W), this, [this]{ closeCurrentTab(); });
     new QShortcut(QKeySequence::Refresh, this, [this]{ reloadOrStop(); });
     new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_L), this, [this]{
+        if (m_topChrome) m_topChrome->show();
         m_addressBar->setFocus();
         m_addressBar->selectAll();
+    });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_K), this, [this]{ onAICoreClicked(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), this, [this]{ toggleFindInPage(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_B), this, [this]{ onBookmarksClicked(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_H), this, [this]{ onHistoryClicked(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_J), this, [this]{ onDownloadsClicked(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma), this, [this]{ onSettingsClicked(); });
+    new QShortcut(QKeySequence(Qt::ALT | Qt::Key_Left), this, [this]{ navigateBack(); });
+    new QShortcut(QKeySequence(Qt::ALT | Qt::Key_Right), this, [this]{ navigateForward(); });
+    new QShortcut(QKeySequence(Qt::ALT | Qt::Key_H), this, [this]{ onHomeClicked(); });
+    new QShortcut(QKeySequence(Qt::ALT | Qt::Key_S), this, [this]{ onSpacesClicked(); });
+
+    // Tab Switching Shortcuts (Ctrl+Tab, Ctrl+Shift+Tab, Ctrl+Shift+A, Ctrl+1..9)
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Tab), this, [this]{
+        if (m_tabs && m_tabs->count() > 1) {
+            m_tabs->setCurrentIndex((m_tabs->currentIndex() + 1) % m_tabs->count());
+        }
+    });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Backtab), this, [this]{
+        if (m_tabs && m_tabs->count() > 1) {
+            m_tabs->setCurrentIndex((m_tabs->currentIndex() - 1 + m_tabs->count()) % m_tabs->count());
+        }
+    });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_A), this, [this]{ onTabSearchClicked(); });
+    for (int i = 1; i <= 8; ++i) {
+        new QShortcut(QKeySequence(QStringLiteral("Ctrl+%1").arg(i)), this, [this, i]{
+            if (m_tabs && (i - 1) < m_tabs->count()) m_tabs->setCurrentIndex(i - 1);
+        });
+    }
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_9), this, [this]{
+        if (m_tabs && m_tabs->count() > 0) m_tabs->setCurrentIndex(m_tabs->count() - 1);
+    });
+
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Plus), this, [this]{ zoomIn(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Equal), this, [this]{ zoomIn(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Minus), this, [this]{ zoomOut(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_0), this, [this]{ zoomReset(); });
+
+    // Keyboard Shortcuts
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_T), this, [this]{ newTab(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_W), this, [this]{ closeCurrentTab(); });
+    new QShortcut(QKeySequence::Refresh, this, [this]{ reloadOrStop(); });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_L), this, [this]{
+        if (m_topChrome) m_topChrome->show();
+        m_addressBar->setFocus();
+        m_addressBar->selectAll();
+    });
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Backslash), this, [this]{
+        if (m_topChrome) m_topChrome->setVisible(!m_topChrome->isVisible());
+    });
+    new QShortcut(QKeySequence(Qt::Key_F11), this, [this]{
+        if (m_topChrome) m_topChrome->setVisible(!m_topChrome->isVisible());
     });
     new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_K), this, [this]{ onAICoreClicked(); });
     new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_F), this, [this]{ toggleFindInPage(); });
@@ -1175,6 +1152,43 @@ void Browser::onTabSearchClicked()
     connect(newTabAct, &QAction::triggered, this, [this] { newTab(); });
 
     menu->exec(QCursor::pos());
+}
+
+void Browser::updateChromeVisibility()
+{
+    if (!m_topChrome) return;
+
+    bool isHome = currentView() && (
+        currentView()->url().isEmpty()
+        || currentView()->url().toString() == QStringLiteral("about:blank")
+        || currentView()->url().toString().contains(QStringLiteral("homepage.html"), Qt::CaseInsensitive)
+        || currentView()->url().toString().startsWith(QStringLiteral("titan://home"), Qt::CaseInsensitive)
+        || currentView()->url().toString().startsWith(QStringLiteral("qrc:"), Qt::CaseInsensitive)
+    );
+
+    int tabCount = m_tabs ? m_tabs->count() : 1;
+
+    // Auto-hide top chrome ONLY when on a single home tab
+    if (isHome && tabCount <= 1) {
+        m_topChrome->hide();
+    } else {
+        m_topChrome->show();
+    }
+}
+
+bool Browser::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::MouseMove) {
+        auto *mouseEvent = static_cast<QMouseEvent *>(event);
+        if (mouseEvent->pos().y() <= 6 && m_topChrome && !m_topChrome->isVisible()) {
+            m_topChrome->show();
+        }
+    } else if (event->type() == QEvent::Leave) {
+        if (watched == m_topChrome) {
+            updateChromeVisibility();
+        }
+    }
+    return QMainWindow::eventFilter(watched, event);
 }
 
 /* ─── Rail & Chrome Actions ────────────────────────────────────────────── */
@@ -1757,11 +1771,6 @@ void Browser::onUrlChanged(const QUrl &url)
                || urlStr.startsWith(QStringLiteral("titan://home"), Qt::CaseInsensitive)
                || urlStr.startsWith(QStringLiteral("qrc:"), Qt::CaseInsensitive);
 
-    bool showTopBar = (!isHome) || (m_tabs && m_tabs->count() > 1);
-    if (m_topBar) m_topBar->setVisible(showTopBar);
-    if (m_navBar) m_navBar->setVisible(!isHome);
-    if (m_railWidget) m_railWidget->setVisible(!isHome);
-
     if (isHome) {
         m_addressBar->clear();
         m_addressBar->setBookmarked(false);
@@ -1778,6 +1787,7 @@ void Browser::onUrlChanged(const QUrl &url)
         }
     }
     updateNavigationButtons();
+    updateChromeVisibility();
 }
 
 void Browser::onLoadProgress(int progress)
@@ -1836,6 +1846,7 @@ void Browser::onTabChanged(int /*index*/)
         m_addressBar->setBookmarked(isBookmarked(v->url()));
         updateNavigationButtons();
     }
+    updateChromeVisibility();
 }
 
 QWebEngineView *Browser::currentView() const

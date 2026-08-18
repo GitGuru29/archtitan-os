@@ -60,6 +60,7 @@ private slots:
     void onTabChanged(int index);
     void onBookmarkClicked(const QUrl &url);
     void onTabSearchClicked();
+    void updateChromeVisibility();
 
     // Navigation rail & chrome flyouts
     void onHomeClicked();
@@ -87,6 +88,9 @@ private slots:
     void zoomOut();
     void zoomReset();
 
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
+
 private:
     void setupUi();
     void setupFindBar(QVBoxLayout *layout);
@@ -102,7 +106,9 @@ private:
     void savePersistentUserData();
     QWebEngineView *currentView() const;
 
-    // Main chrome layout containers
+    // Main top chrome container (auto-hides on startpage)
+    QWidget        *m_topChrome        = nullptr;
+    QWidget        *m_topHoverSensor   = nullptr;
     QWidget        *m_topBar           = nullptr;
     QWidget        *m_navBar           = nullptr;
     QWidget        *m_railWidget       = nullptr;
