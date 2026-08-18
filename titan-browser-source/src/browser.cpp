@@ -1397,7 +1397,7 @@ void Browser::onDownloadsClicked()
     auto *menu = new QMenu(this);
     auto *openFolderAct = menu->addAction(QStringLiteral("Open Downloads Folder"));
     connect(openFolderAct, &QAction::triggered, this, []{
-        QString path = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+        QString path = ProfileManager::instance().downloadPath();
         QDesktopServices::openUrl(QUrl::fromLocalFile(path));
     });
     menu->addSeparator();

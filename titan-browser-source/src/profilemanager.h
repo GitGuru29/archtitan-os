@@ -40,6 +40,9 @@ public:
     QWebEngineProfile *webEngineProfile(const QString &id);
     QWebEngineProfile *activeWebEngineProfile();
 
+    QString downloadPath() const;
+    void setDownloadPath(const QString &path);
+
     void setAdBlocker(AdBlocker *adBlocker);
 
 signals:
@@ -61,4 +64,5 @@ private:
     QMap<QString, QWebEngineProfile *>  m_engineProfiles;
     AdBlocker                          *m_adBlocker = nullptr;
     QString                             m_configDir;
+    QString                             m_downloadPath;
 };

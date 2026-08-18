@@ -11,6 +11,8 @@
 #include <QAction>
 #include <QCursor>
 #include <QDateTime>
+#include <QFileDialog>
+#include <QStandardPaths>
 
 class TitanWebPage : public QWebEnginePage
 {
@@ -68,9 +70,36 @@ QWidget *TabWidget::newTab(const QUrl &url)
     view->setPage(page);
 
     connect(page, &TitanWebPage::internalNavigationRequested, this, [this, view](const QUrl &reqUrl) {
+        QString reqStr = reqUrl.toString();
+        if (reqStr.startsWith(QStringLiteral("titan://action/change-download-dir"))) {
+            QString currentDir = ProfileManager::instance().downloadPath();
+            QString newDir = QFileDialog::getExistingDirectory(
+                view,
+                QStringLiteral("Select Download Directory"),
+                currentDir,
+                QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks
+            );
+            if (!newDir.isEmpty()) {
+                ProfileManager::instance().setDownloadPath(newDir);
+                QString escapedDir = newDir;
+                escapedDir.replace(QStringLiteral("\\"), QStringLiteral("\\\\")).replace(QStringLiteral("'"), QStringLiteral("\\'"));
+                view->page()->runJavaScript(QStringLiteral("if (window.updateDownloadDirLabel) window.updateDownloadDirLabel('%1');").arg(escapedDir));
+            }
+            return;
+        }
         int idx = m_stack->indexOf(view);
         if (idx >= 0) {
             loadInTab(idx, reqUrl);
+        }
+    });
+
+    // Populate saved settings when settings page finishes loading
+    connect(view, &QWebEngineView::loadFinished, this, [view](bool ok) {
+        if (ok && view->url().toString().contains(QStringLiteral("settings.html"))) {
+            QString currentDir = ProfileManager::instance().downloadPath();
+            QString escapedDir = currentDir;
+            escapedDir.replace(QStringLiteral("\\"), QStringLiteral("\\\\")).replace(QStringLiteral("'"), QStringLiteral("\\'"));
+            view->page()->runJavaScript(QStringLiteral("if (window.updateDownloadDirLabel) window.updateDownloadDirLabel('%1');").arg(escapedDir));
         }
     });
 
