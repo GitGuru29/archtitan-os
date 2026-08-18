@@ -127,7 +127,6 @@ private:
     QToolButton    *m_devToolsBtn      = nullptr;
     QToolButton    *m_commandPaletteBtn = nullptr;
     QToolButton    *m_extBtn           = nullptr;
-    QLabel         *m_spaceChip        = nullptr;
 
     // Compact Navigation Rail Buttons
     QToolButton    *m_railHomeBtn      = nullptr;

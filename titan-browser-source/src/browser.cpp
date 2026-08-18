@@ -78,18 +78,6 @@ QLabel#LogoIcon {
     padding: 0;
 }
 
-QLabel#SpaceChip {
-    background: rgba(56, 189, 248, 0.08);
-    border: 1px solid rgba(56, 189, 248, 0.22);
-    border-radius: 4px;
-    color: #38bdf8;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    padding: 2px 6px;
-    margin: 0;
-}
-
 QTabBar {
     background: transparent;
     border: none;
@@ -607,14 +595,6 @@ void Browser::setupUi()
     logoIcon->setPixmap(QIcon(QStringLiteral(":/icons/logo.svg")).pixmap(18, 18));
     logoIcon->setToolTip(QStringLiteral("Titan Browser — Fast · Private · Developer-focused"));
     topLayout->addWidget(logoIcon, 0, Qt::AlignVCenter);
-
-    // Active Space / Workspace Pill
-    m_spaceChip = new QLabel(QStringLiteral("DEV"), topBar);
-    m_spaceChip->setObjectName(QStringLiteral("SpaceChip"));
-    m_spaceChip->setFixedHeight(22);
-    m_spaceChip->setCursor(Qt::PointingHandCursor);
-    m_spaceChip->setToolTip(QStringLiteral("Active Workspace: Development (Click to switch)"));
-    topLayout->addWidget(m_spaceChip, 0, Qt::AlignVCenter);
 
     // The Visible Tab Bar Strip
     m_tabs->tabBar()->setFixedHeight(32);
