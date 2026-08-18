@@ -17,11 +17,19 @@ static const char * const kBuiltinDomains[] = {
     "googleads.g.doubleclick.net", "pagead2.googleadservices.com",
     "ad.youtube.com", "ads.youtube.com",
 
-    /* ── Spotify Ad & Telemetry Endpoints ──────────────────────────────── */
-    "spclient.wg.spotify.com/ads", "spclient.wg.spotify.com/ad-logic",
-    "spclient.wg.spotify.com/gabo-receiver-service", "audio-ak-spotify-com.akamaized.net/ad",
-    "audio-fa.scdn.co/ad", "heads-fa.spotify.com", "adeventtracker.spotify.com",
-    "ads-fa.spotify.com",
+    /* ── Spotify Ad & Telemetry Endpoints ──────────────────────────────────── */
+    /* NOTE: these MUST be pure hostnames — no paths allowed here */
+    "spclient.wg.spotify.com",        /* ad-logic, gabo telemetry */
+    "audio-fa.scdn.co",               /* legacy ad audio CDN */
+    "heads-fa.spotify.com",           /* ad-serving endpoint */
+    "adeventtracker.spotify.com",     /* ad event tracking */
+    "ads-fa.spotify.com",             /* ad delivery */
+    "audio-ak-spotify-com.akamaized.net", /* Akamai Spotify ad CDN */
+    "seektables.scdn.co",             /* seek data for ads */
+    "log.spotify.com",                /* ad event logs */
+    "encore.scdn.co",                 /* ad metadata */
+    "thisis.spotify.com",             /* Spotify ad promo */
+
 
     /* ── Google Advertising ────────────────────────────────────────────── */
     "doubleclick.net", "googleadservices.com", "googlesyndication.com",
@@ -187,15 +195,20 @@ static const char * const kBuiltinUrlRules[] = {
     "||googleads.g.doubleclick.net/pagead/",
     "||static.doubleclick.net/instream/ad_status.js",
 
-    /* ── Spotify Ads & Tracking ─────────────────────────────────────────── */
+    /* ── Spotify Ads & Tracking ─────────────────────────────────────────────── */
     "||spclient.wg.spotify.com/ads/",
     "||spclient.wg.spotify.com/ad-logic/",
     "||spclient.wg.spotify.com/gabo-receiver-service/",
-    "||audio-ak-spotify-com.akamaized.net/ad/",
+    "||spclient.wg.spotify.com/ad-event-tracking/",
     "||audio-fa.scdn.co/ad/",
+    "||audio-ak-spotify-com.akamaized.net/ad/",
+    "||audio4-ak.spotify.com/audio/",
     "||heads-fa.spotify.com/",
     "||adeventtracker.spotify.com/",
     "||ads-fa.spotify.com/",
+    "||audio-akp-*.scdn.co/audio/*/ads/",
+    "||log.spotify.com/",
+    "||seektables.scdn.co/",
 
     /* ── Web Ad Networks & Trackers ─────────────────────────────────────── */
     "||googlesyndication.com/pagead/",

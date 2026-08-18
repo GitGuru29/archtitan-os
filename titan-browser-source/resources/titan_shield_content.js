@@ -323,8 +323,60 @@
         }
     }
 
-    /* ─── 5. Spotify Web Player Auto-Skip & Audio Muter ───────────────────── */
-    let spotifyAdMuted = false;
+    /* ─── 5. Spotify Web Player — Robust Multi-Signal Ad Detector & Skipper ─── */
+    let spotifyAdMuted   = false;
+    let spotifySkipTimer = null;
+
+    function isSpotifyAdPlaying() {
+        /* Signal 1: aria-label="Advertisement" anywhere visible */
+        if (document.querySelector('[aria-label="Advertisement"]'))             return true;
+        if (document.querySelector('[aria-label="Advert"]'))                    return true;
+
+        /* Signal 2: testid-based ad indicators */
+        if (document.querySelector('[data-testid="ad-banner"]'))                return true;
+        if (document.querySelector('[data-testid="topbar-ad-slot"]'))           return true;
+        if (document.querySelector('[data-testid="ad-slot"]'))                  return true;
+        if (document.querySelector('[data-testid="now-playing-widget"] [data-testid="context-item-link"][href*="spotify:ad"]')) return true;
+
+        /* Signal 3: Nowplaying context text says "Advertisement" */
+        const npContext = document.querySelector('[data-testid="context-item-link"]');
+        if (npContext) {
+            const txt = (npContext.textContent || npContext.innerText || '').toLowerCase();
+            if (txt.includes('advertisement') || txt.includes('sponsored')) return true;
+        }
+
+        /* Signal 4: Entity title in now-playing contains "Ad" (Spotify encodes ads as tracks titled "Advertisement") */
+        const entityTitle = document.querySelector('[data-testid="now-playing-widget"] [data-testid="track-info-name"]');
+        if (entityTitle) {
+            const t = (entityTitle.textContent || '').toLowerCase();
+            if (t === 'advertisement' || t === 'ad' || t === 'sponsored') return true;
+        }
+
+        /* Signal 5: Footer ad placeholder visible */
+        if (document.querySelector('.Root__ad-banner:not([style*="display: none"])')) return true;
+        if (document.querySelector('div[class*="AdBanner"]'))                          return true;
+        if (document.querySelector('div[class*="sponsored"]'))                         return true;
+
+        /* Signal 6: Audio element src points to known ad CDN */
+        const audios = document.querySelectorAll('audio');
+        for (const a of audios) {
+            const src = a.src || a.currentSrc || '';
+            if (src.includes('audio-fa.scdn.co/ad') ||
+                src.includes('heads-fa.spotify.com') ||
+                src.includes('ads-fa.spotify.com') ||
+                src.includes('/ad/audio') ||
+                src.includes('adeventtracker')) {
+                return true;
+            }
+            /* Short audio with scdn CDN = likely ad (music tracks are > 60s) */
+            if (Number.isFinite(a.duration) && a.duration > 0 && a.duration < 45 &&
+                (src.includes('scdn.co') || src.includes('akamaized.net'))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     function purgeSpotifyAds() {
         const host = window.location.hostname || '';
@@ -332,32 +384,46 @@
 
         ensureCosmeticStyles();
 
-        const mediaElements = Array.from(document.querySelectorAll('audio, video'));
-        const nowPlaying = document.querySelector('[data-testid="now-playing-widget"]');
-        const trackText = nowPlaying ? (nowPlaying.innerText || '').toLowerCase() : '';
+        const adActive = isSpotifyAdPlaying();
+        const media    = Array.from(document.querySelectorAll('audio, video'));
 
-        const isAd = trackText.includes('advertisement') ||
-            document.querySelector('[aria-label="Advertisement"]') !== null ||
-            document.querySelector('[data-testid="ad-banner"]') !== null;
-
-        for (const media of mediaElements) {
-            if (isAd || (media.duration < 35 && media.src.includes('audio-fa.scdn.co'))) {
+        if (adActive) {
+            for (const m of media) {
+                /* Mute and fast-forward through the ad */
                 if (!spotifyAdMuted) {
-                    media.muted = true;
+                    m.volume = 0;
+                    m.muted  = true;
                     spotifyAdMuted = true;
                 }
-                media.playbackRate = 16.0;
-                if (Number.isFinite(media.duration) && media.duration > 0) {
-                    media.currentTime = media.duration;
+                m.playbackRate = 16.0;
+                if (Number.isFinite(m.duration) && m.duration > 0) {
+                    m.currentTime = m.duration - 0.1;
                 }
+            }
 
-                const skipBtn = document.querySelector('[data-testid="control-button-skip-forward"]');
-                if (skipBtn && !skipBtn.disabled && typeof skipBtn.click === 'function') {
-                    skipBtn.click();
-                }
-            } else if (!isAd && spotifyAdMuted) {
-                media.muted = false;
-                media.playbackRate = 1.0;
+            /* Click the native skip/next button if available and not disabled */
+            const skipBtn = document.querySelector('[data-testid="control-button-skip-forward"]') ||
+                            document.querySelector('[aria-label="Next"]') ||
+                            document.querySelector('button[title="Next"]');
+            if (skipBtn && !skipBtn.disabled && !skipBtn.hasAttribute('disabled')) {
+                try { skipBtn.click(); } catch (e) {}
+            }
+
+            /* Schedule a follow-up skip in 300ms to ensure it fires after the fast-forward */
+            if (!spotifySkipTimer) {
+                spotifySkipTimer = setTimeout(() => {
+                    spotifySkipTimer = null;
+                    const btn = document.querySelector('[data-testid="control-button-skip-forward"]') ||
+                                document.querySelector('[aria-label="Next"]');
+                    if (btn && !btn.disabled) { try { btn.click(); } catch (e) {} }
+                }, 300);
+            }
+        } else if (!adActive && spotifyAdMuted) {
+            /* Restore normal playback once ad has ended */
+            for (const m of media) {
+                m.muted        = false;
+                m.volume       = 1.0;
+                m.playbackRate = 1.0;
                 spotifyAdMuted = false;
             }
         }
