@@ -229,15 +229,18 @@
         .sidebar::-webkit-scrollbar {
             width: 6px;
         }
+
         .main-container::-webkit-scrollbar-track,
         .sidebar::-webkit-scrollbar-track {
             background: transparent;
         }
+
         .main-container::-webkit-scrollbar-thumb,
         .sidebar::-webkit-scrollbar-thumb {
             background: rgba(56, 189, 248, 0.2);
             border-radius: 10px;
         }
+
         .main-container::-webkit-scrollbar-thumb:hover,
         .sidebar::-webkit-scrollbar-thumb:hover {
             background: var(--cyan);
@@ -259,6 +262,7 @@
                 opacity: 0;
                 transform: translateY(6px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -778,7 +782,8 @@
     <aside class="sidebar">
         <div class="sidebar-brand">
             <div class="brand-logo-wrap">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2"
+                    stroke-linecap="round" stroke-linejoin="round">
                     <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
                     <polyline points="2 17 12 22 22 17"></polyline>
                     <polyline points="2 12 12 17 22 12"></polyline>
@@ -794,7 +799,9 @@
         <div class="nav-item active" onclick="switchPage('general', this)">
             <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="3"></circle>
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                </path>
             </svg>
             General
         </div>
@@ -811,7 +818,9 @@
                 <circle cx="17.5" cy="10.5" r=".5"></circle>
                 <circle cx="8.5" cy="7.5" r=".5"></circle>
                 <circle cx="6.5" cy="12.5" r=".5"></circle>
-                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"></path>
+                <path
+                    d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z">
+                </path>
             </svg>
             Appearance & Theme
         </div>
@@ -879,7 +888,8 @@
                     <p class="page-sub">Configure startup behavior, downloads, and default workspace environment</p>
                 </div>
                 <button class="return-btn" onclick="window.location.href='titan://home'">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     </svg>
                     Return to Workspace
@@ -895,7 +905,8 @@
                             <div class="setting-desc">Choose what opens when Titan Browser launches</div>
                         </div>
                         <div class="setting-control">
-                            <select class="setting-select" id="startupSelect" onchange="saveSetting('startup', this.value)">
+                            <select class="setting-select" id="startupSelect"
+                                onchange="saveSetting('startup', this.value)">
                                 <option value="newtab">Open Titan Workspace (Cinematic Dashboard)</option>
                                 <option value="restore">Restore previous session tabs</option>
                                 <option value="custom">Open custom URL</option>
@@ -905,10 +916,12 @@
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Restore closed tabs on crash</div>
-                            <div class="setting-desc">Automatically recover active tabs and pinned workspaces if window closes unexpectedly</div>
+                            <div class="setting-desc">Automatically recover active tabs and pinned workspaces if window
+                                closes unexpectedly</div>
                         </div>
                         <div class="setting-control">
-                            <div class="toggle on" id="toggle-crash-restore" onclick="toggleSwitch(this, 'crash_restore')"></div>
+                            <div class="toggle on" id="toggle-crash-restore"
+                                onclick="toggleSwitch(this, 'crash_restore')"></div>
                         </div>
                     </div>
                 </div>
@@ -920,16 +933,20 @@
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Download location</div>
-                            <div class="setting-desc">Files will be verified by TitanShield and saved to ~/Downloads</div>
+                            <div class="setting-desc" id="dlPathDesc">Files will be verified by TitanShield and saved to
+                                ~/Downloads</div>
                         </div>
                         <div class="setting-control">
-                            <button class="btn-action" onclick="alert('Download directory: ~/Downloads')">Change Folder</button>
+                            <button class="btn-action"
+                                onclick="window.location.href='titan://action/change-download-dir'">Change
+                                Folder</button>
                         </div>
                     </div>
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Ask where to save each file before downloading</div>
-                            <div class="setting-desc">Show native file picker dialog for each incoming download request</div>
+                            <div class="setting-desc">Show native file picker dialog for each incoming download request
+                            </div>
                         </div>
                         <div class="setting-control">
                             <div class="toggle" id="toggle-ask-dl" onclick="toggleSwitch(this, 'ask_download')"></div>
@@ -948,7 +965,8 @@
                     <p class="page-sub">Manage isolated browser profiles, cookies, and multi-login Google sessions</p>
                 </div>
                 <button class="return-btn" onclick="window.location.href='titan://home'">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     </svg>
                     Return to Workspace
@@ -960,20 +978,28 @@
                 <div class="google-banner-left">
                     <div class="google-g-logo">
                         <svg width="24" height="24" viewBox="0 0 24 24">
-                            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/>
-                            <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
-                            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
+                            <path fill="#4285F4"
+                                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" />
+                            <path fill="#34A853"
+                                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z" />
+                            <path fill="#FBBC05"
+                                d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z" />
+                            <path fill="#EA4335"
+                                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z" />
                         </svg>
                     </div>
                     <div>
                         <div class="google-banner-title">Google Account Multi-Login System</div>
-                        <div class="google-banner-desc">Every Titan profile operates with separate disk storage and cookie vaults. Stay logged into your Personal Gmail and Work Google Workspace simultaneously without session conflicts.</div>
+                        <div class="google-banner-desc">Every Titan profile operates with separate disk storage and
+                            cookie vaults. Stay logged into your Personal Gmail and Work Google Workspace simultaneously
+                            without session conflicts.</div>
                     </div>
                 </div>
                 <div style="display: flex; gap: 10px; flex-shrink: 0;">
-                    <button class="btn-action" onclick="window.location.href='https://accounts.google.com'">🔑 Sign in to Google</button>
-                    <button class="return-btn" onclick="window.location.href='https://myaccount.google.com'">Manage Account</button>
+                    <button class="btn-action" onclick="window.location.href='https://accounts.google.com'">🔑 Sign in
+                        to Google</button>
+                    <button class="return-btn" onclick="window.location.href='https://myaccount.google.com'">Manage
+                        Account</button>
                 </div>
             </div>
 
@@ -1006,7 +1032,8 @@
                         </div>
                         <div class="profile-card-footer">
                             <span class="profile-stat">Profile ID: profile_work</span>
-                            <button class="btn-action" style="padding: 3px 10px; font-size: 11px;" onclick="alert('Use the top-right Avatar icon in the window header to switch active profile instantly.')">Switch</button>
+                            <button class="btn-action" style="padding: 3px 10px; font-size: 11px;"
+                                onclick="alert('Use the top-right Avatar icon in the window header to switch active profile instantly.')">Switch</button>
                         </div>
                     </div>
                 </div>
@@ -1018,19 +1045,23 @@
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Strict Cookie & Storage Isolation</div>
-                            <div class="setting-desc">Prevent web trackers and authentication tokens from crossing profile boundaries</div>
+                            <div class="setting-desc">Prevent web trackers and authentication tokens from crossing
+                                profile boundaries</div>
                         </div>
                         <div class="setting-control">
-                            <div class="toggle on" id="toggle-prof-iso" onclick="toggleSwitch(this, 'profile_isolation')"></div>
+                            <div class="toggle on" id="toggle-prof-iso"
+                                onclick="toggleSwitch(this, 'profile_isolation')"></div>
                         </div>
                     </div>
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Separate Bookmarks per Profile</div>
-                            <div class="setting-desc">Maintain dedicated bookmark rows and launchpads for each profile</div>
+                            <div class="setting-desc">Maintain dedicated bookmark rows and launchpads for each profile
+                            </div>
                         </div>
                         <div class="setting-control">
-                            <div class="toggle on" id="toggle-prof-bm" onclick="toggleSwitch(this, 'profile_bookmarks')"></div>
+                            <div class="toggle on" id="toggle-prof-bm"
+                                onclick="toggleSwitch(this, 'profile_bookmarks')"></div>
                         </div>
                     </div>
                 </div>
@@ -1046,7 +1077,8 @@
                     <p class="page-sub">Customize themes, glassmorphism blur, accent colors, and UI density</p>
                 </div>
                 <button class="return-btn" onclick="window.location.href='titan://home'">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     </svg>
                     Return to Workspace
@@ -1083,7 +1115,8 @@
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Frosted Glass Blur (Backdrop Filter)</div>
-                            <div class="setting-desc">Enable GPU-accelerated backdrop blur across sidebar, cards, and omnibox</div>
+                            <div class="setting-desc">Enable GPU-accelerated backdrop blur across sidebar, cards, and
+                                omnibox</div>
                         </div>
                         <div class="setting-control">
                             <div class="toggle on" id="toggle-glass" onclick="toggleSwitch(this, 'glass_blur')"></div>
@@ -1092,7 +1125,8 @@
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Hardware Telemetry HUD in New Tab</div>
-                            <div class="setting-desc">Display real-time CPU, RAM, and Network gauges on the startpage</div>
+                            <div class="setting-desc">Display real-time CPU, RAM, and Network gauges on the startpage
+                            </div>
                         </div>
                         <div class="setting-control">
                             <div class="toggle on" id="toggle-hud" onclick="toggleSwitch(this, 'hud_telemetry')"></div>
@@ -1111,7 +1145,8 @@
                     <p class="page-sub">Configure default omnibox queries and intelligent search suggestions</p>
                 </div>
                 <button class="return-btn" onclick="window.location.href='titan://home'">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     </svg>
                     Return to Workspace
@@ -1124,10 +1159,12 @@
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Search engine used in address bar</div>
-                            <div class="setting-desc">Omnibox queries without protocol prefixes will be routed here</div>
+                            <div class="setting-desc">Omnibox queries without protocol prefixes will be routed here
+                            </div>
                         </div>
                         <div class="setting-control">
-                            <select class="setting-select" id="searchSelect" onchange="saveSetting('search_engine', this.value)">
+                            <select class="setting-select" id="searchSelect"
+                                onchange="saveSetting('search_engine', this.value)">
                                 <option value="google">Google Search (Default)</option>
                                 <option value="duckduckgo">DuckDuckGo (Privacy Focus)</option>
                                 <option value="brave">Brave Search</option>
@@ -1139,10 +1176,12 @@
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Search and URL suggestions</div>
-                            <div class="setting-desc">Display real-time keyword suggestions as you type in the omnibox</div>
+                            <div class="setting-desc">Display real-time keyword suggestions as you type in the omnibox
+                            </div>
                         </div>
                         <div class="setting-control">
-                            <div class="toggle on" id="toggle-search-sugg" onclick="toggleSwitch(this, 'search_suggestions')"></div>
+                            <div class="toggle on" id="toggle-search-sugg"
+                                onclick="toggleSwitch(this, 'search_suggestions')"></div>
                         </div>
                     </div>
                 </div>
@@ -1158,7 +1197,8 @@
                     <p class="page-sub">Native ad blocking, tracker defense, malware protection, and privacy vaults</p>
                 </div>
                 <button class="return-btn" onclick="window.location.href='titan://home'">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     </svg>
                     Return to Workspace
@@ -1171,16 +1211,19 @@
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">TitanShield Native Ad & Tracker Blocker</div>
-                            <div class="setting-desc">Zero-overhead request interception filtering ad networks, popups, and tracking beacons</div>
+                            <div class="setting-desc">Zero-overhead request interception filtering ad networks, popups,
+                                and tracking beacons</div>
                         </div>
                         <div class="setting-control">
-                            <div class="toggle on" id="toggle-adblock" onclick="toggleSwitch(this, 'adblock_active')"></div>
+                            <div class="toggle on" id="toggle-adblock" onclick="toggleSwitch(this, 'adblock_active')">
+                            </div>
                         </div>
                     </div>
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">YouTube & Media Video Ad Skip</div>
-                            <div class="setting-desc">Instant video ad acceleration and overlay dismissal for streaming sites</div>
+                            <div class="setting-desc">Instant video ad acceleration and overlay dismissal for streaming
+                                sites</div>
                         </div>
                         <div class="setting-control">
                             <div class="toggle on" id="toggle-yt-skip" onclick="toggleSwitch(this, 'yt_ad_skip')"></div>
@@ -1189,10 +1232,12 @@
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Fingerprint Protection & Canvas Poisoning</div>
-                            <div class="setting-desc">Inject subtle noise to prevent web scripts from tracking hardware hashes</div>
+                            <div class="setting-desc">Inject subtle noise to prevent web scripts from tracking hardware
+                                hashes</div>
                         </div>
                         <div class="setting-control">
-                            <div class="toggle on" id="toggle-fingerprint" onclick="toggleSwitch(this, 'fingerprint_protect')"></div>
+                            <div class="toggle on" id="toggle-fingerprint"
+                                onclick="toggleSwitch(this, 'fingerprint_protect')"></div>
                         </div>
                     </div>
                 </div>
@@ -1204,7 +1249,8 @@
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Purge Cached Files & Session History</div>
-                            <div class="setting-desc">Erase local HTTP cache, browsing records, and offline storage for the active profile</div>
+                            <div class="setting-desc">Erase local HTTP cache, browsing records, and offline storage for
+                                the active profile</div>
                         </div>
                         <div class="setting-control">
                             <button class="btn-danger" onclick="clearBrowsingData()">Purge Browsing Data</button>
@@ -1223,7 +1269,8 @@
                     <p class="page-sub">Tune GPU rasterization, memory saving tab suspension, and disk cache</p>
                 </div>
                 <button class="return-btn" onclick="window.location.href='titan://home'">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     </svg>
                     Return to Workspace
@@ -1236,19 +1283,23 @@
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Automatic Inactive Tab Suspension</div>
-                            <div class="setting-desc">Reclaim RAM by sleeping tabs inactive for more than 15 minutes</div>
+                            <div class="setting-desc">Reclaim RAM by sleeping tabs inactive for more than 15 minutes
+                            </div>
                         </div>
                         <div class="setting-control">
-                            <div class="toggle on" id="toggle-memsaver" onclick="toggleSwitch(this, 'memory_saver')"></div>
+                            <div class="toggle on" id="toggle-memsaver" onclick="toggleSwitch(this, 'memory_saver')">
+                            </div>
                         </div>
                     </div>
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Smooth Scrolling Acceleration</div>
-                            <div class="setting-desc">Enable fluid subpixel interpolation when scrolling long webpages</div>
+                            <div class="setting-desc">Enable fluid subpixel interpolation when scrolling long webpages
+                            </div>
                         </div>
                         <div class="setting-control">
-                            <div class="toggle on" id="toggle-smooth-scroll" onclick="toggleSwitch(this, 'smooth_scrolling')"></div>
+                            <div class="toggle on" id="toggle-smooth-scroll"
+                                onclick="toggleSwitch(this, 'smooth_scrolling')"></div>
                         </div>
                     </div>
                 </div>
@@ -1264,7 +1315,8 @@
                     <p class="page-sub">Configure in-browser AI model, context windows, and code explanations</p>
                 </div>
                 <button class="return-btn" onclick="window.location.href='titan://home'">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     </svg>
                     Return to Workspace
@@ -1277,7 +1329,8 @@
                     <div class="setting-row">
                         <div class="setting-info">
                             <div class="setting-label">Active Model Provider</div>
-                            <div class="setting-desc">Choose between local quantized models or cloud reasoning engines</div>
+                            <div class="setting-desc">Choose between local quantized models or cloud reasoning engines
+                            </div>
                         </div>
                         <div class="setting-control">
                             <select class="setting-select" id="aiSelect" onchange="saveSetting('ai_model', this.value)">
@@ -1301,7 +1354,8 @@
                     <p class="page-sub">Power-user keyboard shortcuts for blazing fast browser navigation</p>
                 </div>
                 <button class="return-btn" onclick="window.location.href='titan://home'">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     </svg>
                     Return to Workspace
@@ -1317,20 +1371,62 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td>New Tab</td><td><span class="shortcut-key">Ctrl + T</span></td></tr>
-                        <tr><td>Close Current Tab</td><td><span class="shortcut-key">Ctrl + W</span></td></tr>
-                        <tr><td>Focus Address Bar (Omnibox)</td><td><span class="shortcut-key">Ctrl + L</span></td></tr>
-                        <tr><td>Open Titan AI Assistant</td><td><span class="shortcut-key">Ctrl + K</span></td></tr>
-                        <tr><td>Find in Page</td><td><span class="shortcut-key">Ctrl + F</span></td></tr>
-                        <tr><td>Bookmarks Manager</td><td><span class="shortcut-key">Ctrl + B</span></td></tr>
-                        <tr><td>Browsing History</td><td><span class="shortcut-key">Ctrl + H</span></td></tr>
-                        <tr><td>Downloads</td><td><span class="shortcut-key">Ctrl + J</span></td></tr>
-                        <tr><td>Settings</td><td><span class="shortcut-key">Ctrl + ,</span></td></tr>
-                        <tr><td>Navigate Back</td><td><span class="shortcut-key">Alt + Left</span></td></tr>
-                        <tr><td>Navigate Forward</td><td><span class="shortcut-key">Alt + Right</span></td></tr>
-                        <tr><td>Go to Home (Titan Workspace)</td><td><span class="shortcut-key">Alt + H</span></td></tr>
-                        <tr><td>Spaces Workspace Switcher</td><td><span class="shortcut-key">Alt + S</span></td></tr>
-                        <tr><td>Zoom In / Out / Reset</td><td><span class="shortcut-key">Ctrl + + / - / 0</span></td></tr>
+                        <tr>
+                            <td>New Tab</td>
+                            <td><span class="shortcut-key">Ctrl + T</span></td>
+                        </tr>
+                        <tr>
+                            <td>Close Current Tab</td>
+                            <td><span class="shortcut-key">Ctrl + W</span></td>
+                        </tr>
+                        <tr>
+                            <td>Focus Address Bar (Omnibox)</td>
+                            <td><span class="shortcut-key">Ctrl + L</span></td>
+                        </tr>
+                        <tr>
+                            <td>Open Titan AI Assistant</td>
+                            <td><span class="shortcut-key">Ctrl + K</span></td>
+                        </tr>
+                        <tr>
+                            <td>Find in Page</td>
+                            <td><span class="shortcut-key">Ctrl + F</span></td>
+                        </tr>
+                        <tr>
+                            <td>Bookmarks Manager</td>
+                            <td><span class="shortcut-key">Ctrl + B</span></td>
+                        </tr>
+                        <tr>
+                            <td>Browsing History</td>
+                            <td><span class="shortcut-key">Ctrl + H</span></td>
+                        </tr>
+                        <tr>
+                            <td>Downloads</td>
+                            <td><span class="shortcut-key">Ctrl + J</span></td>
+                        </tr>
+                        <tr>
+                            <td>Settings</td>
+                            <td><span class="shortcut-key">Ctrl + ,</span></td>
+                        </tr>
+                        <tr>
+                            <td>Navigate Back</td>
+                            <td><span class="shortcut-key">Alt + Left</span></td>
+                        </tr>
+                        <tr>
+                            <td>Navigate Forward</td>
+                            <td><span class="shortcut-key">Alt + Right</span></td>
+                        </tr>
+                        <tr>
+                            <td>Go to Home (Titan Workspace)</td>
+                            <td><span class="shortcut-key">Alt + H</span></td>
+                        </tr>
+                        <tr>
+                            <td>Spaces Workspace Switcher</td>
+                            <td><span class="shortcut-key">Alt + S</span></td>
+                        </tr>
+                        <tr>
+                            <td>Zoom In / Out / Reset</td>
+                            <td><span class="shortcut-key">Ctrl + + / - / 0</span></td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -1345,7 +1441,8 @@
                     <p class="page-sub">Engine runtime, architecture, and security specs</p>
                 </div>
                 <button class="return-btn" onclick="window.location.href='titan://home'">
-                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                     </svg>
                     Return to Workspace
@@ -1362,7 +1459,8 @@
                 <div class="setting-row">
                     <div class="setting-info">
                         <div class="setting-label">Engine Framework</div>
-                        <div class="setting-desc">Qt 6.7 WebEngine (Chromium Backend) with hardware accelerated compositor</div>
+                        <div class="setting-desc">Qt 6.7 WebEngine (Chromium Backend) with hardware accelerated
+                            compositor</div>
                     </div>
                 </div>
                 <div class="setting-row">
@@ -1374,7 +1472,8 @@
                 <div class="setting-row">
                     <div class="setting-info">
                         <div class="setting-label">Security & Telemetry</div>
-                        <div class="setting-desc">Zero external cloud telemetry. 100% private local storage vaults.</div>
+                        <div class="setting-desc">Zero external cloud telemetry. 100% private local storage vaults.
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1420,6 +1519,13 @@
                 alert('Active profile browsing data purged successfully.');
             }
         }
+
+        window.updateDownloadDirLabel = function (newPath) {
+            const el = document.getElementById('dlPathDesc');
+            if (el && newPath) {
+                el.textContent = 'Files will be verified by TitanShield and saved to ' + newPath;
+            }
+        };
 
         // Initialize saved settings
         window.addEventListener('DOMContentLoaded', () => {

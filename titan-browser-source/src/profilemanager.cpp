@@ -212,9 +212,35 @@ QWebEngineProfile *ProfileManager::activeWebEngineProfile()
     return webEngineProfile(m_activeProfileId);
 }
 
+QString ProfileManager::downloadPath() const
+{
+    if (m_downloadPath.isEmpty()) {
+        return QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    }
+    return m_downloadPath;
+}
+
+void ProfileManager::setDownloadPath(const QString &path)
+{
+    if (path.isEmpty()) return;
+    m_downloadPath = path;
+    saveToDisk();
+
+    for (auto *ep : m_engineProfiles.values()) {
+        if (ep) {
+            ep->setDownloadPath(m_downloadPath);
+        }
+    }
+    if (QWebEngineProfile::defaultProfile()) {
+        QWebEngineProfile::defaultProfile()->setDownloadPath(m_downloadPath);
+    }
+}
+
 void ProfileManager::setupWebEngineProfile(QWebEngineProfile *profile, const QString &profileId)
 {
     if (!profile) return;
+
+    profile->setDownloadPath(downloadPath());
 
     QString storagePath = m_configDir + QStringLiteral("/profiles/") + profileId + QStringLiteral("/storage");
     QString cachePath   = m_configDir + QStringLiteral("/profiles/") + profileId + QStringLiteral("/cache");
@@ -277,6 +303,10 @@ void ProfileManager::loadFromDisk()
 
     QJsonObject root = doc.object();
     m_activeProfileId = root.value(QStringLiteral("activeProfileId")).toString();
+    m_downloadPath = root.value(QStringLiteral("downloadPath")).toString();
+    if (m_downloadPath.isEmpty()) {
+        m_downloadPath = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    }
 
     QJsonArray array = root.value(QStringLiteral("profiles")).toArray();
     for (const auto &val : array) {
@@ -301,6 +331,7 @@ void ProfileManager::saveToDisk()
 {
     QJsonObject root;
     root.insert(QStringLiteral("activeProfileId"), m_activeProfileId);
+    root.insert(QStringLiteral("downloadPath"), m_downloadPath);
 
     QJsonArray array;
     for (const auto &p : m_profiles) {

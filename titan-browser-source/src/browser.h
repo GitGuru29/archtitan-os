@@ -73,6 +73,8 @@ private slots:
     void onSettingsClicked();
     void onShieldClicked();
     void onProfileClicked();
+    void onDevToolsClicked();
+    void onCommandPaletteClicked();
     void onMenuClicked();
     void onThemeToggleClicked();
 
@@ -117,11 +119,14 @@ private:
     AddressBar     *m_addressBar       = nullptr;
     QProgressBar   *m_progress         = nullptr;
 
-    // Navigation buttons
+    // Navigation & action buttons
     QToolButton    *m_backBtn          = nullptr;
     QToolButton    *m_fwdBtn           = nullptr;
     QToolButton    *m_reloadBtn        = nullptr;
     QToolButton    *m_avatarBtn        = nullptr;
+    QToolButton    *m_devToolsBtn      = nullptr;
+    QToolButton    *m_commandPaletteBtn = nullptr;
+    QToolButton    *m_extBtn           = nullptr;
 
     // Compact Navigation Rail Buttons
     QToolButton    *m_railHomeBtn      = nullptr;
