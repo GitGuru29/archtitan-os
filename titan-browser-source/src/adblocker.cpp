@@ -457,6 +457,27 @@ void AdBlocker::interceptRequest(QWebEngineUrlRequestInfo &info)
         scheme == QStringLiteral("file"))
         return;
 
+    // ── YouTube / YouTube Music bypass ────────────────────────────────────
+    // YouTube's video player breaks when ad-related domains are hard-blocked
+    // at the network level (player hangs waiting for responses that never come).
+    // The TitanShield content script handles YouTube ads via mute + fast-forward
+    // + skip, so we skip ALL network blocking on YouTube first-party pages.
+    const QString fpHost = firstParty.host().toLower();
+    if (fpHost.endsWith(QStringLiteral("youtube.com")) ||
+        fpHost.endsWith(QStringLiteral("youtu.be")) ||
+        fpHost.endsWith(QStringLiteral("googlevideo.com")))
+    {
+        // Only block requests to dedicated ad-only domains (never YouTube's own infra)
+        const QString reqHost = url.host().toLower();
+        if (reqHost == QStringLiteral("ad.youtube.com") ||
+            reqHost == QStringLiteral("ads.youtube.com"))
+        {
+            info.block(true);
+            m_blocked.fetchAndAddRelaxed(1);
+        }
+        return; // Let everything else through — content script handles it
+    }
+
     // Check exception rules first
     const QString urlStr = url.toString();
     for (const FilterRule &ex : m_exceptionRules) {
