@@ -195,7 +195,15 @@
         .ad-placeholder,
         div[class*="AdBanner"],
         div[class*="sponsored"],
-        div[data-testid="topbar-ad-slot"] {
+        div[data-testid="topbar-ad-slot"],
+
+        /* ── YouTube Music Ad Elements ── */
+        ytmusic-mealbar-promo-renderer,
+        ytmusic-notification-action-renderer,
+        .ytmusic-player-bar ytmusic-mealbar-promo-renderer,
+        ytmusic-shelf-renderer[class*="promo"],
+        ytmusic-carousel-shelf-basic-header-renderer[class*="ad"],
+        paper-toast[class*="promo"] {
             display: none !important;
             opacity: 0 !important;
             pointer-events: none !important;
@@ -223,108 +231,265 @@
         document.addEventListener('DOMContentLoaded', ensureCosmeticStyles);
     }
 
-    /* ─── 4. Bulletproof YouTube Video Ad Fast-Forwarder & Auto-Skipper ────── */
-    let ytAdMuted = false;
+    /* ─── 4. YouTube & YouTube Music — Comprehensive Ad Destroyer ─────────── */
+    let ytAdMuted    = false;
+    let ytSkipTimer  = null;
 
-    function purgeYouTubeAds() {
-        const host = window.location.hostname || '';
-        if (!host.includes('youtube.com')) return;
-
-        ensureCosmeticStyles();
-
-        // A. Anti-Adblock Modal Auto-Dismissal
-        const modal = document.querySelector('ytd-enforcement-message-view-model, tp-yt-paper-dialog.ytd-popup-container');
-        if (modal) {
-            const popup = modal.closest('.ytd-popup-container') || modal;
-            popup.remove();
-            document.querySelectorAll('tp-yt-iron-overlay-backdrop').forEach(el => el.remove());
-            document.body.style.overflow = 'auto';
-            const vid = document.querySelector('video.html5-main-video') || document.querySelector('video');
-            if (vid && vid.paused) {
-                vid.play();
-            }
+    /* --- 4a. Anti-Adblock & Modal Dismissal --------------------------------- */
+    function dismissYTModals() {
+        /* Classic enforcement popup (the "Turn off your ad blocker" wall) */
+        const enforceSelectors = [
+            'ytd-enforcement-message-view-model',
+            'yt-confirm-dialog-renderer',
+            'ytd-popup-container ytd-dialog-renderer',
+            'tp-yt-paper-dialog.ytd-popup-container',
+            '#yt-confirm-dialog',
+        ];
+        for (const sel of enforceSelectors) {
+            document.querySelectorAll(sel).forEach(el => {
+                const popup = el.closest('.ytd-popup-container') ||
+                              el.closest('tp-yt-paper-dialog')   || el;
+                try { popup.remove(); } catch (e) {}
+            });
         }
+        /* Remove overlay backdrops and restore scroll */
+        document.querySelectorAll(
+            'tp-yt-iron-overlay-backdrop, ytd-popup-container .ytd-popup-container'
+        ).forEach(el => { try { el.remove(); } catch (e) {} });
+        if (document.body) document.body.style.overflow = 'auto';
 
-        // B. In-Stream Video Ad Detection
-        const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
-        const video = document.querySelector('video.html5-main-video') || document.querySelector('video');
+        /* "Skip trial" / "Get Premium" overlays on YTM */
+        document.querySelectorAll(
+            'ytmusic-mealbar-promo-renderer, ytmusic-notification-action-renderer'
+        ).forEach(el => { try { el.remove(); } catch (e) {} });
 
-        const hasAdClass = player && (
+        /* Resume video if it was paused by the modal */
+        const vid = document.querySelector('video.html5-main-video') || document.querySelector('video');
+        if (vid && vid.paused && !ytAdMuted) {
+            try { vid.play(); } catch (e) {}
+        }
+    }
+
+    /* --- 4b. Is an in-stream ad currently active? --------------------------- */
+    function isYTAdActive() {
+        const player = document.getElementById('movie_player') ||
+                       document.querySelector('.html5-video-player');
+
+        /* Signal 1: Player class flags (most reliable) */
+        if (player && (
             player.classList.contains('ad-showing') ||
             player.classList.contains('ad-interrupting')
-        );
+        )) return true;
 
-        const hasAdOverlay = document.querySelector('.ytp-ad-player-overlay') !== null ||
-            document.querySelector('.ytp-ad-player-overlay-layout') !== null ||
-            document.querySelector('.ytp-ad-text') !== null ||
-            document.querySelector('.ytp-ad-preview-text') !== null ||
-            document.querySelector('.ytp-skip-ad-button') !== null ||
-            document.querySelector('.ytp-ad-skip-button-modern') !== null ||
-            document.querySelector('.video-ads.ytp-ad-module')?.childElementCount > 0;
+        /* Signal 2: Ad overlay / progress bar elements present */
+        const adOverlaySelectors = [
+            '.ytp-ad-player-overlay',
+            '.ytp-ad-player-overlay-layout',
+            '.ytp-ad-text',
+            '.ytp-ad-preview-text',
+            '.ytp-ad-preview-container',
+            '.ytp-ad-progress',
+            '.ytp-ad-progress-list',
+            '.ytp-skip-ad-button',
+            '.ytp-ad-skip-button-modern',
+            '.ytp-ad-skip-button',
+            '.ytp-ad-message-container',
+            '.ytp-ad-overlay-container',
+        ];
+        for (const sel of adOverlaySelectors) {
+            if (document.querySelector(sel)) return true;
+        }
 
-        const isAdActive = hasAdClass || hasAdOverlay;
+        /* Signal 3: video-ads container has children */
+        const adModule = document.querySelector('.video-ads.ytp-ad-module');
+        if (adModule && adModule.childElementCount > 0) return true;
 
-        if (isAdActive) {
-            // 1. Mute ad immediately so no sound leaks
+        /* Signal 4: getAdvertisementUiElement — internal player API */
+        try {
+            if (player && typeof player.getAdvertisementUiElement === 'function') {
+                const el = player.getAdvertisementUiElement();
+                if (el) return true;
+            }
+        } catch (e) {}
+
+        return false;
+    }
+
+    /* --- 4c. YouTube Music audio ad detection ------------------------------- */
+    function isYTMusicAdActive() {
+        const host = window.location.hostname || '';
+        if (!host.includes('music.youtube.com')) return false;
+
+        /* Signal 1: YTM ad banner or interstitial */
+        if (document.querySelector('ytmusic-mealbar-promo-renderer')) return true;
+
+        /* Signal 2: Current playing item has ad type indicator */
+        const nowPlaying = document.querySelector('ytmusic-player-bar');
+        if (nowPlaying) {
+            const txt = (nowPlaying.textContent || '').toLowerCase();
+            if (txt.includes('advertisement') || txt.includes('ad ·')) return true;
+        }
+
+        /* Signal 3: audio src from ad CDN */
+        const audios = document.querySelectorAll('audio');
+        for (const a of audios) {
+            const src = a.src || a.currentSrc || '';
+            if (src.includes('googlevideo.com') && src.includes('adt=')) return true;
+            if (src.includes('ad.youtube.com')) return true;
+        }
+
+        /* Signal 4: player bar shows "Ad" badge */
+        if (document.querySelector('[aria-label="Skip ad"]')) return true;
+        if (document.querySelector('.ytmusic-player-bar [class*="ad"]')) return true;
+
+        return false;
+    }
+
+    /* --- 4d. Main YouTube + YouTube Music purge function -------------------- */
+    function purgeYouTubeAds() {
+        const host = window.location.hostname || '';
+        const isYT  = host.includes('youtube.com') && !host.includes('music.youtube.com');
+        const isYTM = host.includes('music.youtube.com');
+        if (!isYT && !isYTM) return;
+
+        ensureCosmeticStyles();
+        dismissYTModals();
+
+        const video  = document.querySelector('video.html5-main-video') || document.querySelector('video');
+        const player = document.getElementById('movie_player') || document.querySelector('.html5-video-player');
+        const adActive = isYT ? isYTAdActive() : (isYTAdActive() || isYTMusicAdActive());
+
+        if (adActive) {
+            /* Step 1: Mute immediately — no audio leak */
             if (video && !ytAdMuted) {
-                video.muted = true;
-                ytAdMuted = true;
+                video.volume = 0;
+                video.muted  = true;
+                ytAdMuted    = true;
             }
 
-            // 2. Fast forward video past ad
+            /* Step 2: Speed through the ad video at 16x */
             if (video) {
                 video.playbackRate = 16.0;
                 if (Number.isFinite(video.duration) && video.duration > 0) {
-                    video.currentTime = video.duration + 1.0;
+                    video.currentTime = video.duration - 0.01;
                 }
             }
 
-            // 3. Native YouTube player API skip
-            if (player && typeof player.skipAd === 'function') {
-                try { player.skipAd(); } catch (e) { }
+            /* Step 3: Native player.skipAd() API (fastest path) */
+            if (player) {
+                if (typeof player.skipAd === 'function') {
+                    try { player.skipAd(); } catch (e) {}
+                }
+                /* YTM variant */
+                if (typeof player.nextVideo === 'function') {
+                    try { player.nextVideo(); } catch (e) {}
+                }
             }
 
-            // 4. Force Click all Skip Button variations with realistic MouseEvents
+            /* Step 4: Click every known skip / close button variant */
             const skipSelectors = [
                 '.ytp-skip-ad-button',
                 '.ytp-ad-skip-button-modern',
                 'button.ytp-skip-ad-button',
                 'button.ytp-ad-skip-button-modern',
                 '.ytp-ad-skip-button',
-                'button[id^="skip-button:"]',
                 '.ytp-ad-skip-button-slot button',
-                'button.ytp-ad-skip-button-container',
+                'button[id^="skip-button:"]',
                 '.ytp-ad-overlay-close-button',
                 '.ytp-ad-survey button',
-                'button[id^="visit-advertiser"]',
                 'div.ytp-ad-player-overlay-skip-or-preview button',
                 '[class*="ytp-ad-skip"]',
-                '[class*="ytp-skip-ad"]'
+                '[class*="ytp-skip-ad"]',
+                /* YouTube Music */
+                '[aria-label="Skip ad"]',
+                'ytmusic-mealbar-promo-renderer button',
+                '.ytmusic-mealbar-promo-renderer .dismiss-button',
             ];
-
-            for (const selector of skipSelectors) {
-                const buttons = document.querySelectorAll(selector);
-                buttons.forEach(btn => {
-                    if (btn) {
-                        try {
-                            btn.click();
-                            ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach(evt => {
-                                btn.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true, view: window }));
-                            });
-                        } catch (e) { }
-                    }
+            for (const sel of skipSelectors) {
+                document.querySelectorAll(sel).forEach(btn => {
+                    if (!btn) return;
+                    try {
+                        ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(evt =>
+                            btn.dispatchEvent(new MouseEvent(evt, { bubbles: true, cancelable: true, view: window }))
+                        );
+                        btn.click();
+                    } catch (e) {}
                 });
             }
-        } else if (!isAdActive && ytAdMuted && video) {
-            // Restore clean video playback
-            video.muted = false;
+
+            /* Step 5: Schedule a follow-up skip to catch delayed skip button appearance */
+            if (!ytSkipTimer) {
+                ytSkipTimer = setTimeout(() => {
+                    ytSkipTimer = null;
+                    document.querySelectorAll(
+                        '.ytp-skip-ad-button, .ytp-ad-skip-button-modern, [aria-label="Skip ad"]'
+                    ).forEach(btn => { try { btn.click(); } catch (e) {} });
+                }, 500);
+            }
+
+        } else if (!adActive && ytAdMuted && video) {
+            /* Restore clean playback after ad ends */
+            video.muted        = false;
+            video.volume       = 1.0;
             video.playbackRate = 1.0;
             ytAdMuted = false;
         }
     }
 
-    /* ─── 5. Spotify Web Player Auto-Skip & Audio Muter ───────────────────── */
-    let spotifyAdMuted = false;
+    /* ─── 5. Spotify Web Player — Robust Multi-Signal Ad Detector & Skipper ─── */
+    let spotifyAdMuted   = false;
+    let spotifySkipTimer = null;
+
+    function isSpotifyAdPlaying() {
+        /* Signal 1: aria-label="Advertisement" anywhere visible */
+        if (document.querySelector('[aria-label="Advertisement"]'))             return true;
+        if (document.querySelector('[aria-label="Advert"]'))                    return true;
+
+        /* Signal 2: testid-based ad indicators */
+        if (document.querySelector('[data-testid="ad-banner"]'))                return true;
+        if (document.querySelector('[data-testid="topbar-ad-slot"]'))           return true;
+        if (document.querySelector('[data-testid="ad-slot"]'))                  return true;
+        if (document.querySelector('[data-testid="now-playing-widget"] [data-testid="context-item-link"][href*="spotify:ad"]')) return true;
+
+        /* Signal 3: Nowplaying context text says "Advertisement" */
+        const npContext = document.querySelector('[data-testid="context-item-link"]');
+        if (npContext) {
+            const txt = (npContext.textContent || npContext.innerText || '').toLowerCase();
+            if (txt.includes('advertisement') || txt.includes('sponsored')) return true;
+        }
+
+        /* Signal 4: Entity title in now-playing contains "Ad" (Spotify encodes ads as tracks titled "Advertisement") */
+        const entityTitle = document.querySelector('[data-testid="now-playing-widget"] [data-testid="track-info-name"]');
+        if (entityTitle) {
+            const t = (entityTitle.textContent || '').toLowerCase();
+            if (t === 'advertisement' || t === 'ad' || t === 'sponsored') return true;
+        }
+
+        /* Signal 5: Footer ad placeholder visible */
+        if (document.querySelector('.Root__ad-banner:not([style*="display: none"])')) return true;
+        if (document.querySelector('div[class*="AdBanner"]'))                          return true;
+        if (document.querySelector('div[class*="sponsored"]'))                         return true;
+
+        /* Signal 6: Audio element src points to known ad CDN */
+        const audios = document.querySelectorAll('audio');
+        for (const a of audios) {
+            const src = a.src || a.currentSrc || '';
+            if (src.includes('audio-fa.scdn.co/ad') ||
+                src.includes('heads-fa.spotify.com') ||
+                src.includes('ads-fa.spotify.com') ||
+                src.includes('/ad/audio') ||
+                src.includes('adeventtracker')) {
+                return true;
+            }
+            /* Short audio with scdn CDN = likely ad (music tracks are > 60s) */
+            if (Number.isFinite(a.duration) && a.duration > 0 && a.duration < 45 &&
+                (src.includes('scdn.co') || src.includes('akamaized.net'))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     function purgeSpotifyAds() {
         const host = window.location.hostname || '';
@@ -332,32 +497,46 @@
 
         ensureCosmeticStyles();
 
-        const mediaElements = Array.from(document.querySelectorAll('audio, video'));
-        const nowPlaying = document.querySelector('[data-testid="now-playing-widget"]');
-        const trackText = nowPlaying ? (nowPlaying.innerText || '').toLowerCase() : '';
+        const adActive = isSpotifyAdPlaying();
+        const media    = Array.from(document.querySelectorAll('audio, video'));
 
-        const isAd = trackText.includes('advertisement') ||
-            document.querySelector('[aria-label="Advertisement"]') !== null ||
-            document.querySelector('[data-testid="ad-banner"]') !== null;
-
-        for (const media of mediaElements) {
-            if (isAd || (media.duration < 35 && media.src.includes('audio-fa.scdn.co'))) {
+        if (adActive) {
+            for (const m of media) {
+                /* Mute and fast-forward through the ad */
                 if (!spotifyAdMuted) {
-                    media.muted = true;
+                    m.volume = 0;
+                    m.muted  = true;
                     spotifyAdMuted = true;
                 }
-                media.playbackRate = 16.0;
-                if (Number.isFinite(media.duration) && media.duration > 0) {
-                    media.currentTime = media.duration;
+                m.playbackRate = 16.0;
+                if (Number.isFinite(m.duration) && m.duration > 0) {
+                    m.currentTime = m.duration - 0.1;
                 }
+            }
 
-                const skipBtn = document.querySelector('[data-testid="control-button-skip-forward"]');
-                if (skipBtn && !skipBtn.disabled && typeof skipBtn.click === 'function') {
-                    skipBtn.click();
-                }
-            } else if (!isAd && spotifyAdMuted) {
-                media.muted = false;
-                media.playbackRate = 1.0;
+            /* Click the native skip/next button if available and not disabled */
+            const skipBtn = document.querySelector('[data-testid="control-button-skip-forward"]') ||
+                            document.querySelector('[aria-label="Next"]') ||
+                            document.querySelector('button[title="Next"]');
+            if (skipBtn && !skipBtn.disabled && !skipBtn.hasAttribute('disabled')) {
+                try { skipBtn.click(); } catch (e) {}
+            }
+
+            /* Schedule a follow-up skip in 300ms to ensure it fires after the fast-forward */
+            if (!spotifySkipTimer) {
+                spotifySkipTimer = setTimeout(() => {
+                    spotifySkipTimer = null;
+                    const btn = document.querySelector('[data-testid="control-button-skip-forward"]') ||
+                                document.querySelector('[aria-label="Next"]');
+                    if (btn && !btn.disabled) { try { btn.click(); } catch (e) {} }
+                }, 300);
+            }
+        } else if (!adActive && spotifyAdMuted) {
+            /* Restore normal playback once ad has ended */
+            for (const m of media) {
+                m.muted        = false;
+                m.volume       = 1.0;
+                m.playbackRate = 1.0;
                 spotifyAdMuted = false;
             }
         }
