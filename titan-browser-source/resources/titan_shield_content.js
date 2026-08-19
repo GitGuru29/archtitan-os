@@ -154,6 +154,8 @@
 
         const hasAdOverlay = document.querySelector('.ytp-ad-player-overlay') !== null ||
             document.querySelector('.ytp-ad-player-overlay-layout') !== null ||
+            document.querySelector('.ytp-ad-text') !== null ||
+            document.querySelector('.ytp-ad-preview-text') !== null ||
             document.querySelector('.ytp-skip-ad-button') !== null ||
             document.querySelector('.ytp-ad-skip-button-modern') !== null ||
             document.querySelector('.video-ads.ytp-ad-module')?.childElementCount > 0;
@@ -167,10 +169,21 @@
                 ytAdMuted = true;
             }
 
-            // Speed up through ad
-            if (video && Number.isFinite(video.duration) && video.duration > 0) {
+            // Fast-forward to end of ad and force ended event
+            if (video) {
                 video.playbackRate = 16.0;
-                video.currentTime = video.duration - 0.01;
+                if (Number.isFinite(video.duration) && video.duration > 0) {
+                    video.currentTime = video.duration;
+                } else {
+                    video.currentTime = 99999;
+                }
+                if (video.paused) {
+                    try { video.play(); } catch (e) { }
+                }
+                try {
+                    video.dispatchEvent(new Event('timeupdate', { bubbles: true }));
+                    video.dispatchEvent(new Event('ended', { bubbles: true }));
+                } catch (e) { }
             }
 
             // Native skip API
@@ -187,6 +200,8 @@
                 '.ytp-ad-skip-button',
                 'button[id^="skip-button:"]',
                 '.ytp-ad-skip-button-slot button',
+                '.ytp-ad-overlay-close-button',
+                'div.ytp-ad-player-overlay-skip-or-preview button',
                 '[class*="ytp-ad-skip"]',
                 '[class*="ytp-skip-ad"]',
                 '[aria-label="Skip ad"]'

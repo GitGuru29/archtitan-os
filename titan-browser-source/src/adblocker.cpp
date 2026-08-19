@@ -16,8 +16,6 @@ static const char * const kBuiltinDomains[] = {
     /* ── YouTube & YouTube Music Ad & Telemetry Endpoints ──────────────── */
     "googleads.g.doubleclick.net", "pagead2.googleadservices.com",
     "ad.youtube.com", "ads.youtube.com",
-    "static.doubleclick.net",           /* YT in-stream ad status scripts */
-    "imasdk.googleapis.com",            /* YouTube IMA SDK — serves all video ads */
 
     /* ── Spotify Ad & Telemetry Endpoints (pure dedicated ad domains only) ── */
     "heads-fa.spotify.com",           /* ad-serving endpoint */
@@ -189,9 +187,6 @@ static const char * const kBuiltinUrlRules[] = {
     "||youtube.com/api/stats/atr",
     "||youtube.com/api/stats/watchtime?*adformat*",
     "||googleads.g.doubleclick.net/pagead/",
-    "||static.doubleclick.net/instream/ad_status.js",
-    "||imasdk.googleapis.com/js/sdkloader/",    /* IMA SDK loader */
-    "||imasdk.googleapis.com/pal/",             /* IMA PAL (Programmatic Access Library) */
     "||pagead2.googlesyndication.com/pagead/",
     "||ad.doubleclick.net/",
 
