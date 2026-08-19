@@ -19,18 +19,11 @@ static const char * const kBuiltinDomains[] = {
     "static.doubleclick.net",           /* YT in-stream ad status scripts */
     "imasdk.googleapis.com",            /* YouTube IMA SDK — serves all video ads */
 
-
-    /* ── Spotify Ad & Telemetry Endpoints ──────────────────────────────────── */
-    /* NOTE: these MUST be pure hostnames — no paths allowed here */
-    "spclient.wg.spotify.com",        /* ad-logic, gabo telemetry */
-    "audio-fa.scdn.co",               /* legacy ad audio CDN */
+    /* ── Spotify Ad & Telemetry Endpoints (pure dedicated ad domains only) ── */
     "heads-fa.spotify.com",           /* ad-serving endpoint */
     "adeventtracker.spotify.com",     /* ad event tracking */
     "ads-fa.spotify.com",             /* ad delivery */
-    "audio-ak-spotify-com.akamaized.net", /* Akamai Spotify ad CDN */
-    "seektables.scdn.co",             /* seek data for ads */
     "log.spotify.com",                /* ad event logs */
-    "encore.scdn.co",                 /* ad metadata */
     "thisis.spotify.com",             /* Spotify ad promo */
 
 
@@ -191,13 +184,10 @@ static const char * const kBuiltinUrlRules[] = {
     "||youtube.com/pagead/",
     "||youtube.com/ptracking",
     "||youtube.com/youtubei/v1/player/ad_break",
-    "||youtube.com/youtubei/v1/player?*adformat*",
     "||youtube.com/get_midroll_info",
     "||youtube.com/api/stats/qoe?*adformat*",
     "||youtube.com/api/stats/atr",
     "||youtube.com/api/stats/watchtime?*adformat*",
-    "||youtube.com/api/stats/ads?",
-    "||googlevideo.com/videoplayback?*adt=*",    /* YTM audio ad streams */
     "||googleads.g.doubleclick.net/pagead/",
     "||static.doubleclick.net/instream/ad_status.js",
     "||imasdk.googleapis.com/js/sdkloader/",    /* IMA SDK loader */
@@ -205,19 +195,14 @@ static const char * const kBuiltinUrlRules[] = {
     "||pagead2.googlesyndication.com/pagead/",
     "||ad.doubleclick.net/",
 
-
-    /* ── Spotify Ads & Tracking ─────────────────────────────────────────────── */
+    /* ── Spotify Ads & Tracking (pure telemetry & ad subpaths only) ───────── */
     "||spclient.wg.spotify.com/ads/",
     "||spclient.wg.spotify.com/ad-logic/",
     "||spclient.wg.spotify.com/gabo-receiver-service/",
     "||spclient.wg.spotify.com/ad-event-tracking/",
-    "||audio-fa.scdn.co/ad/",
-    "||audio-ak-spotify-com.akamaized.net/ad/",
-    "||audio4-ak.spotify.com/audio/",
     "||heads-fa.spotify.com/",
     "||adeventtracker.spotify.com/",
     "||ads-fa.spotify.com/",
-    "||audio-akp-*.scdn.co/audio/*/ads/",
     "||log.spotify.com/",
     "||seektables.scdn.co/",
 
