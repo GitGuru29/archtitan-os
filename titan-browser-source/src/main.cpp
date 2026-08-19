@@ -30,6 +30,7 @@ int main(int argc, char *argv[])
             "--disable-gpu-sandbox "
             "--disable-dev-shm-usage "
             "--lang=en-US "
+            "--autoplay-policy=no-user-gesture-required "
             "--enable-smooth-scrolling "
             "--disk-cache-size=536870912 "
             "--disable-features=VaapiVideoDecoder,UseChromeOSDirectVideoDecoder");

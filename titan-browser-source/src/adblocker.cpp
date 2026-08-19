@@ -13,15 +13,17 @@
    and Peter Lowe's blocklist. Covers ads, trackers, telemetry, and malware.
    ─────────────────────────────────────────────────────────────────────── */
 static const char * const kBuiltinDomains[] = {
-    /* ── YouTube Ad & Telemetry Endpoints ─────────────────────────────── */
+    /* ── YouTube & YouTube Music Ad & Telemetry Endpoints ──────────────── */
     "googleads.g.doubleclick.net", "pagead2.googleadservices.com",
     "ad.youtube.com", "ads.youtube.com",
 
-    /* ── Spotify Ad & Telemetry Endpoints ──────────────────────────────── */
-    "spclient.wg.spotify.com/ads", "spclient.wg.spotify.com/ad-logic",
-    "spclient.wg.spotify.com/gabo-receiver-service", "audio-ak-spotify-com.akamaized.net/ad",
-    "audio-fa.scdn.co/ad", "heads-fa.spotify.com", "adeventtracker.spotify.com",
-    "ads-fa.spotify.com",
+    /* ── Spotify Ad & Telemetry Endpoints (pure dedicated ad domains only) ── */
+    "heads-fa.spotify.com",           /* ad-serving endpoint */
+    "adeventtracker.spotify.com",     /* ad event tracking */
+    "ads-fa.spotify.com",             /* ad delivery */
+    "log.spotify.com",                /* ad event logs */
+    "thisis.spotify.com",             /* Spotify ad promo */
+
 
     /* ── Google Advertising ────────────────────────────────────────────── */
     "doubleclick.net", "googleadservices.com", "googlesyndication.com",
@@ -175,7 +177,7 @@ static const char * const kBuiltinDomains[] = {
 
 /* URL-pattern rules (EasyList-compatible subset) */
 static const char * const kBuiltinUrlRules[] = {
-    /* ── YouTube In-Stream Ads & Tracking ───────────────────────────────── */
+    /* ── YouTube & YouTube Music In-Stream Ads & Tracking ───────────────── */
     "||youtube.com/api/stats/ads",
     "||youtube.com/pagead/",
     "||youtube.com/ptracking",
@@ -185,17 +187,19 @@ static const char * const kBuiltinUrlRules[] = {
     "||youtube.com/api/stats/atr",
     "||youtube.com/api/stats/watchtime?*adformat*",
     "||googleads.g.doubleclick.net/pagead/",
-    "||static.doubleclick.net/instream/ad_status.js",
+    "||pagead2.googlesyndication.com/pagead/",
+    "||ad.doubleclick.net/",
 
-    /* ── Spotify Ads & Tracking ─────────────────────────────────────────── */
+    /* ── Spotify Ads & Tracking (pure telemetry & ad subpaths only) ───────── */
     "||spclient.wg.spotify.com/ads/",
     "||spclient.wg.spotify.com/ad-logic/",
     "||spclient.wg.spotify.com/gabo-receiver-service/",
-    "||audio-ak-spotify-com.akamaized.net/ad/",
-    "||audio-fa.scdn.co/ad/",
+    "||spclient.wg.spotify.com/ad-event-tracking/",
     "||heads-fa.spotify.com/",
     "||adeventtracker.spotify.com/",
     "||ads-fa.spotify.com/",
+    "||log.spotify.com/",
+    "||seektables.scdn.co/",
 
     /* ── Web Ad Networks & Trackers ─────────────────────────────────────── */
     "||googlesyndication.com/pagead/",
