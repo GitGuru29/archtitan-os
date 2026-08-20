@@ -1,0 +1,27 @@
+[Unit]
+Description=Titan GPU Auto-Switcher Daemon
+Documentation=https://github.com/GitGuru29/ArchTitan-OS/wiki
+After=graphical-session.target
+PartOf=graphical-session.target
+ConditionPathExists=/sys/class/drm
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/titan-gpu-switcherd
+ExecStop=/usr/local/bin/titan-gpu-cli power off
+Restart=on-failure
+RestartSec=3
+OOMScoreAdjust=-1000
+
+# Security
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=/sys/bus/pci /sys/class/power_supply /tmp /etc/titan-gpu
+NoNewPrivileges=no
+CapabilityBoundingSet=CAP_SYS_ADMIN CAP_NET_ADMIN
+
+# Environment
+Environment=HOME=/root
+
+[Install]
+WantedBy=graphical-session.target
