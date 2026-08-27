@@ -6,3 +6,4 @@ CMakeLists.txt.user
 .moc/
 .rcc/
 .uic/
+compile_commands.json

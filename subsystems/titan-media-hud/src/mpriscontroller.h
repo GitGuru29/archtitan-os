@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QUrl>
 #include <QProcess>
 #include <QTimer>
 #include <QNetworkAccessManager>
