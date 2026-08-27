@@ -7,8 +7,8 @@ import ArchTitan.Media 1.0
 Window {
     id: rootWindow
     title: "titan-media-hud"
-    width: 440
-    height: 110
+    width: 480
+    height: 84
     
     // Window flags for transparent, frameless Wayland overlay
     flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.BypassWindowManagerHint | Qt.Tool
@@ -16,63 +16,76 @@ Window {
     visible: (Mpris && Mpris.hasMedia) || exitAnim.running
 
     // Position centered horizontally just below Waybar
-    x: Screen.width > 0 ? Math.round((Screen.width - width) / 2) : 740
-    y: 52
+    x: Screen.width > 0 ? Math.round((Screen.width - width) / 2) : 720
+    y: 46
 
-    // Main Card Container with Slide & Fade Animation
+    // Drop Shadow Glow Behind the Pill
     Rectangle {
-        id: card
-        anchors.fill: parent
-        radius: 10
-        color: "#E611111B" // 90% opacity Catppuccin Crust
-        border.color: "#2E89B4FA" // Subtle 1px blue accent border
-        border.width: 1
+        anchors.fill: pillContainer
+        anchors.margins: -4
+        radius: pillContainer.radius + 4
+        color: "#50000000"
+        z: -2
+    }
 
-        // Internal glass highlight
+    // Dynamic Island / macOS Pill Container
+    Rectangle {
+        id: pillContainer
+        anchors.fill: parent
+        radius: 26
+        color: "#F00A0A0E" // Ultra-deep Obsidian Glass (94% opacity)
+        border.color: "#2EFFFFFF" // 1px Apple Specular Frosted Rim
+        border.width: 1
+        clip: true
+
+        // Inner Top Specular Liquid Light
         Rectangle {
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.top: parent.top
+            anchors.leftMargin: 20
+            anchors.rightMargin: 20
             height: 1
-            color: "#1AFFFFFF"
-            radius: 10
+            color: "#30FFFFFF"
+            radius: 1
         }
 
-        // Drop shadow feel
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: -1
-            radius: 11
-            color: "transparent"
-            border.color: "#0D000000"
-            border.width: 1
-            z: -1
-        }
-
-        // Layout
+        // Main Horizontal Content
         RowLayout {
             anchors.fill: parent
-            anchors.margins: 12
+            anchors.leftMargin: 14
+            anchors.rightMargin: 16
+            anchors.topMargin: 10
+            anchors.bottomMargin: 10
             spacing: 12
 
-            // Album Artwork Container
+            // ─── 1. ALBUM ARTWORK ──────────────────────────────────────────────
             Rectangle {
-                Layout.preferredWidth: 84
-                Layout.preferredHeight: 84
+                id: artWrapper
+                Layout.preferredWidth: 54
+                Layout.preferredHeight: 54
                 Layout.alignment: Qt.AlignVCenter
-                radius: 6
-                color: "#181825"
-                border.color: "#2589B4FA"
+                radius: 15
+                color: "#16161C"
+                border.color: (Mpris && Mpris.isPlaying) ? "#4038BDF8" : "#20FFFFFF"
                 border.width: 1
                 clip: true
 
-                // Fallback glyph when no artwork is available
-                Text {
-                    anchors.centerIn: parent
-                    text: "◈"
-                    font.pixelSize: 28
-                    color: "#585B70"
+                // Fallback macOS Music Icon
+                Rectangle {
+                    anchors.fill: parent
+                    gradient: Gradient {
+                        GradientStop { position: 0.0; color: "#2A2A36" }
+                        GradientStop { position: 1.0; color: "#14141A" }
+                    }
                     visible: !artImg.visible || artImg.status !== Image.Ready
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "♫"
+                        font.pixelSize: 22
+                        color: "#94A3B8"
+                    }
                 }
 
                 Image {
@@ -81,6 +94,7 @@ Window {
                     source: Mpris ? Mpris.artUrl : ""
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
+                    mipmap: true
                     visible: status === Image.Ready
                     opacity: 1.0
 
@@ -92,105 +106,176 @@ Window {
                         }
                     }
                 }
+
+                // Breathing Glow on Playing
+                Rectangle {
+                    anchors.fill: parent
+                    radius: parent.radius
+                    color: "transparent"
+                    border.color: "#8038BDF8"
+                    border.width: 1.5
+                    visible: Mpris && Mpris.isPlaying
+                    opacity: 0.6
+
+                    SequentialAnimation on opacity {
+                        running: Mpris && Mpris.isPlaying
+                        loops: Animation.Infinite
+                        NumberAnimation { from: 0.2; to: 0.8; duration: 1200; easing.type: Easing.InOutQuad }
+                        NumberAnimation { from: 0.8; to: 0.2; duration: 1200; easing.type: Easing.InOutQuad }
+                    }
+                }
             }
 
-            // Track Information & Controls
+            // ─── 2. TRACK METADATA & MICRO-SCRUBBER ────────────────────────────
             ColumnLayout {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                spacing: 3
+                Layout.alignment: Qt.AlignVCenter
+                spacing: 2
 
-                // Top Header Row: Source Badge + Status
+                // Header Row: App Pill + Track Title + Live Waveform
                 RowLayout {
                     Layout.fillWidth: true
+                    spacing: 6
 
-                    // Source Badge (e.g. SPOTIFY, FIREFOX, VLC)
+                    // Source Badge Pill (e.g. SPOTIFY, BRAVE, MPV)
                     Rectangle {
-                        height: 16
-                        width: sourceText.implicitWidth + 10
-                        radius: 3
-                        color: "#2089B4FA"
-                        border.color: "#4089B4FA"
+                        height: 15
+                        width: sourceBadgeText.implicitWidth + 8
+                        radius: 7
+                        color: "#2538BDF8"
+                        border.color: "#4038BDF8"
                         border.width: 1
 
                         Text {
-                            id: sourceText
+                            id: sourceBadgeText
                             anchors.centerIn: parent
-                            text: (Mpris && Mpris.playerName ? Mpris.playerName : "MEDIA").toUpperCase()
+                            text: (Mpris && Mpris.playerName ? Mpris.playerName : "NOW PLAYING").toUpperCase()
                             font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: 9
+                            font.pixelSize: 8
                             font.weight: Font.Bold
-                            font.letterSpacing: 0.8
-                            color: "#89B4FA"
+                            font.letterSpacing: 0.6
+                            color: "#38BDF8"
+                        }
+                    }
+
+                    // Live Animated Equalizer Bars (Apple Dynamic Island Style)
+                    Row {
+                        spacing: 2
+                        Layout.alignment: Qt.AlignVCenter
+                        visible: Mpris && Mpris.isPlaying
+
+                        Rectangle {
+                            width: 2.5; radius: 1.25; color: "#38BDF8"
+                            height: 10
+                            SequentialAnimation on height {
+                                running: Mpris && Mpris.isPlaying
+                                loops: Animation.Infinite
+                                NumberAnimation { from: 4; to: 12; duration: 320; easing.type: Easing.InOutSine }
+                                NumberAnimation { from: 12; to: 4; duration: 380; easing.type: Easing.InOutSine }
+                            }
+                        }
+                        Rectangle {
+                            width: 2.5; radius: 1.25; color: "#38BDF8"
+                            height: 6
+                            SequentialAnimation on height {
+                                running: Mpris && Mpris.isPlaying
+                                loops: Animation.Infinite
+                                NumberAnimation { from: 12; to: 5; duration: 400; easing.type: Easing.InOutSine }
+                                NumberAnimation { from: 5; to: 12; duration: 300; easing.type: Easing.InOutSine }
+                            }
+                        }
+                        Rectangle {
+                            width: 2.5; radius: 1.25; color: "#38BDF8"
+                            height: 8
+                            SequentialAnimation on height {
+                                running: Mpris && Mpris.isPlaying
+                                loops: Animation.Infinite
+                                NumberAnimation { from: 3; to: 10; duration: 350; easing.type: Easing.InOutSine }
+                                NumberAnimation { from: 10; to: 3; duration: 420; easing.type: Easing.InOutSine }
+                            }
                         }
                     }
 
                     Item { Layout.fillWidth: true }
 
-                    // Time Display (Elapsed / Total)
+                    // Elapsed / Total Duration Label
                     Text {
                         text: (Mpris ? Mpris.positionText : "0:00") + " / " + (Mpris ? Mpris.lengthText : "0:00")
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 10
-                        color: "#6C7086"
+                        font.pixelSize: 9
+                        color: "#71717A"
                         visible: Mpris ? Mpris.length > 0 : false
                     }
                 }
 
-                // Track Title
+                // Track Title (Crisp White SF-Style Typography)
                 Text {
                     Layout.fillWidth: true
                     text: Mpris ? Mpris.title : "No Media"
-                    font.family: "JetBrainsMono Nerd Font"
+                    font.family: "Inter, -apple-system, BlinkMacSystemFont, sans-serif"
                     font.pixelSize: 13
                     font.weight: Font.DemiBold
-                    color: "#CDD6F4"
+                    color: "#FFFFFF"
                     elide: Text.ElideRight
                     maximumLineCount: 1
                 }
 
-                // Artist
+                // Artist / Subtitle
                 Text {
                     Layout.fillWidth: true
                     text: Mpris ? Mpris.artist : "ArchTitan Desktop"
-                    font.family: "JetBrainsMono Nerd Font"
-                    font.pixelSize: 11
-                    color: "#A6ADC8"
+                    font.family: "Inter, -apple-system, BlinkMacSystemFont, sans-serif"
+                    font.pixelSize: 10.5
+                    color: "#A1A1AA"
                     elide: Text.ElideRight
                     maximumLineCount: 1
                 }
 
                 Item { Layout.preferredHeight: 1 }
 
-                // Interactive Progress Bar
+                // Interactive Apple Scrubber Bar
                 Rectangle {
                     id: progressTrack
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 4
-                    radius: 2
-                    color: "#313244"
+                    Layout.preferredHeight: seekMouseArea.containsMouse ? 5 : 3.5
+                    radius: height / 2
+                    color: "#27272A"
 
+                    Behavior on Layout.preferredHeight {
+                        NumberAnimation { duration: 120 }
+                    }
+
+                    // Progress Fill (Cyan Glow Gradient)
                     Rectangle {
                         height: parent.height
                         width: Math.max(0, Math.min(parent.width, parent.width * (Mpris ? Mpris.progress : 0)))
-                        radius: 2
-                        color: "#89B4FA"
+                        radius: parent.radius
+                        gradient: Gradient {
+                            orientation: Gradient.Horizontal
+                            GradientStop { position: 0.0; color: "#0284C7" }
+                            GradientStop { position: 1.0; color: "#38BDF8" }
+                        }
 
+                        // Scrubber Thumb Pill
                         Rectangle {
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
-                            width: 8
-                            height: 8
+                            width: seekMouseArea.containsMouse ? 8 : 0
+                            height: seekMouseArea.containsMouse ? 8 : 0
                             radius: 4
-                            color: "#CDD6F4"
+                            color: "#FFFFFF"
                             visible: seekMouseArea.containsMouse || seekMouseArea.pressed
+
+                            Behavior on width { NumberAnimation { duration: 100 } }
+                            Behavior on height { NumberAnimation { duration: 100 } }
                         }
                     }
 
                     MouseArea {
                         id: seekMouseArea
                         anchors.fill: parent
-                        anchors.margins: -4
+                        anchors.margins: -6
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: (mouse) => {
@@ -200,102 +285,119 @@ Window {
                         }
                     }
                 }
+            }
 
-                // Playback Controls Row
-                RowLayout {
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignHCenter
-                    spacing: 16
+            // ─── 3. APPLE STYLE MEDIA CONTROLS ────────────────────────────────
+            RowLayout {
+                Layout.alignment: Qt.AlignVCenter
+                spacing: 8
 
-                    // Previous Button
-                    Rectangle {
-                        width: 24
-                        height: 24
-                        radius: 4
-                        color: prevArea.containsMouse ? "#2089B4FA" : "transparent"
+                // Previous Track Button
+                Rectangle {
+                    width: 26
+                    height: 26
+                    radius: 13
+                    color: prevArea.containsMouse ? "#20FFFFFF" : "#10FFFFFF"
+                    scale: prevArea.pressed ? 0.88 : (prevArea.containsMouse ? 1.06 : 1.0)
 
-                        Text {
-                            anchors.centerIn: parent
-                            text: "⏮"
-                            font.pixelSize: 12
-                            color: prevArea.containsMouse ? "#89B4FA" : "#A6ADC8"
-                        }
+                    Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+                    Behavior on color { ColorAnimation { duration: 120 } }
 
-                        MouseArea {
-                            id: prevArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: if (Mpris) Mpris.previous()
-                        }
+                    Text {
+                        anchors.centerIn: parent
+                        text: "⏮"
+                        font.pixelSize: 11
+                        color: prevArea.containsMouse ? "#FFFFFF" : "#A1A1AA"
                     }
 
-                    // Play / Pause Button
-                    Rectangle {
-                        width: 26
-                        height: 26
-                        radius: 13
-                        color: playArea.containsMouse ? "#3089B4FA" : "#1A89B4FA"
-                        border.color: "#4089B4FA"
-                        border.width: 1
+                    MouseArea {
+                        id: prevArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: if (Mpris) Mpris.previous()
+                    }
+                }
 
-                        Text {
-                            anchors.centerIn: parent
-                            anchors.horizontalCenterOffset: (Mpris && Mpris.isPlaying) ? 0 : 1
-                            text: (Mpris && Mpris.isPlaying) ? "❚❚" : "▶"
-                            font.pixelSize: 11
-                            color: "#89B4FA"
-                        }
+                // Play / Pause Button (Apple White Primary Pill)
+                Rectangle {
+                    width: 32
+                    height: 32
+                    radius: 16
+                    color: (Mpris && Mpris.isPlaying) ? "#FFFFFF" : "#38BDF8"
+                    scale: playArea.pressed ? 0.88 : (playArea.containsMouse ? 1.08 : 1.0)
 
-                        MouseArea {
-                            id: playArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: if (Mpris) Mpris.playPause()
-                        }
+                    Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+                    Behavior on color { ColorAnimation { duration: 150 } }
+
+                    Text {
+                        anchors.centerIn: parent
+                        anchors.horizontalCenterOffset: (Mpris && Mpris.isPlaying) ? 0 : 1
+                        text: (Mpris && Mpris.isPlaying) ? "❚❚" : "▶"
+                        font.pixelSize: (Mpris && Mpris.isPlaying) ? 11 : 12
+                        font.weight: Font.Bold
+                        color: (Mpris && Mpris.isPlaying) ? "#0A0A0E" : "#0A0A0E"
                     }
 
-                    // Next Button
-                    Rectangle {
-                        width: 24
-                        height: 24
-                        radius: 4
-                        color: nextArea.containsMouse ? "#2089B4FA" : "transparent"
+                    MouseArea {
+                        id: playArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: if (Mpris) Mpris.playPause()
+                    }
+                }
 
-                        Text {
-                            anchors.centerIn: parent
-                            text: "⏭"
-                            font.pixelSize: 12
-                            color: nextArea.containsMouse ? "#89B4FA" : "#A6ADC8"
-                        }
+                // Next Track Button
+                Rectangle {
+                    width: 26
+                    height: 26
+                    radius: 13
+                    color: nextArea.containsMouse ? "#20FFFFFF" : "#10FFFFFF"
+                    scale: nextArea.pressed ? 0.88 : (nextArea.containsMouse ? 1.06 : 1.0)
 
-                        MouseArea {
-                            id: nextArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: if (Mpris) Mpris.next()
-                        }
+                    Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+                    Behavior on color { ColorAnimation { duration: 120 } }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "⏭"
+                        font.pixelSize: 11
+                        color: nextArea.containsMouse ? "#FFFFFF" : "#A1A1AA"
+                    }
+
+                    MouseArea {
+                        id: nextArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: if (Mpris) Mpris.next()
                     }
                 }
             }
         }
 
-        // Slide & Fade Animations
-        transform: Translate { id: trans; y: -30 }
+        // ─── 4. FLUID MACOS SPRING ANIMATIONS ─────────────────────────────────
+        transform: [
+            Translate { id: trans; y: -36 },
+            Scale { id: cardScale; origin.x: pillContainer.width / 2; origin.y: 0; xScale: 0.9; yScale: 0.9 }
+        ]
         opacity: 0.0
 
         ParallelAnimation {
             id: enterAnim
-            NumberAnimation { target: trans; property: "y"; from: -30; to: 0; duration: 220; easing.type: Easing.OutCubic }
-            NumberAnimation { target: card; property: "opacity"; from: 0.0; to: 1.0; duration: 200; easing.type: Easing.OutQuad }
+            NumberAnimation { target: trans; property: "y"; from: -36; to: 0; duration: 260; easing.type: Easing.OutBack; easing.overshoot: 1.1 }
+            NumberAnimation { target: cardScale; property: "xScale"; from: 0.9; to: 1.0; duration: 240; easing.type: Easing.OutCubic }
+            NumberAnimation { target: cardScale; property: "yScale"; from: 0.9; to: 1.0; duration: 240; easing.type: Easing.OutCubic }
+            NumberAnimation { target: pillContainer; property: "opacity"; from: 0.0; to: 1.0; duration: 200; easing.type: Easing.OutQuad }
         }
 
         ParallelAnimation {
             id: exitAnim
-            NumberAnimation { target: trans; property: "y"; from: 0; to: -30; duration: 180; easing.type: Easing.InCubic }
-            NumberAnimation { target: card; property: "opacity"; from: 1.0; to: 0.0; duration: 160; easing.type: Easing.InQuad }
+            NumberAnimation { target: trans; property: "y"; from: 0; to: -36; duration: 200; easing.type: Easing.InBack }
+            NumberAnimation { target: cardScale; property: "xScale"; from: 1.0; to: 0.9; duration: 180; easing.type: Easing.InCubic }
+            NumberAnimation { target: cardScale; property: "yScale"; from: 1.0; to: 0.9; duration: 180; easing.type: Easing.InCubic }
+            NumberAnimation { target: pillContainer; property: "opacity"; from: 1.0; to: 0.0; duration: 160; easing.type: Easing.InQuad }
         }
 
         Connections {

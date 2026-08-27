@@ -7,3 +7,5 @@ CMakeLists.txt.user
 .rcc/
 .uic/
 compile_commands.json
+.clangd
+
