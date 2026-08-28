@@ -1,6 +1,11 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
     <qresource prefix="/">
-        <file>qml/MediaHudWindow.qml</file>
+        <file>qml/MediaIsland.qml</file>
+        <file>qml/CompactView.qml</file>
+        <file>qml/ExpandedView.qml</file>
+        <file>qml/AlbumArt.qml</file>
+        <file>qml/ProgressViz.qml</file>
+        <file>qml/TransportButton.qml</file>
     </qresource>
 </RCC>

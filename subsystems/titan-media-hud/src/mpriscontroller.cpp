@@ -9,13 +9,19 @@ MprisController::MprisController(QObject *parent)
     : QObject(parent)
     , m_process(new QProcess(this))
     , m_positionTimer(new QTimer(this))
+    , m_driftTimer(new QTimer(this))
     , m_netManager(new QNetworkAccessManager(this))
 {
     connect(m_process, &QProcess::readyReadStandardOutput, this, &MprisController::onPlayerctlOutput);
     connect(m_positionTimer, &QTimer::timeout, this, &MprisController::onPositionTick);
+    connect(m_driftTimer, &QTimer::timeout, this, &MprisController::onDriftCorrection);
     connect(m_netManager, &QNetworkAccessManager::finished, this, &MprisController::onArtworkDownloaded);
 
-    m_positionTimer->setInterval(500);
+    // Position interpolation: update every 250ms for smooth progress
+    m_positionTimer->setInterval(250);
+
+    // Drift correction: sync with real D-Bus position every 5 seconds
+    m_driftTimer->setInterval(5000);
 
     startPlayerctlProcess();
     refresh();
@@ -35,18 +41,22 @@ void MprisController::startPlayerctlProcess()
         return;
     }
 
-    // Follow metadata events from playerctl with structured pipe delimiter
+    // Follow metadata events with structured delimiter
     QStringList args;
     args << "--follow"
          << "metadata"
          << "--format"
          << "{{playerName}};;{{status}};;{{title}};;{{artist}};;{{album}};;{{mpris:artUrl}};;{{position}};;{{mpris:length}}";
 
-    connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
-            [this](int, QProcess::ExitStatus) {
-                // Restart process if it exits unexpectedly
-                QTimer::singleShot(2000, this, &MprisController::startPlayerctlProcess);
-            });
+    // Connect restart handler only once
+    static bool connectedRestart = false;
+    if (!connectedRestart) {
+        connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+                this, [this](int, QProcess::ExitStatus) {
+                    QTimer::singleShot(2000, this, &MprisController::startPlayerctlProcess);
+                });
+        connectedRestart = true;
+    }
 
     m_process->start("playerctl", args);
 }
@@ -83,6 +93,10 @@ void MprisController::parseMetadataLine(const QString &line)
     bool mediaChanged = (m_hasMedia != hasTrack);
     m_hasMedia = hasTrack;
 
+    // Detect actual track change (title+artist combo changed)
+    QString trackId = title + "||" + artist;
+    bool isNewTrack = (!trackId.isEmpty() && trackId != m_lastTrackId && !title.isEmpty());
+
     if (m_playerName != pName || m_title != title || m_artist != artist || m_album != album || m_length != len) {
         m_playerName = pName;
         m_title = title.isEmpty() ? "Unknown Track" : title;
@@ -92,14 +106,21 @@ void MprisController::parseMetadataLine(const QString &line)
         emit metadataChanged();
     }
 
+    if (isNewTrack) {
+        m_lastTrackId = trackId;
+        emit trackChanged();
+    }
+
     if (m_playbackStatus != status) {
         m_playbackStatus = status;
         emit playbackStatusChanged();
 
         if (isPlaying()) {
             if (!m_positionTimer->isActive()) m_positionTimer->start();
+            if (!m_driftTimer->isActive()) m_driftTimer->start();
         } else {
             if (m_positionTimer->isActive()) m_positionTimer->stop();
+            if (m_driftTimer->isActive()) m_driftTimer->stop();
         }
     }
 
@@ -127,6 +148,11 @@ void MprisController::parseMetadataLine(const QString &line)
     if (mediaChanged) {
         emit mediaStateChanged();
     }
+
+    // Query extended properties on metadata change
+    queryVolume();
+    queryShuffle();
+    queryLoop();
 }
 
 void MprisController::downloadArtwork(const QUrl &url)
@@ -170,12 +196,34 @@ void MprisController::onPositionTick()
 {
     if (!isPlaying()) return;
 
-    // Advance position by 500ms (500,000 microseconds)
-    m_position += 500000;
+    // Advance position by 250ms (250,000 microseconds)
+    m_position += 250000;
     if (m_length > 0 && m_position > m_length) {
         m_position = m_length;
     }
     emit positionChanged();
+}
+
+void MprisController::onDriftCorrection()
+{
+    if (!isPlaying()) return;
+
+    // Query real position from playerctl to correct drift
+    QProcess queryProc;
+    queryProc.start("playerctl", QStringList() << "position");
+    if (queryProc.waitForFinished(500)) {
+        QString out = QString::fromUtf8(queryProc.readAllStandardOutput()).trimmed();
+        bool ok = false;
+        double seconds = out.toDouble(&ok);
+        if (ok) {
+            qint64 realPos = static_cast<qint64>(seconds * 1000000.0);
+            // Only correct if drift > 1 second
+            if (qAbs(realPos - m_position) > 1000000) {
+                m_position = realPos;
+                emit positionChanged();
+            }
+        }
+    }
 }
 
 void MprisController::playPause()
@@ -208,6 +256,65 @@ void MprisController::seek(qreal normalized)
     QProcess::startDetached("playerctl", QStringList() << "position" << QString::number(targetSeconds, 'f', 2));
 }
 
+void MprisController::toggleShuffle()
+{
+    QProcess::startDetached("playerctl", QStringList() << "shuffle" << "toggle");
+    QTimer::singleShot(300, this, &MprisController::queryShuffle);
+}
+
+void MprisController::cycleLoop()
+{
+    // Cycle: None → Track → Playlist → None
+    QString next;
+    if (m_loopStatus == "None") next = "Track";
+    else if (m_loopStatus == "Track") next = "Playlist";
+    else next = "None";
+
+    QProcess::startDetached("playerctl", QStringList() << "loop" << next);
+    QTimer::singleShot(300, this, &MprisController::queryLoop);
+}
+
+void MprisController::queryVolume()
+{
+    QProcess proc;
+    proc.start("playerctl", QStringList() << "volume");
+    if (proc.waitForFinished(500)) {
+        bool ok = false;
+        qreal vol = QString::fromUtf8(proc.readAllStandardOutput()).trimmed().toDouble(&ok);
+        if (ok && vol != m_volume) {
+            m_volume = vol;
+            emit volumeChanged();
+        }
+    }
+}
+
+void MprisController::queryShuffle()
+{
+    QProcess proc;
+    proc.start("playerctl", QStringList() << "shuffle");
+    if (proc.waitForFinished(500)) {
+        QString out = QString::fromUtf8(proc.readAllStandardOutput()).trimmed().toLower();
+        bool shuf = (out == "on" || out == "true");
+        if (shuf != m_shuffle) {
+            m_shuffle = shuf;
+            emit shuffleChanged();
+        }
+    }
+}
+
+void MprisController::queryLoop()
+{
+    QProcess proc;
+    proc.start("playerctl", QStringList() << "loop");
+    if (proc.waitForFinished(500)) {
+        QString out = QString::fromUtf8(proc.readAllStandardOutput()).trimmed();
+        if (!out.isEmpty() && out != m_loopStatus) {
+            m_loopStatus = out;
+            emit loopStatusChanged();
+        }
+    }
+}
+
 void MprisController::refresh()
 {
     QProcess queryProc;
@@ -232,7 +339,12 @@ QString MprisController::formatTime(qint64 microseconds)
 {
     if (microseconds <= 0) return "0:00";
     qint64 totalSeconds = microseconds / 1000000;
-    qint64 minutes = totalSeconds / 60;
+    qint64 hours = totalSeconds / 3600;
+    qint64 minutes = (totalSeconds % 3600) / 60;
     qint64 seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+        return QString("%1:%2:%3").arg(hours).arg(minutes, 2, 10, QChar('0')).arg(seconds, 2, 10, QChar('0'));
+    }
     return QString("%1:%2").arg(minutes).arg(seconds, 2, 10, QChar('0'));
 }
