@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
 
     QGuiApplication app(argc, argv);
     app.setApplicationName("titan-media-hud");
+    app.setDesktopFileName("titan-media-hud");
     app.setApplicationDisplayName("ArchTitan Media HUD");
     app.setOrganizationName("ArchTitan");
 
