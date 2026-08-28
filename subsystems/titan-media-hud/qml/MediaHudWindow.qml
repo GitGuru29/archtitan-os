@@ -226,7 +226,7 @@ Window {
                     Layout.fillWidth: true
                     text: Mpris ? Mpris.artist : "ArchTitan Desktop"
                     font.family: "Inter, -apple-system, BlinkMacSystemFont, sans-serif"
-                    font.pixelSize: 10.5
+                    font.pixelSize: 11
                     color: "#A1A1AA"
                     elide: Text.ElideRight
                     maximumLineCount: 1
