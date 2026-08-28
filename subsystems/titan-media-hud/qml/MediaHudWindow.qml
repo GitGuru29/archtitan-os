@@ -11,7 +11,7 @@ Window {
     height: 84
     
     // Window flags for transparent, frameless Wayland overlay
-    flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.BypassWindowManagerHint | Qt.Tool
+    flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.BypassWindowManagerHint | Qt.Popup | Qt.Tool
     color: "transparent"
     visible: (Mpris && Mpris.hasMedia) || exitAnim.running
 
