@@ -8,6 +8,10 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <linux/fs.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <csignal>
 #include <thread>
@@ -319,7 +323,7 @@ class TitanHardwareManager {
     std::atomic<int>  debounce_gen{0};   // generation counter — kills stale debounce threads
     std::mutex mtx;
     std::string pending_class; int pending_ws=-1; bool pending_is_ws=false;
-    std::thread debounce_thd, cli_thd, guard_thd;
+    std::thread debounce_thd, cli_thd, guard_thd, heal_thd;
 
     // Rogue DM/compositor processes — kills any that bypass pacman/systemd locks
     const std::unordered_set<std::string> rogue_dms{
@@ -492,12 +496,103 @@ class TitanHardwareManager {
     }
 
 public:
-    // Periodic rogue DM guard — kills any blacklisted DM/compositor run directly as binary
-    void run_process_guard() {
-        std::cout<<"[HWM] Process guard active (60s interval)\n";
+    // ---------------------------------------------------------------
+    // Shutdown detection — returns true when the system is in the
+    // process of shutting down / rebooting / halting.
+    // If true, the guard thread must NOT kill any processes — doing
+    // so would cause the login-loop bug seen on the host system.
+    // ---------------------------------------------------------------
+    static bool system_is_shutting_down() {
+        // systemd writes this file when a shutdown is scheduled
+        if (fs::exists("/run/systemd/shutdown/scheduled")) return true;
+        // Double-check: if we are transitioning to shutdown targets
+        for (const char* t : {
+            "/run/systemd/system/shutdown.target",
+            "/run/systemd/system/reboot.target",
+            "/run/systemd/system/halt.target",
+            "/run/systemd/system/poweroff.target" }) {
+            if (fs::exists(t)) return true;
+        }
+        return false;
+    }
+
+    // ---------------------------------------------------------------
+    // chattr +i helper — attempts to set immutable flag on a file.
+    // Uses ioctl(FS_IOC_SETFLAGS) directly so we don't fork chattr.
+    // ---------------------------------------------------------------
+    static bool set_immutable(const std::string& path) {
+        int fd = open(path.c_str(), O_RDONLY | O_NONBLOCK);
+        if (fd < 0) return false;
+        unsigned long flags = 0;
+        if (ioctl(fd, FS_IOC_GETFLAGS, &flags) < 0) { close(fd); return false; }
+        flags |= FS_IMMUTABLE_FL;
+        bool ok = (ioctl(fd, FS_IOC_SETFLAGS, &flags) == 0);
+        close(fd);
+        return ok;
+    }
+
+    // ---------------------------------------------------------------
+    // Self-heal watchdog — runs every 30s.
+    // Verifies guard files still exist and are immutable.
+    // If someone did chattr -i + edit, we re-lock.
+    // This runs independently of the rogue-DM guard.
+    // ---------------------------------------------------------------
+    void run_integrity_heal() {
+        static const std::vector<std::string> GUARD_FILES = {
+            "/usr/local/bin/archtitan-session-guard",
+            "/usr/local/bin/archtitan-apply-immutable",
+            "/usr/local/bin/titan_hw_manager",
+            "/etc/pacman.d/hooks/archtitan-session-guard.hook",
+            "/etc/systemd/system/titan_hw_manager.service",
+            "/etc/systemd/system/archtitan-immutable-guard.service",
+        };
+        std::cout<<"[HWM] Integrity heal watchdog active (30s interval)\n";
         while (running.load()) {
-            std::this_thread::sleep_for(std::chrono::seconds(60));
+            // Sleep in 1s increments so we catch running=false promptly
+            for (int i=0; i<30 && running.load(); ++i)
+                std::this_thread::sleep_for(std::chrono::seconds(1));
             if (!running.load()) break;
+            if (system_is_shutting_down()) continue;
+
+            for (const auto& f : GUARD_FILES) {
+                if (!fs::exists(f)) {
+                    // File was deleted — log it. We cannot recreate binaries
+                    // from inside THM, but we flag it loudly.
+                    std::cout<<"[Heal] CRITICAL: Guard file deleted: "<<f<<"\n";
+                    notify("ArchTitan Integrity Alert","Guard file deleted: "+f);
+                    continue;
+                }
+                // Re-apply immutable bit (no-op if already set)
+                if (set_immutable(f)) {
+                    std::cout<<"[Heal] Re-locked: "<<f<<"\n";
+                } else {
+                    std::cout<<"[Heal] WARN: Could not lock: "<<f<<"\n";
+                }
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    // Periodic rogue DM guard — kills any blacklisted compositor.
+    // SHUTDOWN-AWARE: will NOT fire during poweroff/reboot/halt.
+    // This was the root cause of the login-loop bug on the host.
+    // ---------------------------------------------------------------
+    void run_process_guard() {
+        std::cout<<"[HWM] Process guard active (60s interval, shutdown-aware)\n";
+        while (running.load()) {
+            // Interruptible 60s sleep in 1s slices
+            for (int i=0; i<60 && running.load(); ++i)
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            if (!running.load()) break;
+
+            // SAFETY CHECK: do not kill processes during shutdown.
+            // Doing so causes systemd to see processes respawning and
+            // triggers another logout cycle — the bug we saw on host.
+            if (system_is_shutting_down()) {
+                std::cout<<"[Guard] Shutdown detected — guard scan skipped\n";
+                continue;
+            }
+
             for (const auto& e : fs::directory_iterator("/proc")) {
                 if (!e.is_directory()) continue;
                 std::string d=e.path().filename().string();
@@ -522,14 +617,16 @@ public:
     ~TitanHardwareManager() {
         running=false;
         if (debounce_thd.joinable()) debounce_thd.join();
-        if (cli_thd.joinable()) cli_thd.detach();
-        if (guard_thd.joinable()) guard_thd.detach();
+        if (cli_thd.joinable())      cli_thd.detach();
+        if (guard_thd.joinable())    guard_thd.detach();
+        if (heal_thd.joinable())     heal_thd.detach();
     }
 
     void run() {
         cfg=load_config(); apply_extras();
         cli_thd=std::thread(&TitanHardwareManager::run_cli_server,this);
         guard_thd=std::thread(&TitanHardwareManager::run_process_guard,this);
+        heal_thd=std::thread(&TitanHardwareManager::run_integrity_heal,this);
 
         std::string sock=HyprlandIPC::find_sock(".socket2.sock");
         if (sock.empty()) { std::this_thread::sleep_for(std::chrono::seconds(5)); return; }
