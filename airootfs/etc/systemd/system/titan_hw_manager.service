@@ -1,13 +1,25 @@
 [Unit]
 Description=Titan Hardware Manager (ArchTitan Daemon)
-After=graphical-session.target
+After=graphical-session.target archtitan-immutable-guard.service
+Requires=archtitan-immutable-guard.service
 PartOf=graphical-session.target
 
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/titan_hw_manager
+
+# ---------------------------------------------------------------
+# ANTI-TAMPER: Restart immediately if killed. StartLimitInterval=0
+# disables the systemd rate limiter — THM will restart FOREVER,
+# no matter how many times it is stopped.
+# ---------------------------------------------------------------
 Restart=always
-RestartSec=3
+RestartSec=500ms
+StartLimitInterval=0
+
+# Re-lock own binary each start in case chattr was cleared on disk
+# (e.g. root mounted overlay). Safe no-op if already locked.
+ExecStartPre=/usr/bin/chattr +i /usr/local/bin/titan_hw_manager
 
 # Needs root to read /proc system-wide, write /sys governors,
 # and send signals to processes owned by other users.
@@ -20,6 +32,12 @@ Group=root
 # it before touching -200 protected processes during a memory crisis — exactly
 # when THM is needed most. -1000 is the kernel hard-minimum: OOM unkillable.
 OOMScoreAdjust=-1000
+
+# Prevent the service from loading kernel modules or modifying sysctl
+# while still allowing /usr and /boot to be read-only protected.
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=false
 
 # Redirect logs to the systemd journal for crash-recovery auditability.
 StandardOutput=journal

@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# =================================================================
+#  ArchTitan Immutable Guard — Boot-time file locking
+#  Applies chattr +i to all OS enforcement files.
+#  Called ONCE at sysinit (before SDDM / any user session).
+#
+#  RECOVERY NOTE:
+#    To service the OS legitimately, boot from a separate Arch
+#    live USB, mount the partition, then run:
+#      chattr -i <file>
+#    after making your change, re-run this script.
+# =================================================================
+
+set -euo pipefail
+
+LOG_TAG="archtitan-immutable-guard"
+
+_log() { echo "[${LOG_TAG}] $*"; }
+_warn() { echo "[${LOG_TAG}] WARN: $*" >&2; }
+
+# ---------------------------------------------------------------------
+# Files to lock with chattr +i (immutable — even root cannot modify)
+# ---------------------------------------------------------------------
+GUARD_FILES=(
+    "/usr/local/bin/archtitan-session-guard"
+    "/usr/local/bin/archtitan-apply-immutable"
+    "/usr/local/bin/titan_hw_manager"
+    "/etc/pacman.d/hooks/archtitan-session-guard.hook"
+    "/etc/systemd/system/titan_hw_manager.service"
+    "/etc/systemd/system/archtitan-immutable-guard.service"
+)
+
+# Services to mask (prevent even root from starting alternatives)
+MASK_SERVICES=(
+    "gdm.service"
+    "lightdm.service"
+    "lxdm.service"
+    "xdm.service"
+    "ly.service"
+    "greetd.service"
+    "slim.service"
+    "gnome-session.service"
+    "plasma-session.service"
+)
+
+_log "Applying filesystem immutability locks..."
+
+ok=0
+fail=0
+
+for f in "${GUARD_FILES[@]}"; do
+    if [[ ! -e "$f" ]]; then
+        _warn "Skipping (not found): $f"
+        continue
+    fi
+
+    # Remove immutable first to ensure idempotent re-locking
+    chattr -i "$f" 2>/dev/null || true
+
+    if chattr +i "$f" 2>/dev/null; then
+        _log "  LOCKED: $f"
+        (( ok++ )) || true
+    else
+        _warn "  FAILED to lock: $f (filesystem may not support chattr)"
+        (( fail++ )) || true
+    fi
+done
+
+_log "Immutability: ${ok} locked, ${fail} failed."
+
+# ---------------------------------------------------------------------
+# Mask competing session services (belt-and-suspenders on top of chattr)
+# ---------------------------------------------------------------------
+_log "Masking competing session managers..."
+for svc in "${MASK_SERVICES[@]}"; do
+    # Idempotent: masking an already-masked service is a no-op
+    systemctl mask --quiet --now "$svc" 2>/dev/null || true
+done
+
+_log "ArchTitan immutable guard applied successfully."
+exit 0
