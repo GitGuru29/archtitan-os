@@ -5,6 +5,11 @@
 # Archiso build artifacts
 out/
 tmp-work/
+build/
+**/build/
+.cache/
+**/.cache/
+compile_commands.json
 
 # QEMU / VM artifacts
 *.qcow2
