@@ -52,10 +52,7 @@ sandbox/tests/
 
 # Catch-all safety net — anything else added under sandbox/
 sandbox/
-
-# airootfs sandbox runtime dirs
-airootfs/var/titan-sandbox/
-airootfs/var/log/titan-sandbox/
+airootfs/var/
 
 # ─── Titan Hardware Manager (THM) compiled binaries ────────────────────────
 titan-hwm-source/titan_hw_manager
