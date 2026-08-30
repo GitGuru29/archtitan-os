@@ -139,7 +139,7 @@ Item {
             Text {
                 text: Mpris ? Mpris.positionText : "0:00"
                 font.family: "JetBrainsMono Nerd Font"
-                font.pixelSize: 9.5
+                font.pixelSize: 10
                 font.weight: Font.DemiBold
                 color: "#89B4FA"
             }
@@ -149,7 +149,7 @@ Item {
             Text {
                 text: Mpris ? Mpris.lengthText : "0:00"
                 font.family: "JetBrainsMono Nerd Font"
-                font.pixelSize: 9.5
+                font.pixelSize: 10
                 color: "#6C7086"
                 visible: Mpris ? Mpris.length > 0 : false
             }
@@ -222,7 +222,7 @@ Item {
                     anchors.centerIn: parent
                     text: "🎵 " + AudioProfile.profileName
                     font.family: "JetBrainsMono Nerd Font"
-                    font.pixelSize: 8.5
+                    font.pixelSize: 9
                     color: "#74C7EC"
                 }
             }

@@ -74,7 +74,7 @@ Item {
                         anchors.centerIn: parent
                         text: Mpris ? Mpris.playerName.toUpperCase() : ""
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 7.5
+                        font.pixelSize: 8
                         font.weight: Font.Bold
                         color: "#89B4FA"
                     }
