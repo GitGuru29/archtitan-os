@@ -11,7 +11,7 @@ buildmodes=('iso')
 bootmodes=('uefi.grub')
 pacman_conf="pacman.conf"
 airootfs_image_type="squashfs"
-airootfs_image_tool_options=('-comp' 'zstd' '-b' '1M' '-processors' '2' '-mem' '2G')
+airootfs_image_tool_options=('-comp' 'zstd' '-Xcompression-level' '19' '-b' '1M' '-mem' '4G')
 bootstrap_tarball_compression=('zstd' '-c' '-T0' '--auto-threads=logical' '--long' '-19')
 file_permissions=(
   ["/etc/shadow"]="0:0:400"
@@ -30,6 +30,8 @@ file_permissions=(
   ["/usr/local/bin/archtitan-apply-immutable"]="0:0:755"
   ["/etc/systemd/system/archtitan-immutable-guard.service"]="0:0:644"
   ["/usr/local/bin/archtitan-initcpio-preset"]="0:0:755"
+  ["/usr/local/bin/archtitan-postinstall"]="0:0:755"
+  ["/etc/systemd/system/archtitan-postinstall@.service"]="0:0:644"
   ["/usr/bin/titanfetch"]="0:0:755"
   ["/usr/bin/archtitan-settings"]="0:0:755"
   ["/etc/systemd/system/titan-active.slice"]="0:0:644"

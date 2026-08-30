@@ -1,0 +1,221 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  ArchTitan OS — Post-Install First-Boot Setup
+#  Installs AUR packages, npm tools, and pip packages that were selected
+#  during Calamares installation but cannot be installed via pacman chroot.
+#
+#  Runs ONCE on first user login via archtitan-postinstall.service
+#  Executes as the real user (not root).
+# =============================================================================
+
+set -euo pipefail
+
+SELECTIONS_FILE="/etc/archtitan-postinstall/selections"
+LOG_FILE="$HOME/.local/share/archtitan/postinstall.log"
+DONE_FILE="/etc/archtitan-postinstall/.completed"
+
+# Already ran successfully — exit immediately
+[[ -f "$DONE_FILE" ]] && exit 0
+
+mkdir -p "$(dirname "$LOG_FILE")"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+echo "================================================"
+echo " ArchTitan Post-Install Setup — $(date)"
+echo "================================================"
+
+# ─── Read selections written by Calamares shellprocess ───────────────────────
+if [[ ! -f "$SELECTIONS_FILE" ]]; then
+    echo "[INFO] No post-install selections found. Nothing to do."
+    sudo touch "$DONE_FILE"
+    exit 0
+fi
+
+# shellcheck source=/dev/null
+source "$SELECTIONS_FILE"
+
+# ─── Install yay (AUR helper) if not present ─────────────────────────────────
+install_yay() {
+    if command -v yay &>/dev/null; then
+        echo "[INFO] yay already installed."
+        return
+    fi
+    echo "[INFO] Installing yay AUR helper..."
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    git clone --depth=1 https://aur.archlinux.org/yay-bin.git "$tmpdir/yay-bin"
+    (cd "$tmpdir/yay-bin" && makepkg -si --noconfirm)
+    rm -rf "$tmpdir"
+    echo "[OK] yay installed."
+}
+
+# ─── AUR package installer ────────────────────────────────────────────────────
+install_aur() {
+    local pkg="$1"
+    echo "[AUR] Installing: $pkg"
+    yay -S --noconfirm --needed "$pkg" && echo "[OK] $pkg" || echo "[WARN] $pkg install failed — skipping"
+}
+
+# ─── npm package installer ────────────────────────────────────────────────────
+install_npm() {
+    local pkg="$1"
+    echo "[npm] Installing: $pkg"
+    npm install -g "$pkg" && echo "[OK] $pkg" || echo "[WARN] $pkg install failed — skipping"
+}
+
+# ─── pip package installer ────────────────────────────────────────────────────
+install_pip() {
+    local pkg="$1"
+    echo "[pip] Installing: $pkg"
+    pip install --user --break-system-packages "$pkg" && echo "[OK] $pkg" || echo "[WARN] $pkg install failed — skipping"
+}
+
+# ─── VSCode extension installer ──────────────────────────────────────────────
+install_vscode_ext() {
+    local ext="$1"
+    echo "[vscode] Installing extension: $ext"
+    code --install-extension "$ext" --force && echo "[OK] $ext" || echo "[WARN] $ext install failed — skipping"
+}
+
+# ─── Ensure yay is available before any AUR installs ─────────────────────────
+needs_yay=false
+[[ "${INSTALL_ANDROID_STUDIO:-false}" == "true" ]] && needs_yay=true
+[[ "${INSTALL_FLUTTER:-false}"        == "true" ]] && needs_yay=true
+[[ "${INSTALL_HEROIC:-false}"         == "true" ]] && needs_yay=true
+[[ "${INSTALL_PROTON_GE:-false}"      == "true" ]] && needs_yay=true
+[[ "${INSTALL_BURPSUITE:-false}"      == "true" ]] && needs_yay=true
+[[ "${INSTALL_METASPLOIT:-false}"     == "true" ]] && needs_yay=true
+[[ "${INSTALL_GCLOUD:-false}"         == "true" ]] && needs_yay=true
+[[ "${INSTALL_AZURE_CLI:-false}"      == "true" ]] && needs_yay=true
+[[ "${INSTALL_SLACK:-false}"          == "true" ]] && needs_yay=true
+[[ "${INSTALL_ZOOM:-false}"           == "true" ]] && needs_yay=true
+[[ "${INSTALL_TEAMS:-false}"          == "true" ]] && needs_yay=true
+[[ "${INSTALL_FIGMA:-false}"          == "true" ]] && needs_yay=true
+[[ "${INSTALL_DAVINCI:-false}"        == "true" ]] && needs_yay=true
+[[ "${INSTALL_OLLAMA:-false}"         == "true" ]] && needs_yay=true
+
+if [[ "$needs_yay" == "true" ]]; then
+    install_yay
+fi
+
+# ─── AI Coding Assistants ─────────────────────────────────────────────────────
+if [[ "${INSTALL_AGY:-false}" == "true" ]]; then
+    echo "[INFO] Installing Google Antigravity (AGY)..."
+    pip install --user --break-system-packages google-generativeai
+    # Install AGY CLI via official installer
+    curl -fsSL https://storage.googleapis.com/antigravity-sdk/install.sh | bash || \
+        echo "[WARN] AGY installer failed — try manual install from https://antigravity.dev"
+fi
+
+if [[ "${INSTALL_CLAUDE_CODE:-false}" == "true" ]]; then
+    install_npm "@anthropic-ai/claude-code"
+fi
+
+if [[ "${INSTALL_CODEX:-false}" == "true" ]]; then
+    install_npm "@openai/codex"
+fi
+
+if [[ "${INSTALL_AIDER:-false}" == "true" ]]; then
+    install_pip "aider-chat"
+fi
+
+if [[ "${INSTALL_CONTINUE_DEV:-false}" == "true" ]]; then
+    install_vscode_ext "Continue.continue"
+fi
+
+if [[ "${INSTALL_OLLAMA:-false}" == "true" ]]; then
+    install_aur "ollama"
+    sudo systemctl enable --now ollama.service || true
+fi
+
+# ─── Android Development ──────────────────────────────────────────────────────
+if [[ "${INSTALL_ANDROID_STUDIO:-false}" == "true" ]]; then
+    install_aur "android-studio"
+fi
+
+if [[ "${INSTALL_FLUTTER:-false}" == "true" ]]; then
+    install_aur "flutter"
+    # Configure flutter to use system dart
+    flutter config --no-analytics || true
+fi
+
+# ─── Cloud CLIs (AUR) ─────────────────────────────────────────────────────────
+if [[ "${INSTALL_GCLOUD:-false}" == "true" ]]; then
+    install_aur "google-cloud-cli"
+fi
+
+if [[ "${INSTALL_AZURE_CLI:-false}" == "true" ]]; then
+    install_aur "azure-cli"
+fi
+
+# ─── Gaming (AUR) ─────────────────────────────────────────────────────────────
+if [[ "${INSTALL_HEROIC:-false}" == "true" ]]; then
+    install_aur "heroic-games-launcher-bin"
+fi
+
+if [[ "${INSTALL_PROTON_GE:-false}" == "true" ]]; then
+    install_aur "proton-ge-custom-bin"
+fi
+
+# ─── Creative Tools (AUR) ─────────────────────────────────────────────────────
+if [[ "${INSTALL_FIGMA:-false}" == "true" ]]; then
+    install_aur "figma-linux"
+fi
+
+if [[ "${INSTALL_DAVINCI:-false}" == "true" ]]; then
+    install_aur "davinci-resolve"
+fi
+
+# ─── Security (AUR) ───────────────────────────────────────────────────────────
+if [[ "${INSTALL_BURPSUITE:-false}" == "true" ]]; then
+    install_aur "burpsuite"
+fi
+
+if [[ "${INSTALL_METASPLOIT:-false}" == "true" ]]; then
+    install_aur "metasploit"
+fi
+
+# ─── Data Science (pip) ───────────────────────────────────────────────────────
+if [[ "${INSTALL_PYTORCH:-false}" == "true" ]]; then
+    echo "[pip] Installing PyTorch (CUDA) — large download ~2GB..."
+    pip install --user torch torchvision torchaudio \
+        --index-url https://download.pytorch.org/whl/cu124 || \
+        echo "[WARN] PyTorch install failed — check CUDA compatibility"
+fi
+
+if [[ "${INSTALL_TENSORFLOW:-false}" == "true" ]]; then
+    install_pip "tensorflow"
+fi
+
+if [[ "${INSTALL_HF_TRANSFORMERS:-false}" == "true" ]]; then
+    pip install --user transformers datasets accelerate || true
+fi
+
+# ─── Rust cross-compilation (if rustup was installed by pacman) ───────────────
+if [[ "${INSTALL_RUST_CROSS:-false}" == "true" ]] && command -v rustup &>/dev/null; then
+    echo "[INFO] Adding Rust cross-compilation targets..."
+    rustup target add x86_64-unknown-linux-musl wasm32-unknown-unknown || true
+fi
+
+# ─── Communication (AUR) ──────────────────────────────────────────────────────
+if [[ "${INSTALL_SLACK:-false}" == "true" ]]; then
+    install_aur "slack-desktop"
+fi
+
+if [[ "${INSTALL_ZOOM:-false}" == "true" ]]; then
+    install_aur "zoom"
+fi
+
+if [[ "${INSTALL_TEAMS:-false}" == "true" ]]; then
+    install_aur "teams-for-linux"
+fi
+
+# ─── Mark complete ────────────────────────────────────────────────────────────
+echo ""
+echo "================================================"
+echo " ArchTitan Post-Install Setup COMPLETE"
+echo " Log: $LOG_FILE"
+echo "================================================"
+
+sudo touch "$DONE_FILE"
+sudo systemctl disable archtitan-postinstall.service || true
