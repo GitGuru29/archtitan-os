@@ -1,0 +1,416 @@
+---
+# ArchTitan OS — Software Chooser Groups
+# Displayed in Calamares during installation.
+# Packages marked [pacman] are installed directly via pacman in chroot.
+# Packages marked [first-boot] are installed on first user login via
+# archtitan-postinstall.service (handles AUR, npm, pip installs).
+#
+# Format: https://github.com/calamares/calamares/blob/calamares/src/modules/netinstall/
+
+# ─── AI Coding Assistants ──────────────────────────────────────────────────────
+- name: "AI Coding Assistants"
+  description: "AI-powered terminal coding agents and IDE integrations"
+  selected: false
+  critical: false
+  packages: []           # AUR/npm — installed by archtitan-postinstall.service
+  subgroups:
+
+  - name: "Google Antigravity (AGY)"
+    description: >-
+      Google's AI coding agent. Installs 'agy' CLI — pair-programs with Gemini
+      directly in your terminal. [First-boot via pip]
+    selected: false
+    packages: []         # pip install google-generativeai antigravity-sdk
+    # flag written to /etc/archtitan-postinstall/selections for first-boot script
+
+  - name: "Claude Code (Anthropic)"
+    description: >-
+      Anthropic's terminal AI coding agent. 'claude' command integrates with
+      your editor and codebase. [First-boot via npm]
+    selected: false
+    packages: []         # npm install -g @anthropic-ai/claude-code
+
+  - name: "Codex CLI (OpenAI)"
+    description: >-
+      OpenAI's terminal Codex coding agent. Reads your codebase and writes/edits
+      code from natural language. [First-boot via npm]
+    selected: false
+    packages: []         # npm install -g @openai/codex
+
+  - name: "Aider (AI Pair Programmer)"
+    description: >-
+      Open-source AI pair programming in your terminal. Works with GPT-4, Claude,
+      Gemini, and local models. [First-boot via pip]
+    selected: false
+    packages: []         # pip install aider-chat
+
+  - name: "Continue.dev (IDE Extension)"
+    description: >-
+      Open-source AI code assistant VSCode extension. Supports Ollama, Claude,
+      Gemini, GPT-4, and any local model. [First-boot via code --install-extension]
+    selected: false
+    packages: []         # code --install-extension Continue.continue
+
+  - name: "Ollama (Local LLM Runtime)"
+    description: >-
+      Run large language models locally — Llama 3, Mistral, Phi-3, Gemma.
+      Works with Continue.dev and Aider. [pacman]
+    selected: false
+    packages:
+      - ollama           # AUR → pre-built in Chaotic-AUR
+
+# ─── Android Development ───────────────────────────────────────────────────────
+- name: "Android Development"
+  description: "Android SDK, tools, and Android Studio IDE"
+  selected: false
+  critical: false
+  packages:
+    - android-tools      # adb, fastboot, mkbootimg
+    - android-udev       # udev rules for USB device access
+    - jdk-openjdk        # Java runtime required by Android Studio / Gradle
+    - gradle             # Android build system
+  subgroups:
+
+  - name: "Android Studio IDE"
+    description: >-
+      Google's official Android IDE with full emulator support.
+      Installed via yay from AUR on first boot. [First-boot via AUR]
+    selected: false
+    packages: []         # yay -S android-studio
+
+  - name: "Flutter & Dart SDK"
+    description: >-
+      Cross-platform mobile/desktop/web framework from Google.
+      [First-boot via AUR: flutter]
+    selected: false
+    packages: []         # yay -S flutter
+
+  - name: "Scrcpy (Android Screen Mirror)"
+    description: >-
+      Mirror and control Android devices over USB/TCP with zero latency. [pacman]
+    selected: false
+    packages:
+      - scrcpy
+
+# ─── Rust Development ─────────────────────────────────────────────────────────
+- name: "Rust Development"
+  description: "Rust language toolchain, LSP, and cargo ecosystem"
+  selected: false
+  critical: false
+  packages:
+    - rustup             # official Rust toolchain manager (stable + nightly)
+  subgroups:
+
+  - name: "cargo-watch + cargo-edit"
+    description: "Live recompile on file change + 'cargo add/rm' commands. [pacman]"
+    selected: false
+    packages:
+      - cargo-watch
+
+  - name: "Cross-compilation targets"
+    description: "Adds musl libc + ARM/WASM cross-compile targets via rustup. [First-boot]"
+    selected: false
+    packages: []         # rustup target add x86_64-unknown-linux-musl wasm32-unknown-unknown
+
+# ─── Go Development ───────────────────────────────────────────────────────────
+- name: "Go Development"
+  description: "Go language toolchain and popular Go tools"
+  selected: false
+  critical: false
+  packages:
+    - go                 # official Go compiler and stdlib
+  subgroups:
+
+  - name: "gopls + golangci-lint"
+    description: "Go language server (LSP) + fast linter runner. [pacman]"
+    selected: false
+    packages:
+      - gopls
+      - golangci-lint
+
+# ─── Docker / Containers ──────────────────────────────────────────────────────
+- name: "Docker & Containers"
+  description: "Container runtime, orchestration, and Kubernetes tools"
+  selected: false
+  critical: false
+  packages:
+    - docker
+    - docker-compose
+    - docker-buildx
+  subgroups:
+
+  - name: "Podman (rootless containers)"
+    description: "Daemonless OCI container engine — Docker-compatible, rootless. [pacman]"
+    selected: false
+    packages:
+      - podman
+      - podman-compose
+
+  - name: "kubectl + Helm"
+    description: "Kubernetes CLI and Helm chart manager. [pacman]"
+    selected: false
+    packages:
+      - kubectl
+      - helm
+
+  - name: "k9s (Kubernetes TUI)"
+    description: "Terminal UI for managing Kubernetes clusters in real-time. [pacman]"
+    selected: false
+    packages:
+      - k9s
+
+  - name: "Dive (Docker image explorer)"
+    description: "Explore Docker image layers and find what's wasting space. [pacman]"
+    selected: false
+    packages:
+      - dive
+
+# ─── Cloud & DevOps ───────────────────────────────────────────────────────────
+- name: "Cloud & DevOps"
+  description: "Infrastructure-as-code, CI/CD, and cloud provider CLIs"
+  selected: false
+  critical: false
+  packages: []
+  subgroups:
+
+  - name: "Terraform"
+    description: "HashiCorp Infrastructure-as-Code tool. [pacman]"
+    selected: false
+    packages:
+      - terraform
+
+  - name: "AWS CLI"
+    description: "Amazon Web Services command-line interface. [pacman]"
+    selected: false
+    packages:
+      - aws-cli-v2
+
+  - name: "Google Cloud CLI (gcloud)"
+    description: "Google Cloud SDK CLI tools. [First-boot via AUR: google-cloud-cli]"
+    selected: false
+    packages: []         # yay -S google-cloud-cli
+
+  - name: "Azure CLI"
+    description: "Microsoft Azure command-line interface. [First-boot via AUR: azure-cli]"
+    selected: false
+    packages: []         # yay -S azure-cli
+
+  - name: "Ansible"
+    description: "Agentless IT automation and configuration management. [pacman]"
+    selected: false
+    packages:
+      - ansible
+
+# ─── Data Science & ML ────────────────────────────────────────────────────────
+- name: "Data Science & Machine Learning"
+  description: "Python data science stack, Jupyter, and ML frameworks"
+  selected: false
+  critical: false
+  packages:
+    - jupyter-notebook
+    - python-numpy
+    - python-pandas
+    - python-matplotlib
+    - python-scipy
+    - python-scikit-learn
+  subgroups:
+
+  - name: "PyTorch (CUDA)"
+    description: >-
+      Meta's deep learning framework with CUDA GPU acceleration.
+      [First-boot via pip — large download ~2GB]
+    selected: false
+    packages: []         # pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+
+  - name: "TensorFlow"
+    description: "Google's machine learning framework. [First-boot via pip]"
+    selected: false
+    packages: []         # pip install tensorflow
+
+  - name: "Hugging Face Transformers"
+    description: "State-of-the-art NLP models and pipelines. [First-boot via pip]"
+    selected: false
+    packages: []         # pip install transformers datasets
+
+# ─── Virtualization ───────────────────────────────────────────────────────────
+- name: "Virtualization"
+  description: "QEMU/KVM full virtualization stack with virt-manager GUI"
+  selected: false
+  critical: false
+  packages:
+    - virt-manager
+    - qemu-full
+    - libvirt
+    - bridge-utils
+    - dnsmasq
+    - iptables-nft
+    - dmidecode
+
+# ─── Gaming ───────────────────────────────────────────────────────────────────
+- name: "Gaming"
+  description: "Steam, Lutris, Proton, and performance tools"
+  selected: false
+  critical: false
+  packages:
+    - steam
+    - lutris
+    - gamemode
+    - lib32-gamemode
+    - mangohud
+    - lib32-mangohud
+    - wine
+    - winetricks
+  subgroups:
+
+  - name: "Heroic Games Launcher"
+    description: "Native Epic Games, GOG, and Amazon Games launcher. [First-boot via AUR]"
+    selected: false
+    packages: []         # yay -S heroic-games-launcher-bin
+
+  - name: "Proton-GE (Custom Proton)"
+    description: "Community Proton build with wider game compatibility. [First-boot via AUR]"
+    selected: false
+    packages: []         # yay -S proton-ge-custom-bin
+
+  - name: "Bottles"
+    description: "Manage Windows software and games with isolated Wine environments. [pacman]"
+    selected: false
+    packages:
+      - bottles
+
+# ─── Creative Tools ───────────────────────────────────────────────────────────
+- name: "Creative Tools"
+  description: "Image editing, vector art, video editing, and screen recording"
+  selected: false
+  critical: false
+  packages: []
+  subgroups:
+
+  - name: "Image Editing (GIMP + Darktable + Krita)"
+    description: "GNU Image Manipulation Program, RAW photo editor, and Krita painting. [pacman]"
+    selected: false
+    packages:
+      - gimp
+      - darktable
+      - krita
+
+  - name: "Vector & UI Design (Inkscape)"
+    description: "Professional vector graphics editor, SVG native. [pacman]"
+    selected: false
+    packages:
+      - inkscape
+
+  - name: "Video Editing (Kdenlive + DaVinci)"
+    description: "Non-linear video editor kdenlive. DaVinci Resolve via AUR [First-boot]"
+    selected: false
+    packages:
+      - kdenlive        # pacman
+
+  - name: "OBS Studio (Screen Recording)"
+    description: "Open Broadcaster Software — streaming and screen recording. [pacman]"
+    selected: false
+    packages:
+      - obs-studio
+
+  - name: "Blender (3D Modeling)"
+    description: "Industry-grade 3D creation suite — modeling, rigging, rendering. [pacman]"
+    selected: false
+    packages:
+      - blender
+
+  - name: "Figma Linux (UI Design)"
+    description: "Unofficial Figma desktop client for Linux. [First-boot via AUR]"
+    selected: false
+    packages: []         # yay -S figma-linux
+
+# ─── Security & Pentesting ────────────────────────────────────────────────────
+- name: "Security & Pentesting"
+  description: "Network analysis, vulnerability scanning, and forensics tools"
+  selected: false
+  critical: false
+  packages: []
+  subgroups:
+
+  - name: "Wireshark + Nmap"
+    description: "Network packet analyzer and port scanner. [pacman]"
+    selected: false
+    packages:
+      - wireshark-qt
+      - nmap
+
+  - name: "Burp Suite Community"
+    description: "Web application security testing platform. [First-boot via AUR]"
+    selected: false
+    packages: []         # yay -S burpsuite
+
+  - name: "Metasploit Framework"
+    description: "Penetration testing framework. [First-boot via AUR]"
+    selected: false
+    packages: []         # yay -S metasploit
+
+  - name: "Hashcat + John the Ripper"
+    description: "GPU-accelerated password recovery tools. [pacman]"
+    selected: false
+    packages:
+      - hashcat
+      - john
+
+# ─── Extra CLI & Terminal Tools ───────────────────────────────────────────────
+- name: "Extra CLI & Terminal Tools"
+  description: "Productivity-boosting terminal utilities"
+  selected: false
+  critical: false
+  packages:
+    - lazygit            # Git TUI
+    - httpie             # HTTP client (curl replacement)
+    - tmux               # Terminal multiplexer
+    - fzf                # Fuzzy finder
+    - bat                # cat with syntax highlighting
+    - eza                # ls replacement with icons + git info
+    - zoxide             # Smarter cd (remembers frequent dirs)
+    - dust               # du replacement with visual tree
+    - procs              # ps replacement in Rust
+    - tokei              # Code line counter by language
+    - hyperfine          # Command benchmarking tool
+    - tealdeer           # Fast tldr client (simplified man pages)
+
+# ─── Communication & Productivity ────────────────────────────────────────────
+- name: "Communication & Productivity"
+  description: "Chat clients, office suites, and email"
+  selected: false
+  critical: false
+  packages: []
+  subgroups:
+
+  - name: "Discord"
+    description: "Voice, video, and text chat for communities. [pacman]"
+    selected: false
+    packages:
+      - discord
+
+  - name: "Slack"
+    description: "Team messaging platform. [First-boot via AUR]"
+    selected: false
+    packages: []         # yay -S slack-desktop
+
+  - name: "LibreOffice"
+    description: "Full office suite — Writer, Calc, Impress, Draw. [pacman]"
+    selected: false
+    packages:
+      - libreoffice-fresh
+
+  - name: "Thunderbird (Email)"
+    description: "Mozilla email and calendar client. [pacman]"
+    selected: false
+    packages:
+      - thunderbird
+
+  - name: "Zoom"
+    description: "Video conferencing client. [First-boot via AUR]"
+    selected: false
+    packages: []         # yay -S zoom
+
+  - name: "Microsoft Teams"
+    description: "Microsoft Teams web-based client. [First-boot via AUR]"
+    selected: false
+    packages: []         # yay -S teams-for-linux

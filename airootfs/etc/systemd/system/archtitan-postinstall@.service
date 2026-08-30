@@ -1,0 +1,24 @@
+[Unit]
+Description=ArchTitan Post-Install Setup (AUR, npm, pip packages)
+Documentation=https://github.com/GitGuru29/archtitan-os
+# Run after the network is up and the user is logged into a graphical session
+After=network-online.target graphical-session.target
+Wants=network-online.target
+# Only runs on first login — disables itself on success
+ConditionPathExists=!/etc/archtitan-postinstall/.completed
+
+[Service]
+Type=oneshot
+# Run as the logged-in user, not root
+User=%i
+Environment=HOME=/home/%i
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+# Give it 60 minutes max (large downloads like PyTorch/Android Studio)
+TimeoutStartSec=3600
+ExecStart=/usr/local/bin/archtitan-postinstall
+StandardOutput=journal
+StandardError=journal
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target

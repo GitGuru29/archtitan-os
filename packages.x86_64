@@ -75,7 +75,7 @@ neovim
 cmake
 clang
 gdb
-android-tools
+# android-tools -> moved to netinstall chooser
 bluez
 bluez-utils
 networkmanager
@@ -93,10 +93,6 @@ fish
 code
 nodejs
 npm
-go
-rustup
-docker
-docker-compose
 github-cli
 btop
 zellij
@@ -129,10 +125,8 @@ unzip
 zip
 ripgrep
 fd
-lazygit
 tree
 jq
-httpie
 strace
 libseccomp
 libcap
