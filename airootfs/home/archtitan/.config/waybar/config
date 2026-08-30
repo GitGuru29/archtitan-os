@@ -2,150 +2,148 @@
     "layer": "top",
     "position": "top",
     "height": 34,
-    "margin-top": 6,
-    "margin-left": 10,
-    "margin-right": 10,
+    "margin-top": 4,
+    "margin-left": 8,
+    "margin-right": 8,
     "spacing": 0,
     "exclusive": true,
 
     "modules-left": [
-        "custom/logo",
-        "hyprland/workspaces",
-        "hyprland/window"
+        "custom/logo"
     ],
     "modules-center": [
-        "mpris",
-        "hyprland/workspaces#dots"
+        "hyprland/workspaces",
+        "custom/separator-center",
+        "custom/hud-context",
+        "custom/separator-app",
+        "hyprland/window"
     ],
     "modules-right": [
-        "custom/power",
-        "custom/titan-hwm",
         "cpu",
         "memory",
-        "clock",
-        "tray",
-        "backlight",
-        "pulseaudio",
+        "custom/gpu",
         "network",
-        "battery"
+        "pulseaudio",
+        "battery",
+        "clock",
+        "tray"
     ],
 
     "custom/logo": {
-        "format": "◆",
+        "format": "◈ ARCHTITAN",
         "tooltip": false
     },
 
-    "custom/titan-hwm": {
-        "exec": "bash -c 'if [ -d /run/archiso ]; then echo \"{\\\"text\\\":\\\"⬇ Live Mode\\\",\\\"tooltip\\\":\\\"ArchTitan Live ISO — HWM inactive\\\",\\\"class\\\":\\\"live\\\"}\"; else titan-hwm-waybar; fi'",
-        "interval": 5,
-        "return-type": "json",
-        "on-click": "bash -c 'if [ ! -d /run/archiso ]; then titan-hwm status; fi'",
-        "on-right-click": "bash -c 'if [ ! -d /run/archiso ]; then kitty --title=\"Titan HWM\" -e bash -c \"titan-hwm status; echo; read -p \\\"Press Enter...\\\"\"; fi'"
-    },
-
     "hyprland/workspaces": {
-        "format": "{id}",
+        "format": "{icon}",
         "on-click": "activate",
         "sort-by-number": true,
         "persistent-workspaces": {
             "*": 5
         },
         "format-icons": {
-            "active": "{id}",
-            "default": "{id}"
+            "1": "01",
+            "2": "02",
+            "3": "03",
+            "4": "04",
+            "5": "05",
+            "6": "06",
+            "7": "07",
+            "8": "08",
+            "9": "09"
         }
     },
 
-    "hyprland/workspaces#dots": {
-        "format": "{icon}",
-        "format-icons": {
-            "active": "●",
-            "default": "·",
-            "empty": "·"
-        },
-        "on-click": "activate",
-        "sort-by-number": true,
-        "persistent-workspaces": {
-            "*": 9
-        },
+    "custom/separator-center": {
+        "format": "│",
+        "tooltip": false
+    },
+
+    "custom/hud-context": {
+        "exec": "titan-hud-context",
+        "interval": 1,
+        "return-type": "json",
+        "tooltip": true
+    },
+
+    "custom/separator-app": {
+        "format": "·",
         "tooltip": false
     },
 
     "hyprland/window": {
         "format": "{}",
-        "max-length": 60,
+        "max-length": 36,
         "separate-outputs": true,
         "rewrite": {
-            "(.*)calamares(.*)": "⬇ ArchTitan Setup",
-            "(.*)Calamares(.*)": "⬇ ArchTitan Setup",
-            "(.*) — Mozilla Firefox": "🌐 $1",
-            "(.*) - fish": "> $1",
-            "(.*) - kitty": "> $1"
+            "^$": "",
+            "(.*) - kitty": "Kitty",
+            "^kitty$": "Kitty",
+            "(.*) - fish": "Kitty",
+            "(.*)Visual Studio Code(.*)": "Visual Studio Code",
+            "(.*)Code - OSS(.*)": "Visual Studio Code",
+            "^code$": "Visual Studio Code",
+            "^code-oss$": "Visual Studio Code",
+            "(.*)Android Studio(.*)": "Android Studio",
+            "^android-studio$": "Android Studio",
+            "(.*) — Brave": "Brave",
+            "^brave-browser$": "Brave",
+            "(.*) — Mozilla Firefox": "Firefox",
+            "^firefox$": "Firefox",
+            "(.*) — Chromium": "Chromium",
+            "^chromium$": "Chromium",
+            "(.*) — Falkon": "Titan Browser",
+            "(.*) — Titan Browser": "Titan Browser",
+            "^falkon$": "Titan Browser",
+            "^titan-browser$": "Titan Browser",
+            "(.*)calamares(.*)": "ArchTitan Setup",
+            "(.*)Calamares(.*)": "ArchTitan Setup",
+            "(.*)archtitan-settings(.*)": "ArchTitan Settings",
+            "^pavucontrol$": "Volume Mixer",
+            "^btop$": "System Monitor",
+            "^ranger$": "Files",
+            "^thunar$": "Files",
+            "^nemo$": "Files",
+            "^Spotify(.*)": "Spotify",
+            "^vlc$": "VLC Media Player",
+            "^mpv$": "MPV Player"
         }
     },
 
-    "mpris": {
-        "format": "{player_icon}  {title} — {artist}",
-        "format-paused": "{status_icon}  {title}",
-        "format-stopped": "",
-        "player-icons": {
-            "default": "▶",
-            "spotify": ""
-        },
-        "status-icons": {
-            "paused": "⏸"
-        },
-        "ignored-players": ["firefox"],
-        "max-length": 40,
-        "tooltip": false
+    "cpu": {
+        "format": "CPU {usage}%",
+        "interval": 2,
+        "tooltip": true
     },
 
-    "clock": {
-        "format": "  {:%H:%M  •  %a, %d/%m}",
-        "tooltip-format": "<tt><big>{calendar}</big></tt>",
-        "calendar": {
-            "mode": "month",
-            "weeks-pos": "right",
-            "on-scroll": 1,
-            "format": {
-                "months":   "<span color='#C0CAF5'><b>{}</b></span>",
-                "days":     "<span color='#A9B1D6'>{}</span>",
-                "weeks":    "<span color='#565F89'><b>W{}</b></span>",
-                "weekdays": "<span color='#7AA2F7'><b>{}</b></span>",
-                "today":    "<span color='#00D4FF'><b><u>{}</u></b></span>"
-            }
-        }
+    "memory": {
+        "format": "RAM {used:0.1f}G",
+        "interval": 3,
+        "tooltip-format": "RAM: {used:0.2f}GB / {total:0.2f}GB ({percentage}%)\nSwap: {swapUsed:0.2f}GB / {swapTotal:0.2f}GB"
     },
 
-    "backlight": {
-        "format": "{icon} {percent}%",
-        "format-icons": ["", "", "", "", "", "", "", "", ""],
-        "tooltip": false
-    },
-
-    "pulseaudio": {
-        "format": "{icon} {volume}%",
-        "format-muted": "󰖁 Muted",
-        "format-icons": {
-            "headphone": "",
-            "hands-free": "",
-            "headset": "",
-            "phone": "",
-            "portable": "",
-            "car": "",
-            "default": ["", "", ""]
-        },
-        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
-        "on-right-click": "pavucontrol",
-        "tooltip": false
+    "custom/gpu": {
+        "exec": "titan-hud-gpu",
+        "interval": 3,
+        "return-type": "json",
+        "tooltip": true
     },
 
     "network": {
-        "format-wifi": " {signalStrength}%",
-        "format-ethernet": "󰈀 Wired",
-        "format-disconnected": "󰤭 Off",
-        "tooltip-format-wifi": "{essid} — {signalStrength}%\n{ipaddr}",
-        "tooltip-format-ethernet": "{ifname}: {ipaddr}"
+        "format-wifi": "NET {bandwidthDownBytes}",
+        "format-ethernet": "NET {bandwidthDownBytes}",
+        "format-disconnected": "NET OFF",
+        "interval": 2,
+        "tooltip-format-wifi": "{essid} ({signalStrength}%)\nIP: {ipaddr}\nDown: {bandwidthDownBytes}  Up: {bandwidthUpBytes}",
+        "tooltip-format-ethernet": "{ifname}\nIP: {ipaddr}\nDown: {bandwidthDownBytes}  Up: {bandwidthUpBytes}"
+    },
+
+    "pulseaudio": {
+        "format": "VOL {volume}%",
+        "format-muted": "VOL MUTED",
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "on-right-click": "pavucontrol",
+        "tooltip": false
     },
 
     "battery": {
@@ -154,37 +152,35 @@
             "warning": 30,
             "critical": 15
         },
-        "format": "{icon} {capacity}%",
-        "format-charging": "  {capacity}%",
-        "format-plugged": "  {capacity}%",
-        "format-full": "  Full",
-        "format-not-found": "󰂑 AC",
-        "format-icons": ["", "", "", "", ""],
-        "tooltip-format": "{timeTo} — {capacity}%\nPower: {power:.1f}W",
-        "interval": 5
+        "format": "BAT {capacity}%",
+        "format-charging": "CHR {capacity}%",
+        "format-plugged": "PWR {capacity}%",
+        "format-full": "BAT 100%",
+        "format-not-found": "",
+        "interval": 5,
+        "tooltip-format": "{timeTo} — {capacity}%\nPower: {power:.1f}W"
+    },
+
+    "clock": {
+        "format": "{:%H:%M}",
+        "tooltip-format": "<tt><big>{calendar}</big></tt>",
+        "calendar": {
+            "mode": "month",
+            "weeks-pos": "right",
+            "on-scroll": 1,
+            "format": {
+                "months":   "<span color='#CDD6F4'><b>{}</b></span>",
+                "days":     "<span color='#A6ADC8'>{}</span>",
+                "weeks":    "<span color='#585B70'><b>W{}</b></span>",
+                "weekdays": "<span color='#89B4FA'><b>{}</b></span>",
+                "today":    "<span color='#74C7EC'><b><u>{}</u></b></span>"
+            }
+        }
     },
 
     "tray": {
-        "icon-size": 14,
-        "spacing": 6,
+        "icon-size": 13,
+        "spacing": 8,
         "show-passive-items": true
-    },
-
-    "cpu": {
-        "format": "  {usage}%",
-        "tooltip": true,
-        "interval": 2
-    },
-
-    "memory": {
-        "format": "  {}%",
-        "tooltip-format": "RAM: {used:0.1f} GB / {total:0.1f} GB\nSwap: {swapUsed:0.1f} GB / {swapTotal:0.1f} GB",
-        "interval": 5
-    },
-
-    "custom/power": {
-        "format": "⏻ ",
-        "tooltip": false,
-        "on-click": "titan-powermenu"
     }
 }

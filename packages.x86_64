@@ -63,7 +63,8 @@ xfsprogs
 hyprland
 waybar
 kitty
-chromium
+falkon
+qt6-webengine
 rofi-wayland
 rofi-emoji
 inter-font
@@ -110,7 +111,6 @@ xorg-xwayland
 qt5-wayland
 qt6-wayland
 python
-python-pip
 pipewire
 pipewire-pulse
 pipewire-alsa

@@ -1,5 +1,11 @@
 # 🌌 ArchTitan OS
 
+[![Arch Linux](https://img.shields.io/badge/Base-Arch%20Linux-1793D1?logo=arch-linux&logoColor=white)](https://archlinux.org/)
+[![Compositor](https://img.shields.io/badge/Compositor-Hyprland%20(Wayland)-00C8FF?logo=wayland&logoColor=white)](https://hyprland.org/)
+[![UI Framework](https://img.shields.io/badge/GUI-Qt6%20%2F%20QML-41CD52?logo=qt&logoColor=white)](https://www.qt.io/)
+[![Theme](https://img.shields.io/badge/Theme-Catppuccin%20Mocha-cba6f7)](https://github.com/catppuccin/catppuccin)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+
 ArchTitan is a custom, high-performance Linux distribution built on top of Arch Linux. Designed around the modern Wayland ecosystem, it offers a deeply integrated, aesthetically pleasing, and resource-efficient environment tailored for power users, developers, and enthusiasts.
 
 ---
@@ -8,153 +14,193 @@ ArchTitan is a custom, high-performance Linux distribution built on top of Arch 
 
 ArchTitan embraces the Unix philosophy while providing a cohesive, pre-configured premium experience out of the box.
 
-- **Wayland Native:** Powered by the **Hyprland** dynamic tiling window manager.
+- **Wayland Native:** Powered by the **Hyprland** dynamic tiling window manager with fluid animations and responsive window rules.
 - **Resource Aware:** Features custom daemons like the **Titan Hardware Manager (THM)** for deterministic system-level resource orchestration.
-- **Aesthetic First:** Deeply integrated **Catppuccin Mocha** dark theme across all UI elements, terminals, and custom tools.
-- **Developer Ready:** Ships with modern CLI tools, an optimized `fish` + `starship` shell experience, and built-in IDE support.
+- **Aesthetic First:** Deeply integrated **Catppuccin Mocha** dark theme across all UI elements, terminals, browsers, and custom tools.
+- **Privacy & Security Focused:** Process sandboxing via Linux namespaces & seccomp-bpf, plus native ad & tracker blocking in Titan Browser.
+- **Developer Ready:** Ships with modern CLI utilities, an optimized `fish` + `starship` shell experience, PipeWire audio, and Qt6 development toolchains.
 
 ---
 
 ## 🏗️ System Architecture
 
-ArchTitan isn't just a collection of packages; it introduces custom middleware to bridge the gap between the window manager and the underlying hardware.
+ArchTitan bridges the gap between the modern Wayland compositor, custom middleware, and low-level Linux kernel subsystems:
 
 ```mermaid
 graph TD
-    subgraph "User Space (Wayland)"
+    subgraph "User Space (Wayland & UI)"
         H[Hyprland Compositor]
-        W[Waybar]
+        W[Waybar Status Panel]
+        MH[Titan Media HUD<br>Contextual Drawer]
         R[Rofi App Launcher]
         K[Kitty Terminal]
     end
 
-    subgraph "Custom ArchTitan Tooling"
+    subgraph "Core ArchTitan Applications & Tooling"
+        TB[Titan Browser<br>Qt6 WebEngine + Adblock]
+        TS_APP[Titan Settings<br>Unified Qt6/QML Panel]
         TF[TitanFetch<br>System Info CLI/GUI]
-        TS[TitanShare<br>Local Network Sharing]
-        THM[Titan Hardware Manager<br>Daemon]
+        TSD[Titan Sandbox<br>Namespace Isolation]
+        THM[Titan Hardware Manager<br>Privileged Daemon]
     end
 
-    subgraph "Kernel & Subsystems"
-        CG[cgroups v2]
+    subgraph "Kernel & System Subsystems"
+        CG[cgroups v2 & Scheduler]
+        SEC[seccomp-bpf & Namespaces]
         PM[Power Management / ACPI]
-        DB[D-Bus IPC]
+        PW[PipeWire Audio / WirePlumber]
+        NM[NetworkManager & Wi-Fi]
+        DB[D-Bus IPC Bus]
     end
 
-    %% Relationships
+    %% User Space Connections
     H --- W
+    H --- MH
     H --- R
     H --- K
     
-    TF -.->|Reads| CG
-    THM ==>|Enforces Policies| CG
-    THM -.->|Listens| DB
-    THM -.->|Controls| PM
+    %% Tooling Interactions
+    TB -.->|MPRIS Metadata| MH
+    MH -.->|D-Bus Control| PW
+    TS_APP -.->|Configures| NM
+    TS_APP -.->|Manages Profiles| PM
+    TSD ==>|Enforces Policies| SEC
+    TF -.->|Reads Telemetry| CG
+    THM ==>|Enforces Resource Limits| CG
+    THM -.->|Coordinates| DB
+    THM -.->|Controls Governor| PM
 ```
-
-### 🛠️ Custom Components
-
-1. **Titan Hardware Manager (`titan-hwm`)** — *@GitGuru29*
-   A privileged systemd service that dynamically orchestrates system resources. It intercepts power events, monitors Wayland session states, and aggressively manages background tasks using `cgroups v2` to ensure the active desktop session remains flawlessly smooth.
-   
-2. **TitanFetch (`titanfetch`)** — *@GitGuru29*
-   A blazing-fast, C++/Qt6-based system information tool. It replaces traditional Bash fetch scripts, offering both a beautiful terminal ASCII output and a premium, draggable GUI card with live progress bars for hardware usage.
-
-3. **Titan Sandbox (`titan-sandboxd`)** — *@GitGuru29*
-   A secure container and isolation subsystem leveraging Linux namespaces, seccomp-bpf filters, and capability drops with TOML-based policy enforcement for sandboxed application execution.
-
-4. **Titan Settings** — *@GitGuru29*
-   A unified system configuration panel for managing OS-level settings, subsystem configs, and user preferences. *(In Development)*
-
-5. **Auto GPU Switcher** — *@GitGuru29*
-   Intelligent iGPU/dGPU switching based on workload, power state, and thermal conditions with THM integration. *(In Development)*
-
-6. **TITAN AI** — *Teammate*
-   AI-powered developer assistant and repository introspection subsystem. *(In Development)*
-
-7. **TITAN Task Manager** — *Teammate*
-   Advanced process and task scheduling manager. *(In Development)*
-
-8. **TITAN Share** — *Teammate*
-   Peer-to-peer local network file sharing daemon with Android client. *(In Development)*
-
-9. **TITAN Mirror** — *Teammate*
-   Wayland-native screen mirroring for Android devices. *(In Development)*
 
 ---
 
-## 📸 Desktop Environment
+## 🛠️ Core Components & Ecosystem
 
-ArchTitan uses a meticulously crafted Hyprland configuration.
+ArchTitan provides a suite of native C++ and Qt6 applications built specifically for the OS:
+
+### 1. ⚙️ Titan Hardware Manager (`titan-hwm`)
+* **Lead:** `@GitGuru29` | **Location:** `titan-hwm-source/` & `subsystems/titan-hwm/`
+* Privileged systemd daemon orchestrating CPU, RAM, and background workloads using `cgroups v2`.
+* Real-time thermal and power-state throttling with Wayland session awareness to guarantee frame rates for active desktop workflows.
+
+### 2. 🎛️ Titan Settings (`archtitan-settings`)
+* **Lead:** `@GitGuru29` | **Location:** `archtitan-settings/`
+* Unified Qt6/QML system control center featuring:
+  - **Appearance:** Theme toggle, accent colors, panel opacity, icon sets.
+  - **Display:** Brightness, Night Light (`wlsunset`), resolution, and scale factor.
+  - **Audio:** Output/input volume, live PipeWire EQ audio visualizer.
+  - **Power:** Universal stateful power profile cycling (**Power Saver** ➔ **Balanced** ➔ **Performance** via `Super + P` / `Fn + P`).
+  - **Network & Security:** NetworkManager Wi-Fi scanner, Titan Sandbox status, screen autolock, and firewall inspection.
+
+### 3. 🌐 Titan Browser (`titan-browser`)
+* **Lead:** `@GitGuru29` | **Location:** `titan-browser-source/`
+* Fast, lightweight web browser built on **Qt6 WebEngine** with native Wayland rendering:
+  - Glassmorphic UI matching the system-wide Catppuccin Mocha aesthetic.
+  - Multi-tab management, smart URL/search bar (DuckDuckGo integration).
+  - Built-in network-level & DOM ad-blocker optimized for YouTube and Spotify streaming without player stalls.
+  - Featherweight binary footprint (~2–3 MB) reusing shared system Qt6 libraries.
+
+### 4. 🔒 Titan Sandbox (`titan-sandboxd`)
+* **Lead:** `@GitGuru29` | **Location:** `sandbox/` & `subsystems/titan-sandbox/`
+* Fine-grained application isolation engine using Linux user/mount/PID/network namespaces, seccomp-bpf syscall filtering, and capability drops configured via declarative TOML policy files.
+
+### 5. 🎵 Titan Media HUD (`titan-media-hud`)
+* **Lead:** `@GitGuru29` | **Location:** `subsystems/titan-media-hud/`
+* Dynamic contextual media drawer positioned underneath Waybar:
+  - Invisible during idle states (0% CPU impact).
+  - Automatically slides down on active media playback via MPRIS D-Bus.
+  - Features album art caching, interactive seek bar, and track playback controls.
+
+### 6. 📊 TitanFetch (`titanfetch`)
+* **Lead:** `@GitGuru29` | **Location:** `titanfetch-src/` & `subsystems/titan-fetch/`
+* High-performance C++/Qt6 system information utility providing both styled terminal ASCII cards and an interactive desktop hardware monitor with live usage meters.
+
+### 7. 🚀 Additional Subsystems (In Development)
+* **Auto GPU Switcher** (`subsystems/auto-gpu-switcher/`): Intelligent iGPU/dGPU dynamic switching.
+* **TITAN AI** (`subsystems/titan-ai/`): Context-aware developer assistant.
+* **TITAN Task Manager** (`subsystems/titan-task-manager/`): Advanced scheduling and resource tracking.
+* **TITAN Share** (`subsystems/titan-share/`): Peer-to-peer local network discovery and file exchange.
+* **TITAN Mirror** (`subsystems/titan-mirror/`): Wayland-native screen mirroring for mobile devices.
+
+---
+
+## 📸 Desktop Environment & Keybindings
+
+ArchTitan uses an optimized Hyprland desktop with smooth bezier curves, subtle drop shadows, and responsive window grouping.
 
 ```mermaid
 mindmap
-  root((ArchTitan UI))
+  root((ArchTitan Desktop))
     Compositor
       Hyprland
-      Animations: Overshot & Smooth
-      Blur & Shadows
-    Panel
-      Waybar
-      Custom THM Modules
-      System Tray
-    Launcher
-      Rofi (Wayland)
-      App Search
-      Clipboard History
-    Terminal
-      Kitty
-      Fish Shell
-      Starship Prompt
+      Overshot & Snappy Animations
+      Curved Borders & Dark Shadows
+    HUD & Bars
+      Waybar Status Bar
+      Titan Media HUD Drawer
+      Mako Notification Center
+    Launchers & Utilities
+      Rofi (App & Emoji Launcher)
+      Cliphist (Clipboard Manager)
+      Calamares (System Installer)
+    Core Apps
+      Kitty (Fish + Starship)
+      Titan Browser (WebEngine)
+      Titan Settings (Qt6/QML)
+      Ranger (Terminal File Manager)
 ```
 
 ### ⌨️ Essential Keybindings
 
-| Shortcut | Action |
-| :--- | :--- |
-| <kbd>Super</kbd> + <kbd>Return</kbd> | Open Kitty Terminal |
-| <kbd>Super</kbd> / <kbd>Super</kbd> + <kbd>Space</kbd> | Open Rofi App Launcher |
-| <kbd>Super</kbd> + <kbd>W</kbd> | Open Web Browser |
-| <kbd>Super</kbd> + <kbd>E</kbd> | Open File Manager (Ranger) |
-| <kbd>Super</kbd> + <kbd>Q</kbd> | Close active window |
-| <kbd>Super</kbd> + <kbd>F</kbd> | Toggle Fullscreen |
-| <kbd>Super</kbd> + <kbd>V</kbd> | Open Clipboard History |
-| <kbd>Super</kbd> + <kbd>I</kbd> | Launch Calamares System Installer |
-| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Take Screenshot |
+| Shortcut | Action | Description |
+| :--- | :--- | :--- |
+| <kbd>Super</kbd> | Open App Launcher | Launches Rofi application menu |
+| <kbd>Super</kbd> + <kbd>Return</kbd> | Terminal | Opens Kitty terminal with Fish shell |
+| <kbd>Super</kbd> + <kbd>W</kbd> | Titan Browser | Launches Titan Browser |
+| <kbd>Super</kbd> + <kbd>,</kbd> | Titan Settings | Opens unified System Settings panel |
+| <kbd>Super</kbd> + <kbd>E</kbd> | File Manager | Opens Ranger in terminal |
+| <kbd>Super</kbd> + <kbd>P</kbd> / <kbd>Fn</kbd> + <kbd>P</kbd> | Power Profile Toggle | Cycles Power Saver ➔ Balanced ➔ Performance |
+| <kbd>Super</kbd> + <kbd>V</kbd> | Clipboard History | Opens clipboard history picker |
+| <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Screenshot | Area snip copied to clipboard (`grim` + `slurp`) |
+| <kbd>Super</kbd> + <kbd>Q</kbd> | Close Window | Closes active window |
+| <kbd>Super</kbd> + <kbd>F</kbd> | Fullscreen | Toggles fullscreen mode |
+| <kbd>Super</kbd> + <kbd>I</kbd> | System Installer / Settings | Calamares (Live ISO) or Titan Settings (Installed) |
+| <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Del</kbd> | Power Menu | Lock, Suspend, Reboot, Shutdown |
 
 ---
 
 ## 🚀 Building the Live ISO
 
-ArchTitan is built using the official `archiso` tooling. 
+ArchTitan is built using the official Arch Linux `archiso` suite.
 
 ### Prerequisites
-You need an existing Arch Linux host system with the following tools installed:
+
+An Arch Linux host system with `archiso` and `git` installed:
 ```bash
 sudo pacman -S archiso git
 ```
 
-### Build Process
-The build process compiles the custom tools, pulls down the latest Arch Linux packages, and generates a bootable `.iso` image.
+### Build Workflow
 
 ```mermaid
 sequenceDiagram
-    participant U as User
+    participant U as Developer / CI
     participant M as mkarchiso
     participant P as Pacstrap
-    participant C as Custom Scripts
+    participant C as Build Hooks & Scripts
 
-    U->>M: run `mkarchiso`
-    M->>P: Download packages (packages.x86_64)
-    P-->>M: Base rootfs created
-    M->>C: Execute `profiledef.sh` & customize
-    C->>C: Compile TitanFetch & THM
-    C->>C: Copy Hyprland/Kitty configs
-    C-->>M: airootfs ready
-    M->>M: Compress to SquashFS
-    M->>U: Generate `archtitan-YYYY.MM.DD-x86_64.iso`
+    U->>M: sudo mkarchiso -v -w tmp-work/ -o out/ ./
+    M->>P: Pull packages defined in packages.x86_64
+    P-->>M: Base rootfs generated
+    M->>C: Execute profiledef.sh customizations
+    C->>C: Compile Titan tools (Browser, Settings, THM, Fetch, Sandbox)
+    C->>C: Install Hyprland configs, Waybar, fonts & themes
+    C-->>M: airootfs assembled
+    M->>M: SquashFS compression & EFI image packing
+    M-->>U: Output: out/archtitan-YYYY.MM.DD-x86_64.iso
 ```
 
-**Commands:**
+### Build Commands
+
 ```bash
 # Clone the repository
 git clone https://github.com/GitGuru29/archtitan-os.git
@@ -167,173 +213,138 @@ sudo rm -rf tmp-work out
 sudo mkarchiso -v -w tmp-work/ -o out/ ./
 ```
 
-The resulting ISO will be located in the `out/` directory.
+The generated `.iso` will be placed in the `out/` directory.
 
 ---
 
-## 💻 Installation
+## 💻 Installation & Testing
 
-### Bare Metal
-1. Flash the ISO to a USB drive using Rufus, BalenaEtcher, or `dd`.
-2. Boot from the USB (Ensure **UEFI** mode is enabled in your BIOS/Firmware).
-3. Once the live Hyprland desktop loads, press <kbd>Super</kbd> + <kbd>I</kbd> to launch the **Calamares Graphical Installer**.
-4. Follow the prompts to partition your disk and install ArchTitan.
+### 1. Bare Metal Installation
+1. Flash the generated ISO to a USB flash drive using `dd`, BalenaEtcher, or Rufus:
+   ```bash
+   sudo dd if=out/archtitan-*.iso of=/dev/sdX bs=4M status=progress oflag=sync
+   ```
+2. Boot the target machine in **UEFI mode** (disable Secure Boot).
+3. On the live desktop, launch the **Calamares Graphical Installer** (<kbd>Super</kbd> + <kbd>I</kbd>).
+4. Follow the step-by-step partition and user setup wizards to complete the installation.
 
-### Virtual Machine (VirtualBox)
-If testing inside VirtualBox, you **must** configure the following settings before booting, otherwise the Wayland compositor will crash:
-- **System -> Motherboard:** Check `Enable EFI (special OSes only)`
-- **Display -> Screen:** Set Video Memory to `128 MB`
-- **Display -> Screen:** Check `Enable 3D Acceleration`
-- **Display -> Screen:** Set Graphics Controller to `VMSVGA`
+### 2. QEMU / KVM Quick Runner
+Use the bundled `run-vm.sh` script to test live or installed builds in QEMU:
+
+```bash
+# Boot the live ISO
+./run-vm.sh
+
+# Boot from installed qcow2 virtual disk
+./run-vm.sh --disk
+
+# Wipe disk and perform fresh reinstall
+./run-vm.sh --fresh
+```
+
+### 3. VirtualBox Configuration
+When testing inside VirtualBox, ensure the following VM settings are enabled to support Wayland:
+- **System ➔ Motherboard:** Check `Enable EFI (special OSes only)`
+- **Display ➔ Screen:** Video Memory = `128 MB`, Graphics Controller = `VMSVGA`
+- **Display ➔ Screen:** Check `Enable 3D Acceleration`
 
 ---
 
 ## 👥 Team Structure & Subsystem Ownership
 
-This is a **group project** with 4 members. The repository is organized into dedicated subsystem directories under `subsystems/`, each with an identical standardized layout.
+ArchTitan is developed as a modular group project with 4 members. The repository is organized into core OS components at the root and dedicated subsystem packages in `subsystems/`.
 
-### Subsystem Assignment
+### Core OS Components vs. Subsystems
 
-| Subsystem | Owner | Status | Directory |
-| :--- | :--- | :--- | :--- |
-| **Titan Hardware Manager** | @GitGuru29 (Lead) | 🟢 Shipped | `subsystems/titan-hwm/` |
-| **TitanFetch** | @GitGuru29 (Lead) | 🟢 Shipped | `subsystems/titan-fetch/` |
-| **Titan Sandbox** | @GitGuru29 (Lead) | 🟢 Shipped | `subsystems/titan-sandbox/` |
-| **Titan Settings** | @GitGuru29 (Lead) | 🟡 In Dev | `subsystems/titan-settings/` |
-| **Auto GPU Switcher** | @GitGuru29 (Lead) | 🟡 In Dev | `subsystems/auto-gpu-switcher/` |
-| **TITAN AI** | Teammate | 🟡 In Dev | `subsystems/titan-ai/` |
-| **TITAN Task Manager** | Teammate | 🟡 In Dev | `subsystems/titan-task-manager/` |
-| **TITAN Share** | Teammate | 🟡 In Dev | `subsystems/titan-share/` |
-| **TITAN Mirror** | Teammate | 🟡 In Dev | `subsystems/titan-mirror/` |
+| Component | Category | Owner | Status | Directory |
+| :--- | :--- | :--- | :--- | :--- |
+| **Titan Hardware Manager** | Core Daemon | @GitGuru29 (Lead) | 🟢 Shipped | `titan-hwm-source/` & `subsystems/titan-hwm/` |
+| **Titan Settings** | Core App | @GitGuru29 (Lead) | 🟢 Active | `archtitan-settings/` |
+| **Titan Browser** | Core App | @GitGuru29 (Lead) | 🟢 Active | `titan-browser-source/` |
+| **Titan Sandbox** | Core Subsystem | @GitGuru29 (Lead) | 🟢 Shipped | `sandbox/` & `subsystems/titan-sandbox/` |
+| **TitanFetch** | Core Utility | @GitGuru29 (Lead) | 🟢 Shipped | `titanfetch-src/` & `subsystems/titan-fetch/` |
+| **Titan Media HUD** | Companion App | @GitGuru29 (Lead) | 🟢 Active | `subsystems/titan-media-hud/` |
+| **Auto GPU Switcher** | Subsystem | @GitGuru29 (Lead) | 🟡 In Dev | `subsystems/auto-gpu-switcher/` |
+| **TITAN AI** | Subsystem | Teammate | 🟡 In Dev | `subsystems/titan-ai/` |
+| **TITAN Task Manager** | Subsystem | Teammate | 🟡 In Dev | `subsystems/titan-task-manager/` |
+| **TITAN Share** | Subsystem | Teammate | 🟡 In Dev | `subsystems/titan-share/` |
+| **TITAN Mirror** | Subsystem | Teammate | 🟡 In Dev | `subsystems/titan-mirror/` |
 
-### Standard Subsystem Layout
+### Subsystem Directory Layout
 
-Every subsystem folder follows this identical structure:
+All subsystem packages follow this standard structure:
 
 ```
 subsystems/<subsystem-name>/
 ├── src/        ← Source code
-├── tests/      ← Unit & integration tests
+├── tests/      ← Unit, integration, and service tests
 ├── docs/       ← Subsystem-specific documentation
-├── configs/    ← Default config files for OS integration
-└── README.md   ← Overview, build instructions, dependencies
+├── configs/    ← Configuration files for OS rootfs integration
+└── README.md   ← Subsystem overview, build steps, and dependencies
 ```
 
 ---
 
 ## 🚨 Repository Rules & Contribution Guidelines
 
-> **⚠️ All team members MUST read and follow these rules before contributing.**
+> **⚠️ All team members must review and adhere to these guidelines before submitting changes.**
 
-### 🔒 Branch Protection
+### 🔒 Branch Protection & Pull Requests
 
-- The `main` branch is **protected**. No one can push directly to `main` (except repository admin for emergencies).
-- All changes **must** go through a **Pull Request (PR)**.
-- Every PR requires **at least 1 approval** from @GitGuru29 before merging.
-- Stale approvals are **automatically dismissed** when new commits are pushed.
-- **Force pushes** to `main` are **blocked** for everyone.
+- The `main` branch is protected. Direct commits are restricted.
+- All contributions must be submitted via a **Pull Request (PR)** targeting `main`.
+- PRs require at least **1 review and approval** from `@GitGuru29` before merging.
+- Contributors must work exclusively within their assigned `subsystems/<name>/` directories.
 
-### 📁 Work Scope Rules
+### 🛡️ Protected OS Core Files (`CODEOWNERS`)
 
-- Each team member works **ONLY inside their assigned** `subsystems/<name>/` **directory**.
-- **DO NOT** modify any files outside your subsystem folder without explicit permission from @GitGuru29.
+Changes affecting base OS configurations and core tooling require explicit review by `@GitGuru29`:
 
-### 🛡️ Protected OS Core Files (CODEOWNERS)
-
-The following paths are protected via `.github/CODEOWNERS`. Any PR touching these files **automatically requires approval from @GitGuru29** and **cannot be merged** without it:
-
-| Protected Path | Description |
+| Protected Path | Purpose |
 | :--- | :--- |
-| `airootfs/` | OS rootfs overlay — systemd units, configs, binaries |
-| `efiboot/` & `grub/` | Boot configuration |
-| `titan-hwm-source/` | Titan Hardware Manager source |
-| `titanfetch-src/` | TitanFetch source |
-| `sandbox/` | Titan Sandbox source |
-| `packages.x86_64` | Package list for the ISO |
-| `pacman.conf` | Repository/mirror configuration |
-| `profiledef.sh` | ISO build metadata & permissions |
-| `install.sh` | Local host installer script |
-| `run-vm.sh` | QEMU test runner |
-| `.github/` | CI workflows & governance files |
+| `airootfs/` | Rootfs overlay (systemd units, dotfiles, desktop configs, binary overlays) |
+| `archtitan-settings/` | Titan Settings application source |
+| `titan-browser-source/` | Titan Browser source and resources |
+| `titan-hwm-source/` | Titan Hardware Manager daemon source |
+| `titanfetch-src/` | TitanFetch utility source |
+| `sandbox/` | Titan Sandbox daemon & policy parser source |
+| `efiboot/` & `grub/` | EFI & GRUB bootloader configurations |
+| `packages.x86_64` | Package manifest for live ISO generation |
+| `pacman.conf` | Pacman package manager and custom repository configuration |
+| `profiledef.sh` | Archiso build profile definitions and permissions |
+| `install.sh` & `run-vm.sh` | Host installer and QEMU virtual test harness |
+| `.github/` | CI/CD automation workflows and repository governance |
 
-### 📋 Pull Request Workflow
-
-```
-1. Clone the repo
-   git clone https://github.com/GitGuru29/archtitan-os.git
-
-2. Create your feature branch (NEVER work on main)
-   git checkout -b feat/<your-subsystem>-<feature-name>
-
-3. Work ONLY inside your subsystem folder
-   subsystems/<your-subsystem>/src/
-
-4. Commit and push your branch
-   git add .
-   git commit -m "feat(<subsystem>): description"
-   git push origin feat/<your-subsystem>-<feature-name>
-
-5. Open a Pull Request on GitHub targeting `main`
-
-6. Complete the PR checklist confirming you only touched your files
-
-7. Wait for approval from @GitGuru29
-
-8. Once approved → Squash and Merge
-```
-
-### ✅ PR Checklist (enforced via template)
-
-Every PR must confirm:
-- [ ] I only modified files inside `subsystems/<my-subsystem>/`
-- [ ] I did **NOT** touch `airootfs/`, `titan-hwm-source/`, `titanfetch-src/`, `sandbox/`, or any OS build files
-- [ ] My code builds without errors
-- [ ] I updated my subsystem `README.md` if needed
-
-### 🏷️ Commit Message Convention
-
-Use this format for clean git history:
+### 🏷️ Commit Message Format
 
 ```
-<type>(<subsystem>): <short description>
+<type>(<scope>): <short description>
 
 Examples:
-  feat(titan-ai): add initial neural classifier module
-  fix(titan-share): resolve mDNS discovery timeout
-  docs(titan-mirror): update build instructions
-  test(titan-task-manager): add unit tests for scheduler
+  feat(titan-browser): add native Qt6 directory picker for download location
+  fix(settings): implement universal power profile cycling hotkey
+  feat(titan-media-hud): add async album art caching and MPRIS seeker
+  docs(readme): update system architecture and core components guide
 ```
-
-| Type | When to use |
-| :--- | :--- |
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `docs` | Documentation only |
-| `test` | Adding or updating tests |
-| `refactor` | Code change that neither fixes nor adds |
-| `ci` | CI/CD workflow changes |
 
 ---
 
-## 📚 Documentation
+## 📚 Documentation & Resources
 
-Full project documentation is available on the [GitHub Wiki](https://github.com/GitGuru29/archtitan-os/wiki):
+Comprehensive guides and technical documentation are available on the [ArchTitan OS Wiki](https://github.com/GitGuru29/archtitan-os/wiki):
 
-| Topic | Page |
-| :--- | :--- |
-| System design & layers | [Architecture](https://github.com/GitGuru29/archtitan-os/wiki/Architecture) |
-| Build a bootable ISO | [Building the ISO](https://github.com/GitGuru29/archtitan-os/wiki/Building-the-ISO) |
-| Install to disk or VM | [Installation Guide](https://github.com/GitGuru29/archtitan-os/wiki/Installation-Guide) |
-| Resource orchestration | [Titan Hardware Manager](https://github.com/GitGuru29/archtitan-os/wiki/Titan-Hardware-Manager) |
-| App sandboxing | [Titan Sandbox](https://github.com/GitGuru29/archtitan-os/wiki/Titan-Sandbox) |
-| System info tool | [TitanFetch](https://github.com/GitGuru29/archtitan-os/wiki/TitanFetch) |
-| Desktop config | [Desktop Environment](https://github.com/GitGuru29/archtitan-os/wiki/Desktop-Environment) |
-| Repo layout & dev setup | [Developer Guide](https://github.com/GitGuru29/archtitan-os/wiki/Developer-Guide) |
-| Roadmap & status | [Roadmap & Status](https://github.com/GitGuru29/archtitan-os/wiki/Roadmap-and-Status) |
+| Topic | Description | Link |
+| :--- | :--- | :--- |
+| **System Architecture** | Subsystem layers, D-Bus IPC, and kernel interfaces | [Architecture Guide](https://github.com/GitGuru29/archtitan-os/wiki/Architecture) |
+| **Building the ISO** | Archiso compilation steps and dependency handling | [Build Documentation](https://github.com/GitGuru29/archtitan-os/wiki/Building-the-ISO) |
+| **Installation Guide** | UEFI partitioning, live environment, and dual-booting | [Installation Manual](https://github.com/GitGuru29/archtitan-os/wiki/Installation-Guide) |
+| **Hardware Manager** | cgroups v2 resource orchestration and power policies | [THM Documentation](https://github.com/GitGuru29/archtitan-os/wiki/Titan-Hardware-Manager) |
+| **Titan Sandbox** | Namespaces, capability drops, and TOML policies | [Sandbox Manual](https://github.com/GitGuru29/archtitan-os/wiki/Titan-Sandbox) |
+| **Desktop Environment** | Hyprland config, Waybar widgets, and themes | [Desktop Configuration](https://github.com/GitGuru29/archtitan-os/wiki/Desktop-Environment) |
+| **Developer Guide** | Subsystem development and contributor standards | [Developer Guide](https://github.com/GitGuru29/archtitan-os/wiki/Developer-Guide) |
 
 ---
 
 ## 📜 License
 
-This project is open-source and available under the **[Apache License 2.0](LICENSE)**. Arch Linux and other included software packages are subject to their respective upstream licenses.
-
+This project is licensed under the **[Apache License 2.0](LICENSE)**. Arch Linux and upstream package software remain subject to their respective licenses.

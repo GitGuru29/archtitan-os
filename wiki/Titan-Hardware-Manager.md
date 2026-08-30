@@ -1,3 +1,5 @@
+
+
 # Titan Hardware Manager (THM)
 
 The **Titan Hardware Manager (`titan-hwm`)** is ArchTitan OS's primary system resource orchestration service. It is a privileged C++ daemon running as a systemd service (`titan_hw_manager.service`) that dynamically optimizes system resource allocation based on user workflow state.

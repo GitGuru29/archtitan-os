@@ -33,11 +33,12 @@ file_permissions=(
   ["/usr/local/bin/archtitan-postinstall"]="0:0:755"
   ["/etc/systemd/system/archtitan-postinstall@.service"]="0:0:644"
   ["/usr/bin/titanfetch"]="0:0:755"
+  ["/usr/bin/archtitan-settings"]="0:0:755"
   ["/etc/systemd/system/titan-active.slice"]="0:0:644"
   ["/etc/systemd/system/titan-background.slice"]="0:0:644"
   ["/etc/systemd/system/titan-frozen.slice"]="0:0:644"
   # Sandbox system
-  ["/usr/local/bin/titan-sandboxd"]="0:0:755"
+  ["/usr/local/bin/titan-sandboxd"]="0:0:4755"
   ["/usr/local/bin/titan-exec-hook"]="0:0:755"
   ["/etc/systemd/system/titan-sandboxd.service"]="0:0:644"
   ["/etc/titan-sandbox"]="0:0:755"

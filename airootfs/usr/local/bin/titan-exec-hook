@@ -18,7 +18,7 @@
 # USAGE: titan-exec-hook <command> [args...]
 #        titan-exec-hook --query <binary>    (print resolved policy, don't exec)
 
-set -euo pipefail
+set -uo pipefail
 
 POLICY_DIR="/etc/titan-sandbox/policies"
 SANDBOXD="/usr/local/bin/titan-sandboxd"
@@ -130,9 +130,10 @@ mkdir -p "$REGISTRY_DIR" 2>/dev/null || true
 # Run sandboxd — it forks the child into namespaces then waits for it.
 # Capture SANDBOX_PID= from its stdout and write to the registry so THM
 # can map original PID → box PID for cgroup assignment.
-# We do NOT use exec here — process substitution (>(...)) with exec is
-# dangerous in a Wayland/Hyprland context and leaves dangling FDs.
-"$SANDBOXD" "$POLICY" "$CMD" "$@" 2>>"$LOG" | \
+# FALLBACK: If sandboxd fails for any reason (namespace errors, permission
+# denied, policy parse failure), launch the app directly unsandboxed.
+# This prevents silent keybinding death on the installed OS.
+if "$SANDBOXD" "$POLICY" "$CMD" "$@" 2>>"$LOG" | \
 while IFS= read -r line; do
     if [[ "$line" == SANDBOX_PID=* ]]; then
         BOX_PID="${line#SANDBOX_PID=}"
@@ -140,4 +141,9 @@ while IFS= read -r line; do
              >> "${REGISTRY_DIR}/registry" 2>/dev/null || true
         echo "[$(date -Iseconds)] SANDBOX_PID=$BOX_PID for ORIGINAL_PID=$HOOK_PID" >> "$LOG" 2>/dev/null || true
     fi
-done
+done; then
+    : # sandboxd succeeded
+else
+    echo "[titan-exec-hook] WARNING: sandboxd failed (exit $?) for $BINARY — launching unsandboxed" >>"$LOG" 2>/dev/null || true
+    exec "$CMD" "$@"
+fi

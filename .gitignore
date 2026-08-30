@@ -1,7 +1,7 @@
-# ─── Separate projects (not part of this repo) ────────────────────────────────
-# archtitan-settings (Qt6 Settings App) lives at ~/Desktop/archtitan-settings
-# It has its own git repo — do NOT include here.
-archtitan-settings/
+# Build artifacts for archtitan-settings
+archtitan-settings/build/
+archtitan-settings/archtitan-settings
+archtitan-settings/.cache/
 
 # Archiso build artifacts
 out/
@@ -64,4 +64,8 @@ airootfs/var/
 titan-hwm-source/titan_hw_manager
 titan-hwm-source/titan-hwm
 titan-hwm-source/test_thm_suite
+titan-hwm
+titan_hw_manager
 
+# ─── CMake build artifacts (all subsystems) ─────────────────────────────────
+subsystems/titan-media-hud/build/
