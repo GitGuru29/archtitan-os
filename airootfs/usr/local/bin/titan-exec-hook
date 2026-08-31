@@ -30,10 +30,16 @@ mkdir -p "$(dirname "$LOG")" 2>/dev/null || true
 
 declare -A APP_POLICY=(
     # Browsers
+    [titanbrowser]="browser.toml"
+    [titan-browser]="browser.toml"
     [chromium]="browser.toml"
     [firefox]="browser.toml"
     [brave]="browser.toml"
+    [falkon]="browser.toml"
     [firefox-developer-edition]="browser.toml"
+    # Settings & System Control
+    [archtitan-settings]="general-gui.toml"
+    [titan-settings]="general-gui.toml"
     # Media
     [mpv]="media.toml"
     [vlc]="media.toml"

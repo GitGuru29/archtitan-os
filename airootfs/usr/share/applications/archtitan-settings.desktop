@@ -1,8 +1,9 @@
 [Desktop Entry]
 Name=ArchTitan Settings
+GenericName=System Settings
 Comment=Control center and system settings for ArchTitan OS
 Exec=archtitan-settings
-Icon=preferences-system
+Icon=archtitan-settings
 Terminal=false
 Type=Application
 Categories=Settings;System;

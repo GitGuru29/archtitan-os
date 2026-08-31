@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+    <defs>
+        <linearGradient id="titan-grad" x1="4" y1="4" x2="60" y2="56" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#38bdf8"/>
+            <stop offset="50%" stop-color="#0ea5e9"/>
+            <stop offset="100%" stop-color="#0284c7"/>
+        </linearGradient>
+    </defs>
+    <path d="M32 4L4 56H18L32 28L46 56H60L32 4Z" fill="url(#titan-grad)"/>
+    <path d="M24 42H40L32 26L24 42Z" fill="#ffffff" opacity="0.9"/>
+</svg>
