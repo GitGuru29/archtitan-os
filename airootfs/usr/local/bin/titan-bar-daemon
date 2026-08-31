@@ -344,35 +344,88 @@ def _mpris_monitor():
         time.sleep(2)
 
 # ─── Hyprland active window monitor ──────────────────────────────────────────
-def _hyprland_monitor():
+def _query_hyprland_active():
+    try:
+        r = subprocess.run(
+            ["hyprctl", "activewindow", "-j"],
+            capture_output=True, text=True, timeout=2
+        )
+        if r.returncode == 0 and r.stdout.strip():
+            data = json.loads(r.stdout)
+            title = data.get("title", "").strip()
+            app = data.get("class", "").strip()
+            win_name = title or app or "Desktop"
+            with _lock:
+                changed = (state["active_window"] != win_name or state["active_app"] != app)
+                state["active_window"] = win_name
+                state["active_app"] = app
+                is_win_page = (PAGES[state["page_idx"]] == "window")
+            if changed and is_win_page:
+                emit()
+    except Exception:
+        pass
+
+def _find_hyprland_socket():
+    uid = os.getuid()
     sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
-    if not sig:
-        return
-    runtime = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
-    sock_path = Path(runtime) / "hypr" / sig / ".socket2.sock"
+    candidates = []
+    if sig:
+        candidates.append(Path(f"/run/user/{uid}/hypr/{sig}/.socket2.sock"))
+        candidates.append(Path(f"/tmp/hypr/{sig}/.socket2.sock"))
+
+    for base in [Path(f"/run/user/{uid}/hypr"), Path(f"/tmp/hypr")]:
+        if base.exists():
+            for d in sorted(base.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+                candidates.append(d / ".socket2.sock")
+
+    for c in candidates:
+        if c.exists() and c.is_socket():
+            return c
+    return None
+
+def _hyprland_monitor():
+    # Initial query immediately
+    _query_hyprland_active()
 
     while True:
+        sock_path = _find_hyprland_socket()
+        if not sock_path:
+            _query_hyprland_active()
+            time.sleep(2)
+            continue
+
         try:
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
                 s.connect(str(sock_path))
+                s.settimeout(5.0)
                 buf = ""
                 while True:
-                    chunk = s.recv(4096).decode("utf-8", errors="replace")
-                    if not chunk:
-                        break
-                    buf += chunk
-                    while "\n" in buf:
-                        line, buf = buf.split("\n", 1)
-                        if line.startswith("activewindow>>"):
-                            rest   = line[len("activewindow>>"):]
-                            parts  = rest.split(",", 1)
-                            app    = parts[0].strip()
-                            title  = parts[1].strip() if len(parts) > 1 else app
-                            with _lock:
-                                state["active_window"] = title or app or "Desktop"
-                                state["active_app"]    = app
+                    try:
+                        chunk = s.recv(4096).decode("utf-8", errors="replace")
+                        if not chunk:
+                            break
+                        buf += chunk
+                        while "\n" in buf:
+                            line, buf = buf.split("\n", 1)
+                            if line.startswith("activewindow>>"):
+                                rest = line[len("activewindow>>"):]
+                                parts = rest.split(",", 1)
+                                app = parts[0].strip()
+                                title = parts[1].strip() if len(parts) > 1 else app
+                                win_name = title or app or "Desktop"
+                                with _lock:
+                                    state["active_window"] = win_name
+                                    state["active_app"] = app
+                                    is_win_page = (PAGES[state["page_idx"]] == "window")
+                                if is_win_page:
+                                    emit()
+                            elif line.startswith("workspace>>") or line.startswith("focusedmon>>"):
+                                _query_hyprland_active()
+                    except socket.timeout:
+                        _query_hyprland_active()
         except Exception:
-            time.sleep(3)
+            _query_hyprland_active()
+            time.sleep(2)
 
 # ─── System sensors monitor ───────────────────────────────────────────────────
 def _sensors_monitor():
