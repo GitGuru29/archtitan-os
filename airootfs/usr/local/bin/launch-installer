@@ -1,0 +1,14 @@
+#!/bin/bash
+# Allow root to access XWayland just in case Calamares falls back to X11
+if command -v xhost >/dev/null 2>&1; then
+    xhost +SI:localuser:root || true
+fi
+
+# Export necessary Wayland environment for root
+export QT_QPA_PLATFORM=wayland
+export WAYLAND_DISPLAY=$WAYLAND_DISPLAY
+export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR
+export DISPLAY=$DISPLAY
+
+# Launch Calamares as root, preserving environment
+sudo -E calamares -d > /tmp/calamares.log 2>&1

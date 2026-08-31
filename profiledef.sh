@@ -23,6 +23,7 @@ file_permissions=(
   ["/usr/local/bin/choose-mirror"]="0:0:755"
   ["/usr/local/bin/Installation_guide"]="0:0:755"
   ["/usr/local/bin/livecd-sound"]="0:0:755"
+  ["/usr/local/bin/launch-installer"]="0:0:755"
   ["/usr/local/bin/titan_hw_manager"]="0:0:755"
   ["/usr/local/bin/titan-hwm"]="0:0:755"
   ["/usr/local/bin/titan-hwm-waybar"]="0:0:755"
