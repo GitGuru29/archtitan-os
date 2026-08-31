@@ -7,12 +7,5 @@
         <file>qml/AlbumArt.qml</file>
         <file>qml/ProgressViz.qml</file>
         <file>qml/TransportButton.qml</file>
-        <file>qml/pages/MediaPage.qml</file>
-        <file>qml/pages/PowerPage.qml</file>
-        <file>qml/pages/ActiveWindowPage.qml</file>
-        <file>qml/pages/TemperaturePage.qml</file>
-        <file>qml/pages/DateTimePage.qml</file>
-        <file>qml/pages/BatteryPage.qml</file>
-        <file>qml/pages/GpuPage.qml</file>
     </qresource>
 </RCC>

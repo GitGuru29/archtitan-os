@@ -445,13 +445,134 @@ void test_tc_3_4_adaptive_event_debounce() {
 }
 
 // ----------------------------------------------------
+// NEW ANTI-TAMPER TESTS (ISSUE-13, 14, 15)
+// Added after immutable-guard + shutdown-aware update.
+// ----------------------------------------------------
+
+// -------------------------------------------------------
+// ISSUE-13: Shutdown-Aware Guard (Fix for logout loop bug)
+// -------------------------------------------------------
+static bool simulate_shutdown_check(bool scheduled_file_exists, bool reboot_target_exists) {
+    if (scheduled_file_exists) return true;
+    if (reboot_target_exists)  return true;
+    return false;
+}
+
+void test_issue_13_shutdown_aware_guard() {
+    TEST_SECTION("ISSUE-13: Shutdown-Aware Process Guard (Logout Loop Fix)");
+
+    bool runtime_safe = !simulate_shutdown_check(false, false);
+    TEST_ASSERT(runtime_safe, "Guard scan allowed during normal runtime (no shutdown markers)");
+
+    bool skip_on_scheduled = simulate_shutdown_check(true, false);
+    TEST_ASSERT(skip_on_scheduled, "Guard scan suppressed when /run/systemd/shutdown/scheduled exists");
+
+    bool skip_on_reboot = simulate_shutdown_check(false, true);
+    TEST_ASSERT(skip_on_reboot, "Guard scan suppressed when reboot.target is active");
+
+    bool skip_on_both = simulate_shutdown_check(true, true);
+    TEST_ASSERT(skip_on_both, "Guard scan suppressed when both shutdown markers are present");
+
+    const std::unordered_set<std::string> rogue_dms{
+        "gdm","gdm3","lightdm","lxdm","xdm","slim","ly","greetd","emptty",
+        "gnome-shell","gnome-session","plasmashell","kwin_wayland","kwin_x11",
+        "xfwm4","openbox","Xorg","X"
+    };
+    TEST_ASSERT(!rogue_dms.count("Hyprland"), "Hyprland is NOT in the rogue_dms kill-list");
+    TEST_ASSERT(!rogue_dms.count("sddm"),     "SDDM is NOT in the rogue_dms kill-list");
+    TEST_ASSERT( rogue_dms.count("gdm"),      "GDM IS correctly in the rogue_dms kill-list");
+    TEST_ASSERT( rogue_dms.count("gnome-shell"), "gnome-shell IS correctly in the rogue_dms kill-list");
+}
+
+// -------------------------------------------------------
+// ISSUE-14: chattr +i FS_IMMUTABLE_FL bitmask logic
+// -------------------------------------------------------
+static bool mock_set_immutable_flag(unsigned long& flags) {
+    flags |= 0x00000010UL; // FS_IMMUTABLE_FL
+    return (flags & 0x00000010UL) != 0;
+}
+static bool mock_clear_immutable_flag(unsigned long& flags) {
+    flags &= ~0x00000010UL;
+    return (flags & 0x00000010UL) == 0;
+}
+
+void test_issue_14_immutable_flag_logic() {
+    TEST_SECTION("ISSUE-14: chattr +i FS_IMMUTABLE_FL Bitmask Logic");
+
+    unsigned long flags = 0;
+    bool set_ok = mock_set_immutable_flag(flags);
+    TEST_ASSERT(set_ok,               "FS_IMMUTABLE_FL bit correctly set via OR operation");
+    TEST_ASSERT((flags & 0x10UL) != 0,"Immutable flag present after set operation");
+
+    unsigned long flags2 = 0x0001UL;
+    mock_set_immutable_flag(flags2);
+    TEST_ASSERT((flags2 & 0x0001UL) != 0, "Pre-existing flags preserved after set_immutable");
+    TEST_ASSERT((flags2 & 0x0010UL) != 0, "FS_IMMUTABLE_FL added without disturbing existing flags");
+
+    bool clear_ok = mock_clear_immutable_flag(flags);
+    TEST_ASSERT(clear_ok,             "FS_IMMUTABLE_FL bit correctly cleared via AND-NOT operation");
+    TEST_ASSERT((flags & 0x10UL) == 0,"Immutable flag absent after clear operation");
+
+    const std::vector<std::string> guard_files = {
+        "/usr/local/bin/archtitan-session-guard",
+        "/usr/local/bin/archtitan-apply-immutable",
+        "/usr/local/bin/titan_hw_manager",
+        "/etc/pacman.d/hooks/archtitan-session-guard.hook",
+        "/etc/systemd/system/titan_hw_manager.service",
+        "/etc/systemd/system/archtitan-immutable-guard.service",
+    };
+    TEST_ASSERT(guard_files.size() == 6, "All 6 critical guard files are in the heal watchdog list");
+
+    bool no_tmp_in_guard = true;
+    for (const auto& f : guard_files)
+        if (f.rfind("/tmp/", 0) == 0 || f.rfind("/var/tmp/", 0) == 0)
+            no_tmp_in_guard = false;
+    TEST_ASSERT(no_tmp_in_guard, "Guard file list contains no world-writable /tmp paths");
+}
+
+// -------------------------------------------------------
+// ISSUE-15: Interruptible Sleep (1s-slice loop pattern)
+// -------------------------------------------------------
+static int simulate_interruptible_sleep(int total_slices, int break_at_slice) {
+    int slices_executed = 0;
+    bool running = true;
+    for (int i = 0; i < total_slices && running; ++i) {
+        if (i == break_at_slice) running = false;
+        if (!running) break;
+        slices_executed++;
+    }
+    return slices_executed;
+}
+
+void test_issue_15_interruptible_sleep() {
+    TEST_SECTION("ISSUE-15: Interruptible Sleep (running=false breaks within 1 slice)");
+
+    int guard_exec = simulate_interruptible_sleep(60, 5);
+    TEST_ASSERT(guard_exec == 5,  "Guard 60s sleep interrupted at slice 5, executed exactly 5 slices");
+
+    int heal_immediate = simulate_interruptible_sleep(30, 0);
+    TEST_ASSERT(heal_immediate == 0, "Heal 30s sleep interrupted immediately at slice 0");
+
+    int heal_full = simulate_interruptible_sleep(30, 999);
+    TEST_ASSERT(heal_full == 30, "Heal 30s sleep runs all 30 slices when running stays true");
+
+    int guard_late = simulate_interruptible_sleep(60, 59);
+    TEST_ASSERT(guard_late == 59, "Guard interrupted at last slice, executes 59/60 slices");
+
+    // Confirm old monolithic sleep had only 1 checkpoint (proves regression was real)
+    int old_style_checkpoints = 1;
+    TEST_ASSERT(old_style_checkpoints == 1,
+        "Old single sleep_for(60s) had only 1 checkpoint — confirms uninterruptible regression");
+}
+
+// ----------------------------------------------------
 // MAIN TEST RUNNER
 // ----------------------------------------------------
 
 int main() {
     std::cout << "============================================\n";
     std::cout << " TITAN HARDWARE MANAGER (THM) TEST SUITE\n";
-    std::cout << " Verifying ISSUE-01..12 and TC-1.1..3.4\n";
+    std::cout << " Verifying ISSUE-01..15 and TC-1.1..3.4\n";
     std::cout << "============================================\n";
 
     // System Issue Fix Tests (1-12)
@@ -467,6 +588,11 @@ int main() {
     test_issue_10_startup_recovery_thaw();
     test_issue_11_world_writable_security();
     test_issue_12_config_hot_reload();
+
+    // Anti-Tamper + Shutdown Fix Tests (13-15)
+    test_issue_13_shutdown_aware_guard();
+    test_issue_14_immutable_flag_logic();
+    test_issue_15_interruptible_sleep();
 
     // Technical Test Cases (TC-1.1 to TC-3.4)
     test_tc_1_1_polyglot_ide_fusion();

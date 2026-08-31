@@ -43,13 +43,13 @@
     // ── CENTER: Embedded Rolling Viewport ──────────────────────
 
     "custom/titan-center": {
-        "exec"            : "/home/msfvenom/custom-os-build/airootfs/usr/local/bin/titan-bar-daemon",
+        "exec"            : "titan-bar-daemon",
         "return-type"     : "json",
         "restart-interval": 5,
-        "on-scroll-down"  : "/home/msfvenom/custom-os-build/airootfs/usr/local/bin/titan-bar-next",
-        "on-scroll-up"    : "/home/msfvenom/custom-os-build/airootfs/usr/local/bin/titan-bar-prev",
-        "on-click"        : "/home/msfvenom/custom-os-build/airootfs/usr/local/bin/titan-bar-next",
-        "on-click-right"  : "/home/msfvenom/custom-os-build/airootfs/usr/local/bin/titan-bar-prev",
+        "on-scroll-down"  : "titan-bar-next",
+        "on-scroll-up"    : "titan-bar-prev",
+        "on-click"        : "titan-bar-next",
+        "on-click-right"  : "titan-bar-prev",
         "tooltip"         : true
     },
 

@@ -1,0 +1,16 @@
+[Unit]
+Description=ArchTitan Immutable Guard — Lock OS enforcement files (chattr +i)
+# Runs once at sysinit, BEFORE sddm or any user session starts.
+DefaultDependencies=no
+After=local-fs.target systemd-remount-fs.service
+Before=sddm.service titan_hw_manager.service sysinit.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/archtitan-apply-immutable
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=sysinit.target

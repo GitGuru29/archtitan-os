@@ -1,7 +1,6 @@
 alsa-utils
 amd-ucode
 base
-broadcom-wl
 btrfs-progs
 cryptsetup
 dhcpcd
@@ -75,7 +74,7 @@ neovim
 cmake
 clang
 gdb
-android-tools
+# android-tools -> moved to netinstall chooser
 bluez
 bluez-utils
 networkmanager
@@ -90,6 +89,10 @@ qt5-quickcontrols2
 swaybg
 starship
 fish
+code
+nodejs
+npm
+github-cli
 btop
 zellij
 ttf-jetbrains-mono-nerd
