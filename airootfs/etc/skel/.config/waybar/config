@@ -1,15 +1,14 @@
 {
     "layer"        : "top",
     "position"     : "top",
-    "height"       : 36,
-    "margin-top"   : 5,
-    "margin-left"  : 8,
-    "margin-right" : 8,
+    "height"       : 38,
+    "margin-top"   : 6,
+    "margin-left"  : 10,
+    "margin-right" : 10,
     "spacing"      : 0,
     "exclusive"    : true,
 
     "modules-left": [
-        "custom/logo",
         "hyprland/workspaces"
     ],
 
@@ -32,12 +31,7 @@
         "tray"
     ],
 
-    // ── LEFT ──────────────────────────────────────────────────
-
-    "custom/logo": {
-        "format" : "<span weight='900' color='#89B4FA'></span>",
-        "tooltip": false
-    },
+    // ── LEFT: Workspaces ───────────────────────────────────────
 
     "hyprland/workspaces": {
         "format"              : "{id}",
@@ -46,7 +40,7 @@
         "persistent-workspaces": { "*": 5 }
     },
 
-    // ── CENTER — Rolling Viewport ──────────────────────────────
+    // ── CENTER: Embedded Rolling Viewport ──────────────────────
 
     "custom/titan-center": {
         "exec"            : "/home/msfvenom/custom-os-build/airootfs/usr/local/bin/titan-bar-daemon",
@@ -59,76 +53,76 @@
         "tooltip"         : true
     },
 
-    // ── RIGHT ─────────────────────────────────────────────────
+    // ── RIGHT: Telemetry ───────────────────────────────────────
 
     "custom/power-profile": {
-        "exec"    : "powerprofilesctl get 2>/dev/null | sed 's/balanced/🌿 Balanced/;s/performance/⚡ Performance/;s/power-saver/💤 Saver/' || echo '🌿 Balanced'",
+        "exec"    : "powerprofilesctl get 2>/dev/null | sed 's/balanced/󰌪  Balanced/;s/performance/󰓅  Performance/;s/power-saver/󰚥  Saver/' || echo '󰌪  Balanced'",
         "interval": 10,
         "format"  : "{}",
         "tooltip" : false
     },
 
     "custom/separator": {
-        "format" : "<span color='#2A2A3E'>│</span>",
+        "format" : "<span color='#1f202e'>│</span>",
         "tooltip": false
     },
 
     "clock": {
-        "format"         : "📅 {:%a %d %b  %H:%M}",
-        "format-alt"     : "{:%A, %d %B %Y  %H:%M:%S}",
+        "format"         : "󰸗  {:%a, %d %b · %H:%M}",
+        "format-alt"     : "󰸗  {:%A, %d %B %Y · %H:%M:%S}",
         "tooltip-format" : "<tt><big>{calendar}</big></tt>",
         "calendar": {
             "mode"      : "month",
             "weeks-pos" : "right",
             "on-scroll" : 1,
             "format": {
-                "months"  : "<span color='#CDD6F4'><b>{}</b></span>",
-                "days"    : "<span color='#A6ADC8'>{}</span>",
-                "weeks"   : "<span color='#45475A'><b>W{}</b></span>",
-                "weekdays": "<span color='#89B4FA'><b>{}</b></span>",
-                "today"   : "<span color='#74C7EC'><b><u>{}</u></b></span>"
+                "months"  : "<span color='#cdd6f4'><b>{}</b></span>",
+                "days"    : "<span color='#7f849c'>{}</span>",
+                "weeks"   : "<span color='#45475a'><b>W{}</b></span>",
+                "weekdays": "<span color='#b4befe'><b>{}</b></span>",
+                "today"   : "<span color='#a6e3a1'><b><u>{}</u></b></span>"
             }
         }
     },
 
     "temperature": {
         "critical-threshold": 80,
-        "format"            : "🌡 {temperatureC}°C",
-        "format-critical"   : "🔥 {temperatureC}°C",
+        "format"            : "󰔏  {temperatureC}°C",
+        "format-critical"   : "󰔏  {temperatureC}°C",
         "interval"          : 3,
         "tooltip"           : false
     },
 
     "pulseaudio": {
-        "format"       : "🔊 {volume}%",
-        "format-muted" : "🔇",
-        "on-click"     : "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "format"        : "󰕾  {volume}%",
+        "format-muted"  : "󰖁  Muted",
+        "on-click"      : "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
         "on-right-click": "pavucontrol",
-        "tooltip"      : false
+        "tooltip"       : false
     },
 
     "network": {
-        "format-wifi"       : "󰖩 {signalStrength}%",
-        "format-ethernet"   : "󰈀",
-        "format-disconnected": "󰖪",
-        "interval"          : 5,
-        "tooltip-format-wifi"    : "{essid}  {signalStrength}%\nIP: {ipaddr}\n↓ {bandwidthDownBytes}  ↑ {bandwidthUpBytes}",
+        "format-wifi"        : "󰤨",
+        "format-ethernet"    : "󰈀",
+        "format-disconnected": "󰤭",
+        "interval"           : 5,
+        "tooltip-format-wifi"    : "{essid} ({signalStrength}%)\nIP: {ipaddr}\n↓ {bandwidthDownBytes}  ↑ {bandwidthUpBytes}",
         "tooltip-format-ethernet": "{ifname}\nIP: {ipaddr}"
     },
 
     "battery": {
         "states"          : { "good": 95, "warning": 30, "critical": 15 },
-        "format"          : "🔋 {capacity}%",
-        "format-charging" : "⚡ {capacity}%",
-        "format-plugged"  : "🔌 {capacity}%",
-        "format-full"     : "🔋 Full",
+        "format"          : "󰁹  {capacity}%",
+        "format-charging" : "󰂄  {capacity}%",
+        "format-plugged"  : "󰚥  {capacity}%",
+        "format-full"     : "󰁹  100%",
         "format-not-found": "",
         "interval"        : 10,
-        "tooltip-format"  : "{timeTo}  ·  {capacity}%\n{power:.1f} W"
+        "tooltip-format"  : "{timeTo} · {capacity}%\nPower: {power:.1f}W"
     },
 
     "tray": {
-        "icon-size"        : 13,
+        "icon-size"        : 14,
         "spacing"          : 8,
         "show-passive-items": true
     }

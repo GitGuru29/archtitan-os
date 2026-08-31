@@ -1,149 +1,136 @@
 /* ═══════════════════════════════════════════════════════════════
- * ARCHTITAN OS — Waybar Futuristic Linear Theme
- * Single continuous horizontal bar with vertical rolling viewport
+ * ARCHTITAN OS — Minimal Technical Waybar Theme
+ * Near-black charcoal background, restrained purple accents,
+ * thin-line system iconography, and embedded rounded center viewport.
  * ═══════════════════════════════════════════════════════════════ */
 
 * {
-    font-family : "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
-    font-size   : 12px;
-    font-weight : 500;
-    min-height  : 0;
-    border      : none;
+    font-family  : "JetBrainsMono Nerd Font", "JetBrains Mono", monospace;
+    font-size    : 11.5px;
+    font-weight  : 500;
+    min-height   : 0;
+    border       : none;
     border-radius: 0;
-    padding     : 0;
-    margin      : 0;
+    padding      : 0;
+    margin       : 0;
 }
 
-/* ── Main bar ─────────────────────────────────────────────────── */
+/* ── Main Linear Bar (Continuous Horizontal) ─────────────────── */
 window#waybar {
-    background  : rgba(8, 8, 16, 0.90);
-    border      : 1px solid rgba(137, 180, 250, 0.10);
+    background   : rgba(13, 14, 21, 0.94);
+    border       : 1px solid rgba(255, 255, 255, 0.07);
     border-radius: 10px;
-    color       : #CDD6F4;
-    box-shadow  :
-        0 2px 20px rgba(0, 0, 0, 0.60),
-        inset 0 1px 0 rgba(137, 180, 250, 0.05);
+    color        : #cdd6f4;
+    box-shadow   : 0 4px 20px rgba(0, 0, 0, 0.65);
 }
 
-window#waybar.hidden { opacity: 0.1; }
+window#waybar.hidden {
+    opacity: 0.1;
+}
 
-/* ── Section padding ──────────────────────────────────────────── */
-.modules-left   { padding: 0 4px 0 2px; }
+/* ── Section Containers ───────────────────────────────────────── */
+.modules-left   { padding: 0 4px 0 6px; }
 .modules-center { padding: 0; }
-.modules-right  { padding: 0 2px 0 4px; }
+.modules-right  { padding: 0 6px 0 4px; }
 
 /* ═══════════════════════════════════════════════════════════════
- * LEFT — Logo + Workspaces
+ * LEFT — Workspaces
  * ═══════════════════════════════════════════════════════════════ */
 
-#custom-logo {
-    font-size   : 17px;
-    font-weight : 900;
-    padding     : 0 8px 0 10px;
-    color       : #89B4FA;
+#workspaces {
+    margin: 0 2px;
 }
 
-#workspaces { margin: 0 2px; }
-
 #workspaces button {
-    padding      : 2px 9px;
-    margin       : 7px 1px;
-    color        : #45475A;
+    padding      : 2px 10px;
+    margin       : 6px 2px;
+    color        : #585b70;
     background   : transparent;
-    border-radius: 5px;
+    border-radius: 6px;
     font-size    : 11.5px;
     font-weight  : 600;
-    min-width    : 20px;
+    min-width    : 22px;
+    transition   : all 0.2s ease;
 }
 
 #workspaces button:hover {
-    color      : #A6ADC8;
-    background : rgba(137, 180, 250, 0.07);
+    color     : #cdd6f4;
+    background: rgba(255, 255, 255, 0.05);
 }
 
-/* Active workspace — solid filled sapphire pill */
+/* Active workspace — restrained purple pill */
 #workspaces button.active {
-    color        : #FFFFFF;
-    background   : rgba(89, 131, 250, 0.80);
+    color        : #cdd6f4;
+    background   : rgba(180, 190, 254, 0.14);
+    border       : 1px solid rgba(180, 190, 254, 0.25);
     border-radius: 6px;
     font-weight  : 700;
-    box-shadow   :
-        0 0 8px rgba(89, 131, 250, 0.40),
-        0 1px 4px rgba(0, 0, 0, 0.30);
 }
 
 #workspaces button.urgent {
-    color      : #F38BA8;
-    background : rgba(243, 139, 168, 0.15);
-    border-radius: 5px;
+    color        : #f38ba8;
+    background   : rgba(243, 139, 168, 0.12);
+    border       : 1px solid rgba(243, 139, 168, 0.25);
+    border-radius: 6px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
- * CENTER — Vertical Rolling Viewport
- *
- * The four animation names (roll-a-fwd, roll-b-fwd, roll-a-rev,
- * roll-b-rev) are intentionally identical in motion but differ
- * in name.  GTK restarts CSS @keyframes when the animation-name
- * property changes, so alternating a↔b reliably re-triggers the
- * entrance animation on every page transition.
+ * CENTER — Embedded Rounded Viewport
  * ═══════════════════════════════════════════════════════════════ */
 
-/* ── Entrance animations ──────────────────────────────────────── */
+/* ── Vertical Roll Keyframe Animations ────────────────────────── */
 @keyframes roll-a-fwd {
-    from { opacity: 0; margin-top: 16px; }
-    to   { opacity: 1; margin-top:  0;   }
+    from { opacity: 0; margin-top: 14px; }
+    to   { opacity: 1; margin-top: 0; }
 }
 @keyframes roll-b-fwd {
-    from { opacity: 0; margin-top: 16px; }
-    to   { opacity: 1; margin-top:  0;   }
+    from { opacity: 0; margin-top: 14px; }
+    to   { opacity: 1; margin-top: 0; }
 }
 @keyframes roll-a-rev {
-    from { opacity: 0; margin-top: -16px; }
-    to   { opacity: 1; margin-top:   0;   }
+    from { opacity: 0; margin-top: -14px; }
+    to   { opacity: 1; margin-top: 0; }
 }
 @keyframes roll-b-rev {
-    from { opacity: 0; margin-top: -16px; }
-    to   { opacity: 1; margin-top:   0;   }
+    from { opacity: 0; margin-top: -14px; }
+    to   { opacity: 1; margin-top: 0; }
 }
 
-/* ── Base center label ────────────────────────────────────────── */
+/* ── Center Capsule / Card ────────────────────────────────────── */
 #custom-titan-center {
-    color        : #CDD6F4;
-    font-size    : 12px;
+    background   : rgba(255, 255, 255, 0.035);
+    border       : 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 16px;
+    color        : #cdd6f4;
+    font-size    : 11.5px;
     font-weight  : 500;
-    padding      : 0 18px;
-    margin       : 0 4px;
-    /* subtle center capsule feel — transparent to preserve linear look */
-    border-left  : 1px solid rgba(137, 180, 250, 0.07);
-    border-right : 1px solid rgba(137, 180, 250, 0.07);
-    min-width    : 380px;
+    padding      : 0 20px;
+    margin       : 4px 6px;
+    min-width    : 440px;
+    transition   : background 0.2s ease, border-color 0.2s ease;
 }
 
-/* ── Animation trigger classes (daemon sets one of these via JSON) */
+#custom-titan-center:hover {
+    background  : rgba(255, 255, 255, 0.055);
+    border-color: rgba(180, 190, 254, 0.22);
+}
+
+/* ── Animation Classes ────────────────────────────────────────── */
 #custom-titan-center.a-fwd {
-    animation: roll-a-fwd 420ms cubic-bezier(0.16, 1, 0.3, 1);
+    animation: roll-a-fwd 380ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 #custom-titan-center.b-fwd {
-    animation: roll-b-fwd 420ms cubic-bezier(0.16, 1, 0.3, 1);
+    animation: roll-b-fwd 380ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 #custom-titan-center.a-rev {
-    animation: roll-a-rev 420ms cubic-bezier(0.16, 1, 0.3, 1);
+    animation: roll-a-rev 380ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 #custom-titan-center.b-rev {
-    animation: roll-b-rev 420ms cubic-bezier(0.16, 1, 0.3, 1);
+    animation: roll-b-rev 380ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ── Per-page accent coloring via alt class ───────────────────── */
-#custom-titan-center.media        { }
-#custom-titan-center.power        { }
-#custom-titan-center.window       { }
-#custom-titan-center.temperature  { }
-#custom-titan-center.datetime     { }
-#custom-titan-center.battery      { }
-#custom-titan-center.gpu          { }
-
 /* ═══════════════════════════════════════════════════════════════
- * RIGHT — Status Modules
+ * RIGHT — Status & Telemetry Modules
  * ═══════════════════════════════════════════════════════════════ */
 
 #custom-power-profile,
@@ -152,75 +139,99 @@ window#waybar.hidden { opacity: 0.1; }
 #pulseaudio,
 #network,
 #battery {
-    color      : #A6ADC8;
-    font-size  : 11.5px;
-    padding    : 0 10px;
-    margin     : 0;
+    color    : #7f849c;
+    font-size: 11.5px;
+    padding  : 0 8px;
+    margin   : 0;
 }
 
-/* Pipe separators */
+/* Thin subtle vertical separator */
 #custom-separator {
-    color   : rgba(69, 71, 90, 0.6);
-    padding : 0;
-    font-size: 14px;
+    color  : #1f202e;
+    padding: 0;
 }
 
-/* Power profile — green */
+/* Power profile — subtle green for efficiency */
 #custom-power-profile {
-    color      : #A6E3A1;
-    font-weight: 600;
-    font-size  : 11px;
+    color      : #a6e3a1;
+    font-weight: 500;
 }
 
 /* Clock */
 #clock {
-    color      : #CDD6F4;
-    font-weight: 600;
-    font-size  : 11.5px;
+    color      : #cdd6f4;
+    font-weight: 500;
 }
 
 /* Temperature */
 #temperature {
-    color: #89B4FA;
+    color: #7f849c;
 }
 #temperature.critical {
-    color: #F38BA8;
+    color: #f38ba8;
 }
 
 /* Volume */
-#pulseaudio       { color: #B4BEFE; }
-#pulseaudio.muted { color: #45475A; }
+#pulseaudio {
+    color: #7f849c;
+}
+#pulseaudio.muted {
+    color: #45475a;
+}
 
 /* Network */
-#network              { color: #89B4FA; font-size: 13px; }
-#network.disconnected { color: #45475A; }
+#network {
+    color    : #7f849c;
+    font-size: 12.5px;
+    padding  : 0 6px;
+}
+#network.disconnected {
+    color: #45475a;
+}
 
 /* Battery */
-#battery              { color: #A6E3A1; font-weight: 600; }
-#battery.warning      { color: #F9E2AF; }
-#battery.critical     { color: #F38BA8; }
+#battery {
+    color      : #cdd6f4;
+    font-weight: 500;
+}
+#battery.warning {
+    color: #fab387;
+}
+#battery.critical {
+    color: #f38ba8;
+}
 #battery.charging,
-#battery.plugged      { color: #94E2D5; }
-#battery.not-present  { padding: 0; color: transparent; }
+#battery.plugged {
+    color: #a6e3a1;
+}
+#battery.not-present {
+    padding: 0;
+    color  : transparent;
+}
 
-/* Tray */
-#tray { padding: 0 6px 0 4px; }
-#tray > .passive       { -gtk-icon-effect: dim; }
+/* System Tray */
+#tray {
+    padding: 0 6px 0 4px;
+}
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
 #tray > .needs-attention {
-    background   : rgba(243, 139, 168, 0.10);
+    background   : rgba(243, 139, 168, 0.15);
     border-radius: 4px;
 }
 
 /* ── Tooltips ─────────────────────────────────────────────────── */
 tooltip {
-    background : rgba(10, 10, 20, 0.97);
-    border     : 1px solid rgba(137, 180, 250, 0.18);
+    background   : rgba(13, 14, 21, 0.96);
+    border       : 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 8px;
-    color      : #CDD6F4;
-    box-shadow : 0 4px 20px rgba(0, 0, 0, 0.55);
+    color        : #cdd6f4;
+    box-shadow   : 0 4px 18px rgba(0, 0, 0, 0.6);
 }
+
 tooltip label {
-    color  : #CDD6F4;
-    padding: 5px 9px;
+    color    : #cdd6f4;
+    padding  : 6px 10px;
     font-size: 11px;
 }

@@ -3,14 +3,15 @@
 titan-bar-daemon — ArchTitan OS Waybar Center Rolling Viewport
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Single persistent process that outputs Waybar JSON lines to stdout.
-Manages the rotating contextual viewport built INSIDE the Waybar center.
+Persistent daemon feeding the native Waybar center rolling viewport.
+Pure technical, monochrome, native Linux visual language with thin-line glyphs.
+No emojis. Semantic status colors only when required.
 
-Pages rotate automatically every 4.5s via vertical roll animation.
-Responds to:
+Rotates automatically every 4.5s via GTK vertical roll keyframe animations.
+Signals:
   SIGUSR1  → next page
   SIGUSR2  → prev page
-  SIGRTMIN → jump to media page
+  SIGRTMIN → jump to media page (SUPER+M)
 """
 
 import sys
@@ -31,7 +32,7 @@ PAGES = ["media", "power", "window", "temperature", "datetime", "battery", "gpu"
 
 # ─── Shared State ─────────────────────────────────────────────────────────────
 state = {
-    # carousel state
+    # Carousel state
     "page_idx"     : 0,
     "direction"    : "next",
     "anim_token"   : 0,   # alternates 0/1 to retrigger GTK CSS @keyframes
@@ -45,7 +46,7 @@ state = {
     "play_status"  : "Stopped",
     "player_name"  : "",
 
-    # system
+    # System telemetry
     "power_profile": "balanced",
     "active_window": "Desktop",
     "active_app"   : "",
@@ -67,7 +68,6 @@ def emit():
         tooltip   = _build_tooltip(page)
         direction = state["direction"]
         token     = state["anim_token"] % 2
-        # Four distinct class names force GTK to restart @keyframes every change
         css_class = f"{'a' if token == 0 else 'b'}-{'fwd' if direction == 'next' else 'rev'}"
 
     out = {
@@ -91,10 +91,10 @@ def _fmt_us(us):
     s = int(us / 1_000_000)
     return f"{s // 60}:{s % 60:02d}"
 
-def _progress_bar(pos, length, w=18):
+def _progress_bar(pos, length, w=14):
     if not length:
         return "─" * w
-    r = min(1.0, pos / length)
+    r = max(0.0, min(1.0, pos / length))
     n = int(r * (w - 1))
     return "━" * n + "●" + "─" * (w - 1 - n)
 
@@ -103,84 +103,116 @@ def _build_text(page):
 
     if page == "media":
         if not s["title"] or s["play_status"] == "Stopped":
-            return ('<span alpha="60%">🎵  No media playing</span>')
-        title  = _trunc(s["title"],  26)
-        artist = _trunc(s["artist"], 20) if s["artist"] else ""
-        icon   = "⏸" if s["play_status"] == "Playing" else "▶"
+            return '<span color="#6c7086">󰝚</span>  <span color="#6c7086">No media playing</span>'
+        title  = _trunc(s["title"],  24)
+        artist = _trunc(s["artist"], 18) if s["artist"] else ""
+        icon   = "󰏤" if s["play_status"] == "Playing" else "󰐊"
         pos    = _fmt_us(s["position"])
         dur    = _fmt_us(s["length"])
         bar    = _progress_bar(s["position"], s["length"])
-        a_part = (f'<span color="#A6ADC8"> — {artist}</span>' if artist else "")
+        a_part = f'<span color="#7f849c"> — {artist}</span>' if artist else ""
         return (
-            f'<span color="#A6E3A1">🎵</span>  '
-            f'<span weight="bold" color="#CDD6F4">{title}</span>'
+            f'<span color="#b4befe">󰝚</span>  '
+            f'<span weight="600" color="#cdd6f4">{title}</span>'
             f'{a_part}'
-            f'  <span color="#585B70">{icon} {pos}/{dur}  {bar}</span>'
+            f'  <span color="#6c7086">󰒮</span> '
+            f'<span color="#b4befe">{icon}</span> '
+            f'<span color="#6c7086">󰒭  {pos} / {dur}  {bar}</span>'
         )
 
     elif page == "power":
-        p    = s["power_profile"]
-        icon = {"performance": "⚡", "balanced": "🌿", "power-saver": "💤"}.get(p, "⚡")
-        lbl  = p.replace("-", " ").title()
+        p = s["power_profile"].lower()
+        if "perf" in p:
+            icon = "󰓅"
+            lbl = "Performance"
+            desc = "High Performance"
+            val_color = "#cdd6f4"
+        elif "saver" in p:
+            icon = "󰚥"
+            lbl = "Power Saver"
+            desc = "Maximum Battery"
+            val_color = "#cdd6f4"
+        else:
+            icon = "󰌪"
+            lbl = "Balanced"
+            desc = "Optimized Efficiency"
+            val_color = "#a6e3a1"  # subtle green for efficiency
         return (
-            f'<span color="#F9E2AF">{icon}</span>  '
-            f'<span color="#585B70">Power</span>  '
-            f'<span weight="bold" color="#CDD6F4">{lbl}</span>'
+            f'<span color="#6c7086">{icon}</span>  '
+            f'<span color="#6c7086">POWER PROFILE</span>  '
+            f'<span weight="600" color="{val_color}">{lbl}</span>'
+            f'  <span color="#585b70">· {desc}</span>'
         )
 
     elif page == "window":
-        win = _trunc(s["active_window"] or "Desktop", 32)
+        win = _trunc(s["active_window"] or "Desktop", 36)
         return (
-            f'<span color="#89B4FA">󰕮</span>  '
-            f'<span color="#585B70">Window</span>  '
-            f'<span weight="bold" color="#CDD6F4">{win}</span>'
+            f'<span color="#6c7086">󰖯</span>  '
+            f'<span color="#6c7086">ACTIVE WINDOW</span>  '
+            f'<span weight="600" color="#cdd6f4">{win}</span>'
         )
 
     elif page == "temperature":
         t = s["cpu_temp"]
         if t is None:
             return ""
-        color = "#F38BA8" if t > 80 else "#F9E2AF" if t > 65 else "#A6ADC8"
+        if t > 80:
+            color = "#f38ba8"  # critical red
+            status = "High"
+        elif t > 65:
+            color = "#fab387"  # warning orange
+            status = "Warm"
+        else:
+            color = "#cdd6f4"  # normal soft white
+            status = "Normal"
         return (
-            f'<span color="#F9E2AF">🌡</span>  '
-            f'<span color="#585B70">CPU</span>  '
-            f'<span weight="bold" color="{color}">{t}°C</span>'
+            f'<span color="#6c7086">󰔏</span>  '
+            f'<span color="#6c7086">CPU TEMPERATURE</span>  '
+            f'<span weight="600" color="{color}">{t}°C</span>'
+            f'  <span color="#585b70">· {status}</span>'
         )
 
     elif page == "datetime":
         now = datetime.now()
+        date_str = now.strftime("%A, %d %B %Y")
+        time_str = now.strftime("%H:%M")
         return (
-            f'<span color="#A6E3A1">📅</span>  '
-            f'<span color="#A6ADC8">{now.strftime("%a, %d %b")}</span>'
-            f'  <span color="#585B70">·</span>  '
-            f'<span weight="bold" color="#CDD6F4">{now.strftime("%H:%M")}</span>'
+            f'<span color="#6c7086">󰸗</span>  '
+            f'<span color="#6c7086">DATE &amp; TIME</span>  '
+            f'<span weight="600" color="#cdd6f4">{date_str}</span>'
+            f'  <span color="#585b70">·</span>  '
+            f'<span weight="600" color="#cdd6f4">{time_str}</span>'
         )
 
     elif page == "battery":
         pct = s["battery_pct"]
         if pct is None:
             return ""
-        st   = s["battery_status"]
-        icon = "⚡" if st in ("Charging", "Full") else "🔋"
-        color = "#F38BA8" if pct < 15 else "#F9E2AF" if pct < 30 else "#A6E3A1"
-        st_part = f'  <span color="#585B70">{st}</span>' if st not in ("Unknown", "") else ""
+        st = s["battery_status"]
+        if pct < 15:
+            color = "#f38ba8"  # critical red
+        elif pct < 30:
+            color = "#fab387"  # warning orange
+        else:
+            color = "#cdd6f4"  # normal soft white
+        icon = "󰂄" if st in ("Charging", "Full") else "󰁹"
         return (
-            f'<span color="{color}">{icon}</span>  '
-            f'<span color="#585B70">Battery</span>  '
-            f'<span weight="bold" color="{color}">{pct}%</span>'
-            f'{st_part}'
+            f'<span color="#6c7086">{icon}</span>  '
+            f'<span color="#6c7086">BATTERY</span>  '
+            f'<span weight="600" color="{color}">{pct}%</span>'
+            f'  <span color="#585b70">· {st}</span>'
         )
 
     elif page == "gpu":
         t = s["gpu_temp"]
         if t is None:
             return ""
-        model = _trunc(s["gpu_model"], 14) if s["gpu_model"] else "GPU"
+        model = _trunc(s["gpu_model"], 16) if s["gpu_model"] else "GPU"
         return (
-            f'<span color="#CBA6F7">󰢮</span>  '
-            f'<span color="#585B70">GPU</span>  '
-            f'<span weight="bold" color="#CDD6F4">{t}°C</span>'
-            f'  <span color="#585B70">{model}</span>'
+            f'<span color="#6c7086">󰢮</span>  '
+            f'<span color="#6c7086">GPU</span>  '
+            f'<span weight="600" color="#cdd6f4">{t}°C</span>'
+            f'  <span color="#585b70">· {model}</span>'
         )
 
     return ""
@@ -192,28 +224,27 @@ def _build_tooltip(page):
     elif page == "power":
         return f"Power Profile: {s['power_profile']}"
     elif page == "window":
-        return f"Active: {s['active_window']}"
+        return f"Active Window: {s['active_window']}"
     elif page == "temperature" and s["cpu_temp"]:
-        return f"CPU: {s['cpu_temp']}°C"
+        return f"CPU Temperature: {s['cpu_temp']}°C"
     elif page == "battery" and s["battery_pct"] is not None:
-        return f"Battery: {s['battery_pct']}%  ·  {s['battery_status']}"
+        return f"Battery: {s['battery_pct']}% ({s['battery_status']})"
     elif page == "gpu" and s["gpu_temp"]:
-        return f"GPU: {s['gpu_temp']}°C  ·  {s['gpu_model']}"
+        return f"GPU: {s['gpu_temp']}°C ({s['gpu_model']})"
     return ""
 
 # ─── Page helpers ─────────────────────────────────────────────────────────────
 def _page_hidden(page):
     s = state
-    if page == "temperature"  and s["cpu_temp"]     is None: return True
-    if page == "battery"      and s["battery_pct"]  is None: return True
-    if page == "gpu"          and s["gpu_temp"]      is None: return True
+    if page == "temperature" and s["cpu_temp"] is None: return True
+    if page == "battery"     and s["battery_pct"] is None: return True
+    if page == "gpu"         and s["gpu_temp"] is None: return True
     return False
 
 def _advance(delta):
     global _auto_timer
     with _lock:
         n = len(PAGES)
-        # walk in delta direction skipping hidden pages (max n attempts)
         idx = state["page_idx"]
         for _ in range(n):
             idx = (idx + delta) % n
@@ -259,13 +290,12 @@ signal.signal(signal.SIGUSR2,  _sig_prev)
 try:
     signal.signal(signal.SIGRTMIN, _sig_media)
 except (AttributeError, OSError):
-    pass  # SIGRTMIN not always available
+    pass
 
 # ─── MPRIS monitor ────────────────────────────────────────────────────────────
 def _mpris_monitor():
     while True:
         try:
-            # Discover players
             r = subprocess.run(
                 ["dbus-send", "--print-reply", "--dest=org.freedesktop.DBus",
                  "/org/freedesktop/DBus", "org.freedesktop.DBus.ListNames"],
@@ -350,7 +380,6 @@ def _sensors_monitor():
         # CPU temperature
         try:
             cpu_t = None
-            # Prefer x86_pkg_temp / acpitz
             for zone in sorted(Path("/sys/class/thermal").iterdir()):
                 tf  = zone / "type"
                 tvf = zone / "temp"
@@ -359,7 +388,6 @@ def _sensors_monitor():
                     if any(k in ztype for k in ("pkg", "cpu", "x86", "acpitz")):
                         cpu_t = round(int(tvf.read_text()) / 1000)
                         break
-            # Fallback: hwmon coretemp / k10temp
             if cpu_t is None:
                 for hw in sorted(Path("/sys/class/hwmon").iterdir()):
                     nf = hw / "name"
@@ -408,7 +436,7 @@ def _sensors_monitor():
         except Exception:
             pass
 
-        # GPU (NVIDIA then AMD)
+        # GPU
         try:
             gt, gm = None, ""
             try:
@@ -442,9 +470,8 @@ def _sensors_monitor():
 
 # ─── DateTime tick ────────────────────────────────────────────────────────────
 def _datetime_tick():
-    """Re-emit every 30s when datetime page is visible."""
     while True:
-        time.sleep(30)
+        time.sleep(15)
         with _lock:
             page = PAGES[state["page_idx"]]
         if page == "datetime":
@@ -452,20 +479,18 @@ def _datetime_tick():
 
 # ─── Media position tick ──────────────────────────────────────────────────────
 def _media_tick():
-    """Re-emit every 2s when media page is visible to advance the seek bar."""
     while True:
         time.sleep(2)
         with _lock:
             page   = PAGES[state["page_idx"]]
             status = state["play_status"]
             if status == "Playing":
-                state["position"] += 2_000_000  # approx +2s in microseconds
+                state["position"] += 2_000_000
         if page == "media" and status == "Playing":
             emit()
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 def main():
-    # Write PID so helper scripts can signal us
     runtime = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
     pid_path = Path(runtime) / "titan-bar-daemon.pid"
     try:
@@ -473,20 +498,15 @@ def main():
     except Exception:
         pass
 
-    # Spawn background threads
     for fn in [_mpris_monitor, _hyprland_monitor, _sensors_monitor,
                _datetime_tick, _media_tick]:
         t = threading.Thread(target=fn, daemon=True)
         t.start()
 
-    # Brief wait for initial sensor data
-    time.sleep(0.6)
-
-    # Initial emit and start rotation
+    time.sleep(0.5)
     emit()
     _schedule_rotation()
 
-    # Keep alive — main thread spins; threads handle all updates
     while True:
         time.sleep(60)
 
