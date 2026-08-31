@@ -1,150 +1,86 @@
 {
     "layer": "top",
     "position": "top",
-    "height": 34,
-    "margin-top": 4,
-    "margin-left": 8,
-    "margin-right": 8,
+    "height": 42,
+    "margin-top": 6,
+    "margin-left": 10,
+    "margin-right": 10,
     "spacing": 0,
     "exclusive": true,
 
     "modules-left": [
-        "custom/logo"
+        "custom/logo",
+        "hyprland/workspaces"
     ],
+
     "modules-center": [
-        "hyprland/workspaces",
-        "custom/separator-center",
-        "custom/hud-context",
-        "custom/separator-app",
-        "hyprland/window"
+        "custom/mediahub"
     ],
+
     "modules-right": [
-        "cpu",
-        "memory",
-        "custom/gpu",
-        "network",
-        "pulseaudio",
-        "battery",
+        "custom/power-profile",
         "clock",
+        "temperature",
+        "pulseaudio",
+        "network",
+        "battery",
         "tray"
     ],
 
     "custom/logo": {
-        "format": "◈ ARCHTITAN",
+        "format": "",
         "tooltip": false
     },
 
     "hyprland/workspaces": {
-        "format": "{icon}",
+        "format": "{id}",
         "on-click": "activate",
         "sort-by-number": true,
         "persistent-workspaces": {
             "*": 5
-        },
-        "format-icons": {
-            "1": "01",
-            "2": "02",
-            "3": "03",
-            "4": "04",
-            "5": "05",
-            "6": "06",
-            "7": "07",
-            "8": "08",
-            "9": "09"
         }
     },
 
-    "custom/separator-center": {
-        "format": "│",
-        "tooltip": false
-    },
-
-    "custom/hud-context": {
-        "exec": "titan-hud-context",
-        "interval": 1,
+    "custom/mediahub": {
+        "exec": "echo '{\"text\": \"● ○ ○ ○ ○ ○  MEDIA HUB  (AUTO SCROLLING)\", \"tooltip\": \"Click to toggle Titan Media Hub\"}'",
         "return-type": "json",
-        "tooltip": true,
-        "on-click": "titan-media-hud --toggle"
+        "interval": 4,
+        "on-click": "titan-media-hud --toggle",
+        "on-scroll-up": "titan-media-hud --prev",
+        "on-scroll-down": "titan-media-hud --next",
+        "tooltip": true
     },
 
-    "custom/separator-app": {
-        "format": "·",
-        "tooltip": false
-    },
-
-    "hyprland/window": {
+    "custom/power-profile": {
+        "exec": "powerprofilesctl get 2>/dev/null | sed 's/balanced/🌿 Balanced/;s/performance/⚡ Performance/;s/power-saver/🔋 Power Saver/' || echo '🌿 Balanced'",
+        "interval": 5,
         "format": "{}",
-        "max-length": 36,
-        "separate-outputs": true,
-        "rewrite": {
-            "^$": "",
-            "(.*) - kitty": "Kitty",
-            "^kitty$": "Kitty",
-            "(.*) - fish": "Kitty",
-            "(.*)Visual Studio Code(.*)": "Visual Studio Code",
-            "(.*)Code - OSS(.*)": "Visual Studio Code",
-            "^code$": "Visual Studio Code",
-            "^code-oss$": "Visual Studio Code",
-            "(.*)Android Studio(.*)": "Android Studio",
-            "^android-studio$": "Android Studio",
-            "(.*) — Brave": "Brave",
-            "^brave-browser$": "Brave",
-            "(.*) — Mozilla Firefox": "Firefox",
-            "^firefox$": "Firefox",
-            "(.*) — Chromium": "Chromium",
-            "^chromium$": "Chromium",
-            "(.*) — Falkon": "Titan Browser",
-            "(.*) — Titan Browser": "Titan Browser",
-            "^falkon$": "Titan Browser",
-            "^titan-browser$": "Titan Browser",
-            "(.*)calamares(.*)": "ArchTitan Setup",
-            "(.*)Calamares(.*)": "ArchTitan Setup",
-            "(.*)archtitan-settings(.*)": "ArchTitan Settings",
-            "^pavucontrol$": "Volume Mixer",
-            "^btop$": "System Monitor",
-            "^ranger$": "Files",
-            "^thunar$": "Files",
-            "^nemo$": "Files",
-            "^Spotify(.*)": "Spotify",
-            "^vlc$": "VLC Media Player",
-            "^mpv$": "MPV Player"
-        }
+        "tooltip": false
     },
 
-    "cpu": {
-        "format": "CPU {usage}%",
+    "temperature": {
+        "critical-threshold": 80,
+        "format": "🌡 {temperatureC}°C",
+        "format-critical": "🔥 {temperatureC}°C",
         "interval": 2,
-        "tooltip": true
-    },
-
-    "memory": {
-        "format": "RAM {used:0.1f}G",
-        "interval": 3,
-        "tooltip-format": "RAM: {used:0.2f}GB / {total:0.2f}GB ({percentage}%)\nSwap: {swapUsed:0.2f}GB / {swapTotal:0.2f}GB"
-    },
-
-    "custom/gpu": {
-        "exec": "titan-hud-gpu",
-        "interval": 3,
-        "return-type": "json",
-        "tooltip": true
-    },
-
-    "network": {
-        "format-wifi": "NET {bandwidthDownBytes}",
-        "format-ethernet": "NET {bandwidthDownBytes}",
-        "format-disconnected": "NET OFF",
-        "interval": 2,
-        "tooltip-format-wifi": "{essid} ({signalStrength}%)\nIP: {ipaddr}\nDown: {bandwidthDownBytes}  Up: {bandwidthUpBytes}",
-        "tooltip-format-ethernet": "{ifname}\nIP: {ipaddr}\nDown: {bandwidthDownBytes}  Up: {bandwidthUpBytes}"
+        "tooltip": false
     },
 
     "pulseaudio": {
-        "format": "VOL {volume}%",
-        "format-muted": "VOL MUTED",
+        "format": "🔊 {volume}%",
+        "format-muted": "🔇 MUTED",
         "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
         "on-right-click": "pavucontrol",
         "tooltip": false
+    },
+
+    "network": {
+        "format-wifi": "󰖩",
+        "format-ethernet": "󰈀",
+        "format-disconnected": "󰖪",
+        "interval": 5,
+        "tooltip-format-wifi": "{essid} ({signalStrength}%)\nIP: {ipaddr}\nDown: {bandwidthDownBytes}  Up: {bandwidthUpBytes}",
+        "tooltip-format-ethernet": "{ifname}\nIP: {ipaddr}"
     },
 
     "battery": {
@@ -153,17 +89,18 @@
             "warning": 30,
             "critical": 15
         },
-        "format": "BAT {capacity}%",
-        "format-charging": "CHR {capacity}%",
-        "format-plugged": "PWR {capacity}%",
-        "format-full": "BAT 100%",
+        "format": "🔋 {capacity}%",
+        "format-charging": "⚡ {capacity}%",
+        "format-plugged": "🔌 {capacity}%",
+        "format-full": "🔋 100%",
         "format-not-found": "",
         "interval": 5,
         "tooltip-format": "{timeTo} — {capacity}%\nPower: {power:.1f}W"
     },
 
     "clock": {
-        "format": "{:%H:%M}",
+        "format": "📅 {:%a, %d %b\n%H:%M}",
+        "format-alt": "📅 {:%A, %d %B %Y}",
         "tooltip-format": "<tt><big>{calendar}</big></tt>",
         "calendar": {
             "mode": "month",
@@ -180,7 +117,7 @@
     },
 
     "tray": {
-        "icon-size": 13,
+        "icon-size": 14,
         "spacing": 8,
         "show-passive-items": true
     }
