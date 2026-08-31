@@ -63,7 +63,8 @@
         "exec": "titan-hud-context",
         "interval": 1,
         "return-type": "json",
-        "tooltip": true
+        "tooltip": true,
+        "on-click": "titan-media-hud --toggle"
     },
 
     "custom/separator-app": {
