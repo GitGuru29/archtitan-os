@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# titan-bar-media — jump the rolling viewport to the Media page (SUPER+M)
+PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/titan-bar-daemon.pid"
+if [[ -f "$PID_FILE" ]]; then
+    kill -SIGRTMIN "$(cat "$PID_FILE")" 2>/dev/null || \
+    kill -SIGUSR1  "$(cat "$PID_FILE")" 2>/dev/null
+fi

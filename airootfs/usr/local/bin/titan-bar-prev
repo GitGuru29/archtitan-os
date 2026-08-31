@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# titan-bar-prev — roll the viewport backwards one page
+PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/titan-bar-daemon.pid"
+[[ -f "$PID_FILE" ]] && kill -SIGUSR2 "$(cat "$PID_FILE")" 2>/dev/null
