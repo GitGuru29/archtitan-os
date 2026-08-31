@@ -1,12 +1,12 @@
 {
-    "layer": "top",
-    "position": "top",
-    "height": 42,
-    "margin-top": 6,
-    "margin-left": 10,
-    "margin-right": 10,
-    "spacing": 0,
-    "exclusive": true,
+    "layer"        : "top",
+    "position"     : "top",
+    "height"       : 36,
+    "margin-top"   : 5,
+    "margin-left"  : 8,
+    "margin-right" : 8,
+    "spacing"      : 0,
+    "exclusive"    : true,
 
     "modules-left": [
         "custom/logo",
@@ -14,111 +14,122 @@
     ],
 
     "modules-center": [
-        "custom/mediahub"
+        "custom/titan-center"
     ],
 
     "modules-right": [
         "custom/power-profile",
+        "custom/separator",
         "clock",
+        "custom/separator",
         "temperature",
+        "custom/separator",
         "pulseaudio",
+        "custom/separator",
         "network",
+        "custom/separator",
         "battery",
         "tray"
     ],
 
+    // ── LEFT ──────────────────────────────────────────────────
+
     "custom/logo": {
-        "format": "",
+        "format" : "<span weight='900' color='#89B4FA'></span>",
         "tooltip": false
     },
 
     "hyprland/workspaces": {
-        "format": "{id}",
-        "on-click": "activate",
-        "sort-by-number": true,
-        "persistent-workspaces": {
-            "*": 5
-        }
+        "format"              : "{id}",
+        "on-click"            : "activate",
+        "sort-by-number"      : true,
+        "persistent-workspaces": { "*": 5 }
     },
 
-    "custom/mediahub": {
-        "exec": "echo '{\"text\": \"● ○ ○ ○ ○ ○  MEDIA HUB  (AUTO SCROLLING)\", \"tooltip\": \"Click to toggle Titan Media Hub\"}'",
-        "return-type": "json",
-        "interval": 4,
-        "on-click": "titan-media-hud --toggle",
-        "on-scroll-up": "titan-media-hud --prev",
-        "on-scroll-down": "titan-media-hud --next",
-        "tooltip": true
+    // ── CENTER — Rolling Viewport ──────────────────────────────
+
+    "custom/titan-center": {
+        "exec"            : "/home/msfvenom/custom-os-build/airootfs/usr/local/bin/titan-bar-daemon",
+        "return-type"     : "json",
+        "restart-interval": 5,
+        "on-scroll-down"  : "/home/msfvenom/custom-os-build/airootfs/usr/local/bin/titan-bar-next",
+        "on-scroll-up"    : "/home/msfvenom/custom-os-build/airootfs/usr/local/bin/titan-bar-prev",
+        "on-click"        : "/home/msfvenom/custom-os-build/airootfs/usr/local/bin/titan-bar-next",
+        "on-click-right"  : "/home/msfvenom/custom-os-build/airootfs/usr/local/bin/titan-bar-prev",
+        "tooltip"         : true
     },
+
+    // ── RIGHT ─────────────────────────────────────────────────
 
     "custom/power-profile": {
-        "exec": "powerprofilesctl get 2>/dev/null | sed 's/balanced/🌿 Balanced/;s/performance/⚡ Performance/;s/power-saver/🔋 Power Saver/' || echo '🌿 Balanced'",
-        "interval": 5,
-        "format": "{}",
+        "exec"    : "powerprofilesctl get 2>/dev/null | sed 's/balanced/🌿 Balanced/;s/performance/⚡ Performance/;s/power-saver/💤 Saver/' || echo '🌿 Balanced'",
+        "interval": 10,
+        "format"  : "{}",
+        "tooltip" : false
+    },
+
+    "custom/separator": {
+        "format" : "<span color='#2A2A3E'>│</span>",
         "tooltip": false
-    },
-
-    "temperature": {
-        "critical-threshold": 80,
-        "format": "🌡 {temperatureC}°C",
-        "format-critical": "🔥 {temperatureC}°C",
-        "interval": 2,
-        "tooltip": false
-    },
-
-    "pulseaudio": {
-        "format": "🔊 {volume}%",
-        "format-muted": "🔇 MUTED",
-        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
-        "on-right-click": "pavucontrol",
-        "tooltip": false
-    },
-
-    "network": {
-        "format-wifi": "󰖩",
-        "format-ethernet": "󰈀",
-        "format-disconnected": "󰖪",
-        "interval": 5,
-        "tooltip-format-wifi": "{essid} ({signalStrength}%)\nIP: {ipaddr}\nDown: {bandwidthDownBytes}  Up: {bandwidthUpBytes}",
-        "tooltip-format-ethernet": "{ifname}\nIP: {ipaddr}"
-    },
-
-    "battery": {
-        "states": {
-            "good": 95,
-            "warning": 30,
-            "critical": 15
-        },
-        "format": "🔋 {capacity}%",
-        "format-charging": "⚡ {capacity}%",
-        "format-plugged": "🔌 {capacity}%",
-        "format-full": "🔋 100%",
-        "format-not-found": "",
-        "interval": 5,
-        "tooltip-format": "{timeTo} — {capacity}%\nPower: {power:.1f}W"
     },
 
     "clock": {
-        "format": "📅 {:%a, %d %b\n%H:%M}",
-        "format-alt": "📅 {:%A, %d %B %Y}",
-        "tooltip-format": "<tt><big>{calendar}</big></tt>",
+        "format"         : "📅 {:%a %d %b  %H:%M}",
+        "format-alt"     : "{:%A, %d %B %Y  %H:%M:%S}",
+        "tooltip-format" : "<tt><big>{calendar}</big></tt>",
         "calendar": {
-            "mode": "month",
-            "weeks-pos": "right",
-            "on-scroll": 1,
+            "mode"      : "month",
+            "weeks-pos" : "right",
+            "on-scroll" : 1,
             "format": {
-                "months":   "<span color='#CDD6F4'><b>{}</b></span>",
-                "days":     "<span color='#A6ADC8'>{}</span>",
-                "weeks":    "<span color='#585B70'><b>W{}</b></span>",
+                "months"  : "<span color='#CDD6F4'><b>{}</b></span>",
+                "days"    : "<span color='#A6ADC8'>{}</span>",
+                "weeks"   : "<span color='#45475A'><b>W{}</b></span>",
                 "weekdays": "<span color='#89B4FA'><b>{}</b></span>",
-                "today":    "<span color='#74C7EC'><b><u>{}</u></b></span>"
+                "today"   : "<span color='#74C7EC'><b><u>{}</u></b></span>"
             }
         }
     },
 
+    "temperature": {
+        "critical-threshold": 80,
+        "format"            : "🌡 {temperatureC}°C",
+        "format-critical"   : "🔥 {temperatureC}°C",
+        "interval"          : 3,
+        "tooltip"           : false
+    },
+
+    "pulseaudio": {
+        "format"       : "🔊 {volume}%",
+        "format-muted" : "🔇",
+        "on-click"     : "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "on-right-click": "pavucontrol",
+        "tooltip"      : false
+    },
+
+    "network": {
+        "format-wifi"       : "󰖩 {signalStrength}%",
+        "format-ethernet"   : "󰈀",
+        "format-disconnected": "󰖪",
+        "interval"          : 5,
+        "tooltip-format-wifi"    : "{essid}  {signalStrength}%\nIP: {ipaddr}\n↓ {bandwidthDownBytes}  ↑ {bandwidthUpBytes}",
+        "tooltip-format-ethernet": "{ifname}\nIP: {ipaddr}"
+    },
+
+    "battery": {
+        "states"          : { "good": 95, "warning": 30, "critical": 15 },
+        "format"          : "🔋 {capacity}%",
+        "format-charging" : "⚡ {capacity}%",
+        "format-plugged"  : "🔌 {capacity}%",
+        "format-full"     : "🔋 Full",
+        "format-not-found": "",
+        "interval"        : 10,
+        "tooltip-format"  : "{timeTo}  ·  {capacity}%\n{power:.1f} W"
+    },
+
     "tray": {
-        "icon-size": 14,
-        "spacing": 8,
+        "icon-size"        : 13,
+        "spacing"          : 8,
         "show-passive-items": true
     }
 }

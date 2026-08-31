@@ -1,0 +1,494 @@
+#!/usr/bin/env python3
+"""
+titan-bar-daemon — ArchTitan OS Waybar Center Rolling Viewport
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Single persistent process that outputs Waybar JSON lines to stdout.
+Manages the rotating contextual viewport built INSIDE the Waybar center.
+
+Pages rotate automatically every 4.5s via vertical roll animation.
+Responds to:
+  SIGUSR1  → next page
+  SIGUSR2  → prev page
+  SIGRTMIN → jump to media page
+"""
+
+import sys
+import os
+import json
+import time
+import signal
+import threading
+import subprocess
+import socket
+import re
+from datetime import datetime
+from pathlib import Path
+
+# ─── Configuration ────────────────────────────────────────────────────────────
+ROTATION_INTERVAL = 4.5
+PAGES = ["media", "power", "window", "temperature", "datetime", "battery", "gpu"]
+
+# ─── Shared State ─────────────────────────────────────────────────────────────
+state = {
+    # carousel state
+    "page_idx"     : 0,
+    "direction"    : "next",
+    "anim_token"   : 0,   # alternates 0/1 to retrigger GTK CSS @keyframes
+
+    # MPRIS
+    "title"        : "",
+    "artist"       : "",
+    "album"        : "",
+    "position"     : 0,
+    "length"       : 0,
+    "play_status"  : "Stopped",
+    "player_name"  : "",
+
+    # system
+    "power_profile": "balanced",
+    "active_window": "Desktop",
+    "active_app"   : "",
+    "cpu_temp"     : None,
+    "battery_pct"  : None,
+    "battery_status": "Unknown",
+    "gpu_temp"     : None,
+    "gpu_model"    : "",
+}
+
+_lock       = threading.Lock()
+_auto_timer = None
+
+# ─── Output ───────────────────────────────────────────────────────────────────
+def emit():
+    with _lock:
+        page      = PAGES[state["page_idx"]]
+        text      = _build_text(page)
+        tooltip   = _build_tooltip(page)
+        direction = state["direction"]
+        token     = state["anim_token"] % 2
+        # Four distinct class names force GTK to restart @keyframes every change
+        css_class = f"{'a' if token == 0 else 'b'}-{'fwd' if direction == 'next' else 'rev'}"
+
+    out = {
+        "text"    : text,
+        "tooltip" : tooltip,
+        "class"   : css_class,
+        "alt"     : page,
+    }
+    try:
+        print(json.dumps(out, ensure_ascii=False), flush=True)
+    except BrokenPipeError:
+        sys.exit(0)
+
+# ─── Text builders ────────────────────────────────────────────────────────────
+def _trunc(s, n):
+    return s[:n] + "…" if len(s) > n else s
+
+def _fmt_us(us):
+    if not us:
+        return "0:00"
+    s = int(us / 1_000_000)
+    return f"{s // 60}:{s % 60:02d}"
+
+def _progress_bar(pos, length, w=18):
+    if not length:
+        return "─" * w
+    r = min(1.0, pos / length)
+    n = int(r * (w - 1))
+    return "━" * n + "●" + "─" * (w - 1 - n)
+
+def _build_text(page):
+    s = state
+
+    if page == "media":
+        if not s["title"] or s["play_status"] == "Stopped":
+            return ('<span alpha="60%">🎵  No media playing</span>')
+        title  = _trunc(s["title"],  26)
+        artist = _trunc(s["artist"], 20) if s["artist"] else ""
+        icon   = "⏸" if s["play_status"] == "Playing" else "▶"
+        pos    = _fmt_us(s["position"])
+        dur    = _fmt_us(s["length"])
+        bar    = _progress_bar(s["position"], s["length"])
+        a_part = (f'<span color="#A6ADC8"> — {artist}</span>' if artist else "")
+        return (
+            f'<span color="#A6E3A1">🎵</span>  '
+            f'<span weight="bold" color="#CDD6F4">{title}</span>'
+            f'{a_part}'
+            f'  <span color="#585B70">{icon} {pos}/{dur}  {bar}</span>'
+        )
+
+    elif page == "power":
+        p    = s["power_profile"]
+        icon = {"performance": "⚡", "balanced": "🌿", "power-saver": "💤"}.get(p, "⚡")
+        lbl  = p.replace("-", " ").title()
+        return (
+            f'<span color="#F9E2AF">{icon}</span>  '
+            f'<span color="#585B70">Power</span>  '
+            f'<span weight="bold" color="#CDD6F4">{lbl}</span>'
+        )
+
+    elif page == "window":
+        win = _trunc(s["active_window"] or "Desktop", 32)
+        return (
+            f'<span color="#89B4FA">󰕮</span>  '
+            f'<span color="#585B70">Window</span>  '
+            f'<span weight="bold" color="#CDD6F4">{win}</span>'
+        )
+
+    elif page == "temperature":
+        t = s["cpu_temp"]
+        if t is None:
+            return ""
+        color = "#F38BA8" if t > 80 else "#F9E2AF" if t > 65 else "#A6ADC8"
+        return (
+            f'<span color="#F9E2AF">🌡</span>  '
+            f'<span color="#585B70">CPU</span>  '
+            f'<span weight="bold" color="{color}">{t}°C</span>'
+        )
+
+    elif page == "datetime":
+        now = datetime.now()
+        return (
+            f'<span color="#A6E3A1">📅</span>  '
+            f'<span color="#A6ADC8">{now.strftime("%a, %d %b")}</span>'
+            f'  <span color="#585B70">·</span>  '
+            f'<span weight="bold" color="#CDD6F4">{now.strftime("%H:%M")}</span>'
+        )
+
+    elif page == "battery":
+        pct = s["battery_pct"]
+        if pct is None:
+            return ""
+        st   = s["battery_status"]
+        icon = "⚡" if st in ("Charging", "Full") else "🔋"
+        color = "#F38BA8" if pct < 15 else "#F9E2AF" if pct < 30 else "#A6E3A1"
+        st_part = f'  <span color="#585B70">{st}</span>' if st not in ("Unknown", "") else ""
+        return (
+            f'<span color="{color}">{icon}</span>  '
+            f'<span color="#585B70">Battery</span>  '
+            f'<span weight="bold" color="{color}">{pct}%</span>'
+            f'{st_part}'
+        )
+
+    elif page == "gpu":
+        t = s["gpu_temp"]
+        if t is None:
+            return ""
+        model = _trunc(s["gpu_model"], 14) if s["gpu_model"] else "GPU"
+        return (
+            f'<span color="#CBA6F7">󰢮</span>  '
+            f'<span color="#585B70">GPU</span>  '
+            f'<span weight="bold" color="#CDD6F4">{t}°C</span>'
+            f'  <span color="#585B70">{model}</span>'
+        )
+
+    return ""
+
+def _build_tooltip(page):
+    s = state
+    if page == "media" and s["title"]:
+        return f"{s['player_name']}: {s['artist']} — {s['title']}\n{s['album']}"
+    elif page == "power":
+        return f"Power Profile: {s['power_profile']}"
+    elif page == "window":
+        return f"Active: {s['active_window']}"
+    elif page == "temperature" and s["cpu_temp"]:
+        return f"CPU: {s['cpu_temp']}°C"
+    elif page == "battery" and s["battery_pct"] is not None:
+        return f"Battery: {s['battery_pct']}%  ·  {s['battery_status']}"
+    elif page == "gpu" and s["gpu_temp"]:
+        return f"GPU: {s['gpu_temp']}°C  ·  {s['gpu_model']}"
+    return ""
+
+# ─── Page helpers ─────────────────────────────────────────────────────────────
+def _page_hidden(page):
+    s = state
+    if page == "temperature"  and s["cpu_temp"]     is None: return True
+    if page == "battery"      and s["battery_pct"]  is None: return True
+    if page == "gpu"          and s["gpu_temp"]      is None: return True
+    return False
+
+def _advance(delta):
+    global _auto_timer
+    with _lock:
+        n = len(PAGES)
+        # walk in delta direction skipping hidden pages (max n attempts)
+        idx = state["page_idx"]
+        for _ in range(n):
+            idx = (idx + delta) % n
+            if not _page_hidden(PAGES[idx]):
+                break
+        state["page_idx"]   = idx
+        state["direction"]  = "next" if delta > 0 else "prev"
+        state["anim_token"] += 1
+    emit()
+    _schedule_rotation()
+
+# ─── Auto rotation ────────────────────────────────────────────────────────────
+def _schedule_rotation():
+    global _auto_timer
+    if _auto_timer:
+        _auto_timer.cancel()
+    _auto_timer = threading.Timer(ROTATION_INTERVAL, _auto_rotate)
+    _auto_timer.daemon = True
+    _auto_timer.start()
+
+def _auto_rotate():
+    _advance(1)
+
+# ─── Signal handlers ──────────────────────────────────────────────────────────
+def _sig_next(signum, frame):
+    _advance(1)
+
+def _sig_prev(signum, frame):
+    _advance(-1)
+
+def _sig_media(signum, frame):
+    """Jump directly to media page (SUPER+M)."""
+    with _lock:
+        mi = PAGES.index("media")
+        state["page_idx"]   = mi
+        state["direction"]  = "next"
+        state["anim_token"] += 1
+    emit()
+    _schedule_rotation()
+
+signal.signal(signal.SIGUSR1,  _sig_next)
+signal.signal(signal.SIGUSR2,  _sig_prev)
+try:
+    signal.signal(signal.SIGRTMIN, _sig_media)
+except (AttributeError, OSError):
+    pass  # SIGRTMIN not always available
+
+# ─── MPRIS monitor ────────────────────────────────────────────────────────────
+def _mpris_monitor():
+    while True:
+        try:
+            # Discover players
+            r = subprocess.run(
+                ["dbus-send", "--print-reply", "--dest=org.freedesktop.DBus",
+                 "/org/freedesktop/DBus", "org.freedesktop.DBus.ListNames"],
+                capture_output=True, text=True, timeout=3
+            )
+            players = re.findall(r'org\.mpris\.MediaPlayer2\.(\S+?)(?=\")', r.stdout)
+
+            if players:
+                pname = players[0]
+                dest  = f"org.mpris.MediaPlayer2.{pname}"
+                mr = subprocess.run(
+                    ["dbus-send", "--print-reply", f"--dest={dest}",
+                     "/org/mpris/MediaPlayer2",
+                     "org.freedesktop.DBus.Properties.GetAll",
+                     "string:org.mpris.MediaPlayer2.Player"],
+                    capture_output=True, text=True, timeout=3
+                )
+                out = mr.stdout
+
+                def _extract(pattern, default=""):
+                    m = re.search(pattern, out, re.DOTALL)
+                    return m.group(1) if m else default
+
+                title  = _extract(r'xesam:title[^\n]*\n\s+variant\s+string\s+"([^"]+)"')
+                artist = _extract(r'xesam:artist[^\n]*\n.*?string\s+"([^"]+)"')
+                album  = _extract(r'xesam:album[^\n]*\n\s+variant\s+string\s+"([^"]+)"')
+                status = _extract(r'PlaybackStatus[^\n]*\n\s+variant\s+string\s+"([^"]+)"', "Stopped")
+                pos_m  = re.search(r'Position[^\n]*\n\s+variant\s+int64\s+(\d+)', out)
+                len_m  = re.search(r'mpris:length[^\n]*\n\s+variant\s+int64\s+(\d+)', out)
+
+                with _lock:
+                    state["title"]       = title
+                    state["artist"]      = artist
+                    state["album"]       = album
+                    state["play_status"] = status
+                    state["position"]    = int(pos_m.group(1)) if pos_m else 0
+                    state["length"]      = int(len_m.group(1)) if len_m else 0
+                    state["player_name"] = pname
+            else:
+                with _lock:
+                    state["title"]       = ""
+                    state["play_status"] = "Stopped"
+                    state["player_name"] = ""
+        except Exception:
+            pass
+        time.sleep(2)
+
+# ─── Hyprland active window monitor ──────────────────────────────────────────
+def _hyprland_monitor():
+    sig = os.environ.get("HYPRLAND_INSTANCE_SIGNATURE", "")
+    if not sig:
+        return
+    runtime = os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+    sock_path = Path(runtime) / "hypr" / sig / ".socket2.sock"
+
+    while True:
+        try:
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+                s.connect(str(sock_path))
+                buf = ""
+                while True:
+                    chunk = s.recv(4096).decode("utf-8", errors="replace")
+                    if not chunk:
+                        break
+                    buf += chunk
+                    while "\n" in buf:
+                        line, buf = buf.split("\n", 1)
+                        if line.startswith("activewindow>>"):
+                            rest   = line[len("activewindow>>"):]
+                            parts  = rest.split(",", 1)
+                            app    = parts[0].strip()
+                            title  = parts[1].strip() if len(parts) > 1 else app
+                            with _lock:
+                                state["active_window"] = title or app or "Desktop"
+                                state["active_app"]    = app
+        except Exception:
+            time.sleep(3)
+
+# ─── System sensors monitor ───────────────────────────────────────────────────
+def _sensors_monitor():
+    while True:
+        # CPU temperature
+        try:
+            cpu_t = None
+            # Prefer x86_pkg_temp / acpitz
+            for zone in sorted(Path("/sys/class/thermal").iterdir()):
+                tf  = zone / "type"
+                tvf = zone / "temp"
+                if tf.exists() and tvf.exists():
+                    ztype = tf.read_text().strip().lower()
+                    if any(k in ztype for k in ("pkg", "cpu", "x86", "acpitz")):
+                        cpu_t = round(int(tvf.read_text()) / 1000)
+                        break
+            # Fallback: hwmon coretemp / k10temp
+            if cpu_t is None:
+                for hw in sorted(Path("/sys/class/hwmon").iterdir()):
+                    nf = hw / "name"
+                    if nf.exists() and nf.read_text().strip() in ("coretemp", "k10temp", "zenpower"):
+                        for i in range(1, 12):
+                            tf = hw / f"temp{i}_input"
+                            lf = hw / f"temp{i}_label"
+                            if tf.exists():
+                                lbl = lf.read_text().strip() if lf.exists() else ""
+                                if not lbl or "Package" in lbl or "Tctl" in lbl or i == 1:
+                                    cpu_t = round(int(tf.read_text()) / 1000)
+                                    break
+                        if cpu_t is not None:
+                            break
+            with _lock:
+                state["cpu_temp"] = cpu_t
+        except Exception:
+            pass
+
+        # Battery
+        try:
+            bp, bs = None, "Unknown"
+            for bat in Path("/sys/class/power_supply").iterdir():
+                tf = bat / "type"
+                if tf.exists() and tf.read_text().strip() == "Battery":
+                    cf  = bat / "capacity"
+                    sf  = bat / "status"
+                    bp  = int(cf.read_text()) if cf.exists() else None
+                    bs  = sf.read_text().strip() if sf.exists() else "Unknown"
+                    break
+            with _lock:
+                state["battery_pct"]    = bp
+                state["battery_status"] = bs
+        except Exception:
+            pass
+
+        # Power profile
+        try:
+            r = subprocess.run(
+                ["powerprofilesctl", "get"],
+                capture_output=True, text=True, timeout=2
+            )
+            if r.returncode == 0:
+                with _lock:
+                    state["power_profile"] = r.stdout.strip()
+        except Exception:
+            pass
+
+        # GPU (NVIDIA then AMD)
+        try:
+            gt, gm = None, ""
+            try:
+                r = subprocess.run(
+                    ["nvidia-smi", "--query-gpu=temperature.gpu,name",
+                     "--format=csv,noheader,nounits"],
+                    capture_output=True, text=True, timeout=2
+                )
+                if r.returncode == 0:
+                    parts = r.stdout.strip().split(",")
+                    gt = int(parts[0].strip())
+                    gm = parts[1].strip()[:16] if len(parts) > 1 else "NVIDIA GPU"
+            except Exception:
+                pass
+            if gt is None:
+                for hw in Path("/sys/class/hwmon").iterdir():
+                    nf = hw / "name"
+                    if nf.exists() and nf.read_text().strip() in ("amdgpu", "radeon"):
+                        tf = hw / "temp1_input"
+                        if tf.exists():
+                            gt = round(int(tf.read_text()) / 1000)
+                            gm = "AMD GPU"
+                            break
+            with _lock:
+                state["gpu_temp"]  = gt
+                state["gpu_model"] = gm
+        except Exception:
+            pass
+
+        time.sleep(3)
+
+# ─── DateTime tick ────────────────────────────────────────────────────────────
+def _datetime_tick():
+    """Re-emit every 30s when datetime page is visible."""
+    while True:
+        time.sleep(30)
+        with _lock:
+            page = PAGES[state["page_idx"]]
+        if page == "datetime":
+            emit()
+
+# ─── Media position tick ──────────────────────────────────────────────────────
+def _media_tick():
+    """Re-emit every 2s when media page is visible to advance the seek bar."""
+    while True:
+        time.sleep(2)
+        with _lock:
+            page   = PAGES[state["page_idx"]]
+            status = state["play_status"]
+            if status == "Playing":
+                state["position"] += 2_000_000  # approx +2s in microseconds
+        if page == "media" and status == "Playing":
+            emit()
+
+# ─── Main ─────────────────────────────────────────────────────────────────────
+def main():
+    # Write PID so helper scripts can signal us
+    runtime = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+    pid_path = Path(runtime) / "titan-bar-daemon.pid"
+    try:
+        pid_path.write_text(str(os.getpid()))
+    except Exception:
+        pass
+
+    # Spawn background threads
+    for fn in [_mpris_monitor, _hyprland_monitor, _sensors_monitor,
+               _datetime_tick, _media_tick]:
+        t = threading.Thread(target=fn, daemon=True)
+        t.start()
+
+    # Brief wait for initial sensor data
+    time.sleep(0.6)
+
+    # Initial emit and start rotation
+    emit()
+    _schedule_rotation()
+
+    # Keep alive — main thread spins; threads handle all updates
+    while True:
+        time.sleep(60)
+
+if __name__ == "__main__":
+    main()
