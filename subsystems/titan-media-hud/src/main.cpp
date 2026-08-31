@@ -12,6 +12,7 @@
 #include "mpriscontroller.h"
 #include "mediaislandcontroller.h"
 #include "audioprofilecontroller.h"
+#include "systemcontroller.h"
 #include "ipcserver.h"
 
 int main(int argc, char *argv[])
@@ -61,6 +62,7 @@ int main(int argc, char *argv[])
     MprisController mprisCtrl;
     MediaIslandController islandCtrl;
     AudioProfileController audioCtrl;
+    SystemController systemCtrl;
 
     // Connect track changes to auto-popup
     QObject::connect(&mprisCtrl, &MprisController::trackChanged,
@@ -74,6 +76,7 @@ int main(int argc, char *argv[])
     qmlRegisterSingletonInstance<MprisController>("ArchTitan.Media", 1, 0, "Mpris", &mprisCtrl);
     qmlRegisterSingletonInstance<MediaIslandController>("ArchTitan.Media", 1, 0, "Island", &islandCtrl);
     qmlRegisterSingletonInstance<AudioProfileController>("ArchTitan.Media", 1, 0, "AudioProfile", &audioCtrl);
+    qmlRegisterSingletonInstance<SystemController>("ArchTitan.Media", 1, 0, "System", &systemCtrl);
 
     QQmlApplicationEngine engine;
 

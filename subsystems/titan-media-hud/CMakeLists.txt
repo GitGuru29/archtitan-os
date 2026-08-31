@@ -16,6 +16,7 @@ set(SOURCES
     src/mediaislandcontroller.cpp
     src/ipcserver.cpp
     src/audioprofilecontroller.cpp
+    src/systemcontroller.cpp
 )
 
 set(HEADERS
@@ -23,6 +24,7 @@ set(HEADERS
     src/mediaislandcontroller.h
     src/ipcserver.h
     src/audioprofilecontroller.h
+    src/systemcontroller.h
 )
 
 set(RESOURCES
