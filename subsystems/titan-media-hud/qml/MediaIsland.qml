@@ -4,61 +4,68 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import ArchTitan.Media 1.0
 
+import "pages"
+
 Window {
     id: root
     title: "titan-media-hud"
-    width: 490
+    width: 540
     height: islandContent.implicitHeight + 12
     color: "transparent"
     visible: false
 
     // ─── CONSTANTS ────────────────────────────────────────────────────────────
-    readonly property int islandWidth: 490
-    readonly property int compactHeight: 56
-    readonly property int expandedHeight: 220
-    readonly property color bgColor: "#F011111B"       // Catppuccin Mocha Crust 94% glass
-    readonly property color borderColor: "#2889B4FA"   // Sapphire 16% neon border
-    readonly property color accentPrimary: "#89B4FA"
-    readonly property color accentSecondary: "#74C7EC"
-    readonly property color textPrimary: "#CDD6F4"
-    readonly property color textSecondary: "#A6ADC8"
-    readonly property color textDim: "#585B70"
+    readonly property int hudWidth: 540
+    readonly property int hudHeight: 76
+    readonly property color bgColor: "#F011111B"       // Deep Catppuccin Mocha Crust 94% glass
 
-    // ─── KEYBOARD ESCAPE LISTENER ─────────────────────────────────────────────
+    // ─── KEYBOARD DISMISS (Escape Key) ────────────────────────────────────────
     Item {
         focus: Island.isVisible
         Keys.onEscapePressed: Island.dismiss()
     }
 
-    // ─── CLIP CONTAINER (Dynamic emergence from top edge) ────────────────────
+    // ─── MASTER PHYSICAL HUD CONTAINER ───────────────────────────────────────
     Item {
         id: clipContainer
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        width: root.islandWidth
-        height: islandContent.implicitHeight + 10
+        width: root.hudWidth
+        height: root.hudHeight + 10
         clip: false
 
-        // The island pill body
         Rectangle {
             id: islandContent
-            width: root.islandWidth
-            implicitHeight: (Island.isExpanded || Island.isExpanding)
-                            ? root.expandedHeight : root.compactHeight
+            width: root.hudWidth
+            implicitHeight: root.hudHeight
             anchors.horizontalCenter: parent.horizontalCenter
             y: 0
 
-            radius: 20
+            radius: 22
             color: root.bgColor
-            border.color: root.borderColor
-            border.width: 1
+            border.color: getDynamicBorderColor()
+            border.width: 1.2
+
+            Behavior on border.color { ColorAnimation { duration: 300 } }
+
+            // Dynamic border color depending on active page
+            function getDynamicBorderColor() {
+                var p = System ? System.currentPageName : "media"
+                if (p === "power") return "#4074C7EC"
+                if (p === "window") return "#4089B4FA"
+                if (p === "temperature") return "#40FAB387"
+                if (p === "datetime") return "#40A6E3A1"
+                if (p === "battery") return "#40F9E2AF"
+                if (p === "gpu") return "#40CBA6F7"
+                return "#4089B4FA" // default sapphire for media
+            }
 
             // ── TOP SPECULAR GLASS HIGHLIGHT ──────────────────────────────────
             Rectangle {
                 anchors.top: parent.top
                 anchors.topMargin: 1
                 anchors.horizontalCenter: parent.horizontalCenter
-                width: parent.width * 0.7
+                width: parent.width * 0.72
                 height: 1
                 radius: 1
                 gradient: Gradient {
@@ -81,61 +88,137 @@ Window {
                 border.width: 4
             }
 
-            Behavior on implicitHeight {
-                NumberAnimation {
-                    duration: 320
-                    easing.type: Easing.OutCubic
+            // ── PAGINATION INDICATOR DOTS ─────────────────────────────────────
+            Row {
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.top: parent.top
+                anchors.topMargin: 5
+                spacing: 5
+                z: 10
+                visible: System ? System.pageCount > 1 : false
+
+                Repeater {
+                    model: System ? System.pageCount : 1
+
+                    Rectangle {
+                        width: (index === (System ? System.currentPageIndex : 0)) ? 14 : 5
+                        height: 5
+                        radius: 2.5
+                        color: (index === (System ? System.currentPageIndex : 0)) ? "#89B4FA" : "#40FFFFFF"
+
+                        Behavior on width { NumberAnimation { duration: 200; easing.type: Easing.OutQuad } }
+                        Behavior on color { ColorAnimation { duration: 200 } }
+                    }
                 }
             }
 
-            // ── COMPACT VIEW ──────────────────────────────────────────────────
-            CompactView {
-                id: compactView
+            // ── MOUSE WHEEL & GESTURE INTERACTION ─────────────────────────────
+            MouseArea {
                 anchors.fill: parent
-                anchors.margins: 4
-                visible: opacity > 0.01
-                opacity: (Island.isCompact || Island.isOpening || Island.isClosing) ? 1.0 : 0.0
-
-                Behavior on opacity {
-                    NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+                hoverEnabled: true
+                onWheel: (wheel) => {
+                    if (System) {
+                        System.userScrolled(wheel.angleDelta.y)
+                    }
                 }
-
-                onExpandRequested: Island.expand()
             }
 
-            // ── EXPANDED VIEW ─────────────────────────────────────────────────
-            ExpandedView {
-                id: expandedView
+            // ── VERTICAL PAGE CAROUSEL VIEWPORT ───────────────────────────────
+            Item {
+                id: carouselViewport
                 anchors.fill: parent
-                anchors.margins: 10
-                visible: opacity > 0.01
-                opacity: (Island.isExpanded || Island.isExpanding) ? 1.0 : 0.0
+                anchors.topMargin: 6
+                clip: true
 
-                Behavior on opacity {
-                    NumberAnimation { duration: 240; easing.type: Easing.OutQuad }
+                // Track previous index to determine scroll direction (up/down)
+                property int lastIndex: 0
+                property bool scrollDown: true
+
+                Connections {
+                    target: System
+                    function onCurrentPageIndexChanged() {
+                        var newIdx = System.currentPageIndex
+                        carouselViewport.scrollDown = (newIdx >= carouselViewport.lastIndex) ||
+                                                     (carouselViewport.lastIndex === System.pageCount - 1 && newIdx === 0)
+                        carouselViewport.lastIndex = newIdx
+                    }
                 }
 
-                onCollapseRequested: Island.collapse()
-            }
+                // 1. Media Page
+                MediaPage {
+                    visible: opacity > 0.01
+                    opacity: (System && System.currentPageName === "media") ? 1.0 : 0.0
+                    y: (System && System.currentPageName === "media") ? 0 :
+                       (carouselViewport.scrollDown ? -parent.height : parent.height)
 
-            // ── NO MEDIA IDLE STATE ───────────────────────────────────────────
-            RowLayout {
-                anchors.centerIn: parent
-                spacing: 8
-                visible: !(Mpris && Mpris.hasMedia) && Island.isVisible
-                opacity: visible ? 0.7 : 0.0
-
-                Text {
-                    text: "♫"
-                    font.pixelSize: 16
-                    color: root.accentPrimary
+                    Behavior on opacity { NumberAnimation { duration: 280; easing.type: Easing.OutQuad } }
+                    Behavior on y { NumberAnimation { duration: 320; easing.type: Easing.OutCubic } }
                 }
-                Text {
-                    text: "No Media Playing"
-                    font.family: "JetBrainsMono Nerd Font"
-                    font.pixelSize: 11
-                    font.weight: Font.Medium
-                    color: root.textSecondary
+
+                // 2. Power Profile Page
+                PowerPage {
+                    visible: opacity > 0.01
+                    opacity: (System && System.currentPageName === "power") ? 1.0 : 0.0
+                    y: (System && System.currentPageName === "power") ? 0 :
+                       (carouselViewport.scrollDown ? -parent.height : parent.height)
+
+                    Behavior on opacity { NumberAnimation { duration: 280; easing.type: Easing.OutQuad } }
+                    Behavior on y { NumberAnimation { duration: 320; easing.type: Easing.OutCubic } }
+                }
+
+                // 3. Active Window Page
+                ActiveWindowPage {
+                    visible: opacity > 0.01
+                    opacity: (System && System.currentPageName === "window") ? 1.0 : 0.0
+                    y: (System && System.currentPageName === "window") ? 0 :
+                       (carouselViewport.scrollDown ? -parent.height : parent.height)
+
+                    Behavior on opacity { NumberAnimation { duration: 280; easing.type: Easing.OutQuad } }
+                    Behavior on y { NumberAnimation { duration: 320; easing.type: Easing.OutCubic } }
+                }
+
+                // 4. CPU Temperature Page
+                TemperaturePage {
+                    visible: opacity > 0.01
+                    opacity: (System && System.currentPageName === "temperature") ? 1.0 : 0.0
+                    y: (System && System.currentPageName === "temperature") ? 0 :
+                       (carouselViewport.scrollDown ? -parent.height : parent.height)
+
+                    Behavior on opacity { NumberAnimation { duration: 280; easing.type: Easing.OutQuad } }
+                    Behavior on y { NumberAnimation { duration: 320; easing.type: Easing.OutCubic } }
+                }
+
+                // 5. Date & Time Page
+                DateTimePage {
+                    visible: opacity > 0.01
+                    opacity: (System && System.currentPageName === "datetime") ? 1.0 : 0.0
+                    y: (System && System.currentPageName === "datetime") ? 0 :
+                       (carouselViewport.scrollDown ? -parent.height : parent.height)
+
+                    Behavior on opacity { NumberAnimation { duration: 280; easing.type: Easing.OutQuad } }
+                    Behavior on y { NumberAnimation { duration: 320; easing.type: Easing.OutCubic } }
+                }
+
+                // 6. Battery Page
+                BatteryPage {
+                    visible: opacity > 0.01
+                    opacity: (System && System.currentPageName === "battery") ? 1.0 : 0.0
+                    y: (System && System.currentPageName === "battery") ? 0 :
+                       (carouselViewport.scrollDown ? -parent.height : parent.height)
+
+                    Behavior on opacity { NumberAnimation { duration: 280; easing.type: Easing.OutQuad } }
+                    Behavior on y { NumberAnimation { duration: 320; easing.type: Easing.OutCubic } }
+                }
+
+                // 7. GPU Page
+                GpuPage {
+                    visible: opacity > 0.01
+                    opacity: (System && System.currentPageName === "gpu") ? 1.0 : 0.0
+                    y: (System && System.currentPageName === "gpu") ? 0 :
+                       (carouselViewport.scrollDown ? -parent.height : parent.height)
+
+                    Behavior on opacity { NumberAnimation { duration: 280; easing.type: Easing.OutQuad } }
+                    Behavior on y { NumberAnimation { duration: 320; easing.type: Easing.OutCubic } }
                 }
             }
         }
@@ -147,7 +230,7 @@ Window {
         islandContent.scale = 0.75
     }
 
-    // ─── OPEN ANIMATION ───────────────────────────────────────────────────────
+    // ─── OPEN ANIMATION (Emerges from Waybar) ─────────────────────────────────
     ParallelAnimation {
         id: openAnim
 
@@ -155,7 +238,7 @@ Window {
             target: clipContainer
             property: "opacity"
             from: 0.0; to: 1.0
-            duration: 140
+            duration: 150
             easing.type: Easing.OutQuad
         }
 
@@ -171,7 +254,7 @@ Window {
         NumberAnimation {
             target: islandContent
             property: "y"
-            from: -root.compactHeight * 0.7; to: 0
+            from: -root.hudHeight * 0.7; to: 0
             duration: 340
             easing.type: Easing.OutBack
             easing.overshoot: 1.04
@@ -180,7 +263,7 @@ Window {
         onFinished: Island.onOpenAnimationFinished()
     }
 
-    // ─── CLOSE ANIMATION ──────────────────────────────────────────────────────
+    // ─── CLOSE ANIMATION (Retracts to Waybar) ─────────────────────────────────
     ParallelAnimation {
         id: closeAnim
 
@@ -204,7 +287,7 @@ Window {
         NumberAnimation {
             target: islandContent
             property: "y"
-            from: 0; to: -root.compactHeight * 0.5
+            from: 0; to: -root.hudHeight * 0.5
             duration: 220
             easing.type: Easing.InCubic
         }
@@ -222,7 +305,7 @@ Window {
 
         function onRequestOpen() {
             closeAnim.stop()
-            islandContent.y = -root.compactHeight * 0.7
+            islandContent.y = -root.hudHeight * 0.7
             islandContent.scale = 0.75
             clipContainer.opacity = 0.0
             openAnim.start()
