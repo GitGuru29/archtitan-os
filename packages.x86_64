@@ -106,6 +106,9 @@ wl-clipboard
 xdg-desktop-portal-hyprland
 xorg-server
 xorg-xwayland
+xorg-xhost
+gptfdisk
+hwinfo
 qt5-wayland
 qt6-wayland
 python

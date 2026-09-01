@@ -1,14 +1,27 @@
 #!/bin/bash
-# Allow root to access XWayland just in case Calamares falls back to X11
+# launch-installer — Robust launcher for Calamares on ArchTitan Live ISO
+
+# 1. Allow root to connect to XWayland / X11 server
 if command -v xhost >/dev/null 2>&1; then
-    xhost +SI:localuser:root || true
+    xhost +SI:localuser:root >/dev/null 2>&1 || true
+    xhost + >/dev/null 2>&1 || true
 fi
 
-# Export necessary Wayland environment for root
-export QT_QPA_PLATFORM=wayland
-export WAYLAND_DISPLAY=$WAYLAND_DISPLAY
-export XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR
-export DISPLAY=$DISPLAY
+# 2. Relax permissions on live user's runtime directory for root Qt Wayland access
+if [[ -n "$XDG_RUNTIME_DIR" ]]; then
+    chmod 777 "$XDG_RUNTIME_DIR" 2>/dev/null || true
+    if [[ -n "$WAYLAND_DISPLAY" ]]; then
+        chmod 777 "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" 2>/dev/null || true
+    fi
+fi
 
-# Launch Calamares as root, preserving environment
-sudo -E calamares -d > /tmp/calamares.log 2>&1
+# 3. Export display & desktop environment variables
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}"
+export DISPLAY="${DISPLAY:-:0}"
+export XDG_CURRENT_DESKTOP="Hyprland"
+export XDG_SESSION_TYPE="wayland"
+export QT_QPA_PLATFORM="wayland;xcb"
+export QT_AUTO_SCREEN_SCALE_FACTOR=1
+
+# 4. Launch Calamares in debug mode with logging
+exec sudo -E calamares -d "$@" > /tmp/calamares.log 2>&1
