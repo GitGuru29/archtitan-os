@@ -1,4 +1,4 @@
-# 🌌 ArchTitan OS
+#  ArchTitan OS
 
 [![Arch Linux](https://img.shields.io/badge/Base-Arch%20Linux-1793D1?logo=arch-linux&logoColor=white)](https://archlinux.org/)
 [![Compositor](https://img.shields.io/badge/Compositor-Hyprland%20(Wayland)-00C8FF?logo=wayland&logoColor=white)](https://hyprland.org/)
@@ -10,7 +10,7 @@ ArchTitan is a custom, high-performance Linux distribution built on top of Arch 
 
 ---
 
-## 🎯 Core Philosophy
+##  Core Philosophy
 
 ArchTitan embraces the Unix philosophy while providing a cohesive, pre-configured premium experience out of the box.
 
@@ -22,7 +22,7 @@ ArchTitan embraces the Unix philosophy while providing a cohesive, pre-configure
 
 ---
 
-## 🏗️ System Architecture
+##  System Architecture
 
 ArchTitan bridges the gap between the modern Wayland compositor, custom middleware, and low-level Linux kernel subsystems:
 
@@ -73,16 +73,16 @@ graph TD
 
 ---
 
-## 🛠️ Core Components & Ecosystem
+##  Core Components & Ecosystem
 
 ArchTitan provides a suite of native C++ and Qt6 applications built specifically for the OS:
 
-### 1. ⚙️ Titan Hardware Manager (`titan-hwm`)
+### 1.  Titan Hardware Manager (`titan-hwm`)
 * **Lead:** `@GitGuru29` | **Location:** `titan-hwm-source/` & `subsystems/titan-hwm/`
 * Privileged systemd daemon orchestrating CPU, RAM, and background workloads using `cgroups v2`.
 * Real-time thermal and power-state throttling with Wayland session awareness to guarantee frame rates for active desktop workflows.
 
-### 2. 🎛️ Titan Settings (`archtitan-settings`)
+### 2.  Titan Settings (`archtitan-settings`)
 * **Lead:** `@GitGuru29` | **Location:** `archtitan-settings/`
 * Unified Qt6/QML system control center featuring:
   - **Appearance:** Theme toggle, accent colors, panel opacity, icon sets.
@@ -91,7 +91,7 @@ ArchTitan provides a suite of native C++ and Qt6 applications built specifically
   - **Power:** Universal stateful power profile cycling (**Power Saver** ➔ **Balanced** ➔ **Performance** via `Super + P` / `Fn + P`).
   - **Network & Security:** NetworkManager Wi-Fi scanner, Titan Sandbox status, screen autolock, and firewall inspection.
 
-### 3. 🌐 Titan Browser (`titan-browser`)
+### 3.  Titan Browser (`titan-browser`)
 * **Lead:** `@GitGuru29` | **Location:** `titan-browser-source/`
 * Fast, lightweight web browser built on **Qt6 WebEngine** with native Wayland rendering:
   - Glassmorphic UI matching the system-wide Catppuccin Mocha aesthetic.
@@ -99,22 +99,22 @@ ArchTitan provides a suite of native C++ and Qt6 applications built specifically
   - Built-in network-level & DOM ad-blocker optimized for YouTube and Spotify streaming without player stalls.
   - Featherweight binary footprint (~2–3 MB) reusing shared system Qt6 libraries.
 
-### 4. 🔒 Titan Sandbox (`titan-sandboxd`)
+### 4.  Titan Sandbox (`titan-sandboxd`)
 * **Lead:** `@GitGuru29` | **Location:** `sandbox/` & `subsystems/titan-sandbox/`
 * Fine-grained application isolation engine using Linux user/mount/PID/network namespaces, seccomp-bpf syscall filtering, and capability drops configured via declarative TOML policy files.
 
-### 5. 🎵 Titan Media HUD (`titan-media-hud`)
+### 5.  Titan Media HUD (`titan-media-hud`)
 * **Lead:** `@GitGuru29` | **Location:** `subsystems/titan-media-hud/`
 * Dynamic contextual media drawer positioned underneath Waybar:
   - Invisible during idle states (0% CPU impact).
   - Automatically slides down on active media playback via MPRIS D-Bus.
   - Features album art caching, interactive seek bar, and track playback controls.
 
-### 6. 📊 TitanFetch (`titanfetch`)
+### 6.  TitanFetch (`titanfetch`)
 * **Lead:** `@GitGuru29` | **Location:** `titanfetch-src/` & `subsystems/titan-fetch/`
 * High-performance C++/Qt6 system information utility providing both styled terminal ASCII cards and an interactive desktop hardware monitor with live usage meters.
 
-### 7. 🚀 Additional Subsystems (In Development)
+### 7.  Additional Subsystems (In Development)
 * **Auto GPU Switcher** (`subsystems/auto-gpu-switcher/`): Intelligent iGPU/dGPU dynamic switching.
 * **TITAN AI** (`subsystems/titan-ai/`): Context-aware developer assistant.
 * **TITAN Task Manager** (`subsystems/titan-task-manager/`): Advanced scheduling and resource tracking.
@@ -123,7 +123,7 @@ ArchTitan provides a suite of native C++ and Qt6 applications built specifically
 
 ---
 
-## 📸 Desktop Environment & Keybindings
+##  Desktop Environment & Keybindings
 
 ArchTitan uses an optimized Hyprland desktop with smooth bezier curves, subtle drop shadows, and responsive window grouping.
 
@@ -149,7 +149,7 @@ mindmap
       Ranger (Terminal File Manager)
 ```
 
-### ⌨️ Essential Keybindings
+###  Essential Keybindings
 
 | Shortcut | Action | Description |
 | :--- | :--- | :--- |
@@ -168,7 +168,7 @@ mindmap
 
 ---
 
-## 🚀 Building the Live ISO
+##  Building the Live ISO
 
 ArchTitan is built using the official Arch Linux `archiso` suite.
 
@@ -217,7 +217,7 @@ The generated `.iso` will be placed in the `out/` directory.
 
 ---
 
-## 💻 Installation & Testing
+##  Installation & Testing
 
 ### 1. Bare Metal Installation
 1. Flash the generated ISO to a USB flash drive using `dd`, BalenaEtcher, or Rufus:
@@ -250,7 +250,7 @@ When testing inside VirtualBox, ensure the following VM settings are enabled to 
 
 ---
 
-## 👥 Team Structure & Subsystem Ownership
+##  Team Structure & Subsystem Ownership
 
 ArchTitan is developed as a modular group project with 4 members. The repository is organized into core OS components at the root and dedicated subsystem packages in `subsystems/`.
 
