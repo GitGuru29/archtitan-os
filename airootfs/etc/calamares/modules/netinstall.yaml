@@ -85,13 +85,6 @@
     selected: false
     packages: []         # yay -S flutter
 
-  - name: "Scrcpy (Android Screen Mirror)"
-    description: >-
-      Mirror and control Android devices over USB/TCP with zero latency. [pacman]
-    selected: false
-    packages:
-      - scrcpy
-
 # ─── Rust Development ─────────────────────────────────────────────────────────
 - name: "Rust Development"
   description: "Rust language toolchain, LSP, and cargo ecosystem"
