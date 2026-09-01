@@ -1,5 +1,3 @@
-
-
 # Titan Hardware Manager (THM)
 
 The **Titan Hardware Manager (`titan-hwm`)** is ArchTitan OS's primary system resource orchestration service. It is a privileged C++ daemon running as a systemd service (`titan_hw_manager.service`) that dynamically optimizes system resource allocation based on user workflow state.
@@ -12,7 +10,7 @@ The **Titan Hardware Manager (`titan-hwm`)** is ArchTitan OS's primary system re
 - **cgroup v2 Slicing**: Controls process priority, CPU bandwidth, and memory allocation by dynamically organizing processes into `titan-active.slice`, `titan-background.slice`, and `titan-frozen.slice`.
 - **PSI & Memory Escalation**: Monitors `/proc/pressure/memory` (Pressure Stall Information) and `/sys/class/thermal` to prevent OOM thrashing and thermal throttling.
 - **Audio Protection Whitelist**: Ensures background media players and audio daemons (PipeWire, Spotify, mpv) are never frozen or SIGKILLed during memory pressure.
-- **CLI & IPC**: Controlled and monitored via `/usr/local/bin/titan-hwm` interacting over a Unix domain socket at `/tmp/titan_hwm.sock`.
+- **First-Party UI Integration**: Integrated with Waybar status badge, Titan Media HUD context module, ArchTitan Settings GUI, and CLI socket.
 
 ---
 
@@ -25,7 +23,7 @@ flowchart TD
         PROC[Process Tree / procfs]
         PSI["/proc/pressure/memory"]
         THERM["/sys/class/thermal"]
-        SOCK["/tmp/titan_hwm.sock  IPC"]
+        SOCK["/tmp/titan_hwm.sock IPC"]
     end
 
     subgraph Daemon["titan_hw_manager Daemon"]
@@ -42,6 +40,12 @@ flowchart TD
         SYS[CPU Governor Hints]
     end
 
+    subgraph UI_Outputs["UI Telemetry Consumers"]
+        WAY[Waybar THM Badge]
+        HUD[Titan Media HUD Context]
+        SET[ArchTitan Settings GUI]
+    end
+
     HYPR --> FUS
     PROC --> FUS
     SOCK --> POL
@@ -54,6 +58,10 @@ flowchart TD
     ESC --> FRZ
     POL --> SYS
     POL --> STATE
+
+    STATE --> WAY
+    STATE --> HUD
+    STATE --> SET
 ```
 
 ---
@@ -67,7 +75,7 @@ THM recognizes five primary workload profiles based on window focus, running bin
 | **System Dev** | C/C++, Rust, Linux Kernel, CMake (`clangd`, `cargo`, `gcc`) | Maximum CPU priority, protected LSP memory, active governor hints |
 | **Web Dev** | Node.js, Vite, TypeScript, React (`node`, `npm`, `vite`, `tsserver`) | Elevated memory budget, high thread prioritization for build watchers |
 | **Android Dev** | Android Studio, Gradle, ADB, QEMU Emulators (`java`, `gradle`, `adb`) | Reserved memory slab for emulator & Gradle daemon, high I/O priority |
-| **Casual** | Web browsing, video streaming, text editing (`chromium`, `mpv`) | Balanced CPU scheduling, background compiler tasks throttled |
+| **Casual** | Web browsing (TitanBrowser), video streaming, text editing (`mpv`, `titanbrowser`) | Balanced CPU scheduling, background compiler tasks throttled |
 | **Neutral** | General shell usage, idle system | Default Linux CFS scheduling |
 
 ---
@@ -108,14 +116,14 @@ Processes in the audio whitelist are strictly excluded from `titan-frozen.slice`
 
 ---
 
-## CLI Control Reference (`titan-hwm`)
+## CLI & GUI Control Reference (`titan-hwm`)
 
-The `titan-hwm` utility provides command-line control and live telemetry:
+THM can be controlled via command line or the **ArchTitan Settings** GUI (<kbd>Super</kbd> + <kbd>Space</kbd> -> `titan-settings`):
 
 ### Manual Profile Switching
 
 ```bash
-# Force a specific profile
+# Force a specific profile via CLI socket
 titan-hwm switch web
 titan-hwm switch android
 titan-hwm switch system
@@ -141,7 +149,7 @@ titan-hwm metrics
 ## Configuration & State Files
 
 - **IPC Socket**: `/tmp/titan_hwm.sock` (UNIX domain socket for CLI requests)
-- **State File**: `/tmp/titan_hwm_state` (Read by Waybar custom modules and scripts)
+- **State File**: `/tmp/titan_hwm_state` (Read by Waybar custom modules, Titan Media HUD, and ArchTitan Settings)
 - **Service Unit**: `/etc/systemd/system/titan_hw_manager.service`
 - **Binary Locations**:
   - Daemon: `/usr/local/bin/titan_hw_manager`

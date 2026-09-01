@@ -1,6 +1,6 @@
 # Installation Guide
 
-ArchTitan ships as a UEFI-only live ISO. Installation uses **Calamares** — a graphical installer preconfigured for ArchTitan branding and BTRFS/ext4 partitioning.
+ArchTitan ships as a UEFI-only live ISO. Installation uses **Calamares** — a graphical installer preconfigured for ArchTitan branding, BTRFS/ext4 partitioning, and desktop customization.
 
 ---
 
@@ -31,14 +31,14 @@ Use [Balena Etcher](https://etcher.balena.io/) or [Rufus](https://rufus.ie/) in 
 
 1. Boot from USB in UEFI mode.
 2. SDDM loads the ArchTitan theme; the live user session starts Hyprland automatically.
-3. Calamares may auto-launch after ~6 seconds on live media (detected via `/run/archiso`).
-4. You can minimize Calamares and explore the desktop first — reopen with **Super + I**.
+3. You can launch Calamares anytime with **Super + I** or via the desktop shortcut **Install ArchTitan OS**.
 
 ### Live session notes
 
 - **Screen lock is disabled** on the live ISO (`Super + L` does nothing) to prevent lockout without a known password.
-- Default live credentials follow archiso conventions (check `airootfs/etc/passwd` if needed).
+- Default live credentials follow archiso conventions (`archtitan:archtitan`).
 - `sudo` is passwordless for the live user.
+- **`launch-installer` Helper**: Launching Calamares executes `/usr/local/bin/launch-installer`, which automatically detects the active Wayland socket, sets `XDG_RUNTIME_DIR`, grants `xhost` display access for root, and invokes Calamares under appropriate display privileges.
 
 ---
 
@@ -49,7 +49,7 @@ Use [Balena Etcher](https://etcher.balena.io/) or [Rufus](https://rufus.ie/) in 
 | **Welcome** | ArchTitan branding, language selection |
 | **Location** | Timezone, locale, keyboard |
 | **Keyboard** | Layout confirmation |
-| **Partitions** | Manual or guided partitioning (BTRFS supported) |
+| **Partitions** | Manual or guided partitioning (BTRFS supported with `@` subvolumes) |
 | **Users** | Create username, password, hostname |
 | **Summary** | Review before install |
 | **Install** | Copy squashfs, configure bootloader, mkinitcpio |
@@ -61,9 +61,10 @@ After completion, reboot and remove the USB drive.
 ## Post-Install First Boot
 
 1. SDDM presents the ArchTitan login theme.
-2. Hyprland starts with the default skel configuration from `/etc/skel/`.
+2. Hyprland starts with default user configuration from `/etc/skel/`.
 3. Titan Hardware Manager enables on graphical session start.
 4. Copy or customize configs in `~/.config/hypr/`, `~/.config/waybar/`, `~/.config/titan-hwm/`.
+5. Launch **ArchTitan Settings** (<kbd>Super</kbd> + <kbd>Space</kbd> -> search `titan-settings`) to configure monitor layouts, themes, and THM profiles.
 
 ### Optional: Android development stack
 
@@ -81,7 +82,7 @@ This installs `yay-bin` and Android Studio via AUR. Expect a long first run on s
 
 ### QEMU/KVM (recommended for development)
 
-The repo includes `run-vm.sh`:
+The repo includes `run-vm.sh`, which automatically detects the newest ISO in `out/` or `Downloads/`:
 
 ```bash
 ./run-vm.sh          # Boot ISO — install to qcow2
@@ -96,7 +97,7 @@ sudo pacman -S qemu-system-x86 edk2-ovmf
 sudo usermod -aG kvm $USER   # then re-login
 ```
 
-Default VM spec: 4 GB RAM, 4 vCPUs, 60 GB qcow2, virtio-gpu with GL.
+Default VM spec: 4 GB RAM, 4 vCPUs, 60 GB qcow2, virtio-gpu with GL acceleration.
 
 ### VirtualBox
 
@@ -109,11 +110,7 @@ VirtualBox requires explicit settings or Hyprland will fail to start:
 | Display → Enable 3D Acceleration | ✅ Checked |
 | Display → Graphics Controller | VMSVGA |
 
-Guest additions (`virtualbox-guest-utils`) are included in `packages.x86_64`.
-
-### VMware / Hyper-V
-
-Open VM Tools and Hyper-V guest services are preinstalled in the package list for better integration on those hypervisors.
+Hyprland automatically detects virtualized environments and applies `AQ_NO_MODIFIERS=1` and `no_hardware_cursors = true` for hardware cursor compatibility. Guest additions (`virtualbox-guest-utils`) are included in `packages.x86_64`.
 
 ---
 
@@ -131,7 +128,7 @@ Calamares `partition.conf` in `airootfs/etc/calamares/modules/` defines ArchTita
 
 ## Bootloader
 
-GRUB is the default bootloader, installed to the EFI System Partition. Theme files live in:
+GRUB is the default bootloader, installed to the EFI System Partition with graphical theme and unicode font support (`unicode.pf2`). Theme files live in:
 
 - `grub/themes/archtitan/` (ISO)
 - `/usr/share/grub/themes/archtitan/` (installed system)
@@ -143,26 +140,12 @@ sudo mkinitcpio -P
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
-Or use the helper:
-
-```bash
-archtitan-initcpio-preset
-```
-
----
-
-## Uninstall / Dual-Boot Cleanup
-
-ArchTitan does not ship a removal wizard. To remove:
-
-1. Delete ArchTitan partitions from another live environment.
-2. Remove GRUB entry from firmware boot order or Windows Boot Manager.
-3. Reclaim EFI partition space only if no other OS needs those entries.
-
 ---
 
 ## Next Steps
 
-- [Desktop Environment](Desktop-Environment) — keybindings and customization
+- [Desktop Environment](Desktop-Environment) — keybindings, Waybar, and customization
+- [Titan Browser](Titan-Browser) — first-party web browser guide
+- [ArchTitan Settings](ArchTitan-Settings) — system control center usage
 - [Titan Hardware Manager](Titan-Hardware-Manager) — tune workload profiles
-- [Troubleshooting](Troubleshooting) — black screen, audio, Wi-Fi issues
+- [Troubleshooting](Troubleshooting) — black screen, audio, display socket issues

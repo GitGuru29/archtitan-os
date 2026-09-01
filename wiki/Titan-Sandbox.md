@@ -17,8 +17,8 @@ flowchart TD
     LAUNCH["User Launch (Rofi / Keybind / CLI)"] --> HOOK["titan-exec-hook Wrapper"]
     HOOK --> MAP{"Policy Lookup<br>(APP_POLICY_MAP / WORKLOAD_POLICY_MAP)"}
     
-    MAP -->|chromium / firefox| BROWSER["browser.toml"]
-    MAP -->|code / nvim / zed| DEV["system-dev.toml"]
+    MAP -->|titanbrowser / chromium / firefox| BROWSER["browser.toml"]
+    MAP -->|archtitan-settings / code / nvim| DEV["system-dev.toml"]
     MAP -->|mpv / vlc / spotify| MEDIA["media.toml"]
     MAP -->|unknown binary| DEFAULT["unknown.toml (Strict)"]
 
@@ -61,9 +61,9 @@ Policies are authored in clean TOML format and installed into `/etc/titan-sandbo
 
 | Policy | Target Applications | Rules Overview |
 | :--- | :--- | :--- |
-| `browser.toml` | Chromium, Firefox, Brave | GPU device access allowed (`/dev/dri/`), network enabled, homedir restricted to `~/.config/` & downloads |
-| `system-dev.toml` | VS Code, Neovim, Zed, Cursor | Access to build toolchain (`/usr/bin/`, `/usr/include/`), project workspace read/write, terminal PTY allowed |
-| `media.toml` | MPV, VLC, Spotify | Sound card access (`/dev/snd/`, PipeWire socket), read-only media library access, network unshared for local players |
+| `browser.toml` | **TitanBrowser**, Chromium, Firefox, Brave | GPU device access allowed (`/dev/dri/`), network enabled, homedir restricted to `~/.config/titanbrowser` & downloads |
+| `system-dev.toml` | **ArchTitan Settings**, VS Code, Neovim, Zed, Cursor | Access to build toolchain (`/usr/bin/`, `/usr/include/`), project workspace read/write, terminal PTY allowed |
+| `media.toml` | MPV, VLC, Spotify, **Titan Media HUD** | Sound card access (`/dev/snd/`, PipeWire socket), read-only media library access |
 | `general-gui.toml` | File managers, Chat tools | Standard desktop application policy with XDG directory access |
 | `unknown.toml` | Uncategorized binaries | Fallback strict policy with maximum lockdown |
 
