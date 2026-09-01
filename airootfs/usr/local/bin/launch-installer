@@ -1,27 +1,43 @@
 #!/bin/bash
 # launch-installer — Robust launcher for Calamares on ArchTitan Live ISO
+# Calamares must run as root but needs access to the archtitan user's
+# Wayland compositor socket and runtime directory.
 
-# 1. Allow root to connect to XWayland / X11 server
-if command -v xhost >/dev/null 2>&1; then
-    xhost +SI:localuser:root >/dev/null 2>&1 || true
-    xhost + >/dev/null 2>&1 || true
+# Determine the live user's runtime info
+LIVE_USER="archtitan"
+LIVE_UID=1000
+RUNTIME_DIR="/run/user/${LIVE_UID}"
+
+# 1. Find the active Wayland display socket from the archtitan user session
+if [[ -z "${WAYLAND_DISPLAY:-}" ]]; then
+    for sock in "${RUNTIME_DIR}"/wayland-*; do
+        [[ -S "$sock" ]] && export WAYLAND_DISPLAY="$(basename "$sock")" && break
+    done
 fi
-
-# 2. Relax permissions on live user's runtime directory for root Qt Wayland access
-if [[ -n "$XDG_RUNTIME_DIR" ]]; then
-    chmod 777 "$XDG_RUNTIME_DIR" 2>/dev/null || true
-    if [[ -n "$WAYLAND_DISPLAY" ]]; then
-        chmod 777 "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" 2>/dev/null || true
-    fi
-fi
-
-# 3. Export display & desktop environment variables
 export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}"
 export DISPLAY="${DISPLAY:-:0}"
+export XDG_RUNTIME_DIR="${RUNTIME_DIR}"
 export XDG_CURRENT_DESKTOP="Hyprland"
 export XDG_SESSION_TYPE="wayland"
 export QT_QPA_PLATFORM="wayland;xcb"
 export QT_AUTO_SCREEN_SCALE_FACTOR=1
+export QT_SCALE_FACTOR=1
 
-# 4. Launch Calamares in debug mode with logging
-exec sudo -E calamares -d "$@" > /tmp/calamares.log 2>&1
+# 2. Allow root to connect to the Wayland socket
+if [[ -d "${RUNTIME_DIR}" ]]; then
+    chmod 777 "${RUNTIME_DIR}" 2>/dev/null || true
+    if [[ -n "${WAYLAND_DISPLAY}" && -S "${RUNTIME_DIR}/${WAYLAND_DISPLAY}" ]]; then
+        chmod 777 "${RUNTIME_DIR}/${WAYLAND_DISPLAY}" 2>/dev/null || true
+    fi
+fi
+
+# 3. Allow root to connect to XWayland if Calamares falls back
+if command -v xhost >/dev/null 2>&1; then
+    XAUTHORITY_FILE="${RUNTIME_DIR}/.Xauthority"
+    [[ -f "$XAUTHORITY_FILE" ]] && export XAUTHORITY="$XAUTHORITY_FILE"
+    xhost +SI:localuser:root >/dev/null 2>&1 || true
+    xhost +local: >/dev/null 2>&1 || true
+fi
+
+# 4. Launch Calamares as root with full environment, log output
+exec sudo -E calamares -d "$@" >/tmp/calamares.log 2>&1
