@@ -103,8 +103,8 @@ fi
 # ── Build QEMU args ──────────────────────────────────────────────────────────
 QEMU_ARGS=(
     $KVM_FLAG
-    -m 4G
-    -smp 4
+    -m 5G
+    -smp 2
     -machine type=q35,smm=on
 
     # UEFI firmware
@@ -132,7 +132,7 @@ QEMU_ARGS=(
     -device usb-tablet
 
     # Better performance
-    -object memory-backend-memfd,id=mem,size=4G,share=on
+    -object memory-backend-memfd,id=mem,size=5G,share=on
     -numa node,memdev=mem
 )
 
@@ -148,7 +148,7 @@ fi
 echo ""
 echo "══════════════════════════════════════════════"
 echo "  ArchTitan VM Starting"
-echo "  RAM:  4GB  |  CPUs: 4  |  Disk: 60GB"
+echo "  RAM:  5GB  |  CPUs: 2  |  Disk: 60GB"
 echo "  UEFI: $OVMF_CODE"
 if $BOOT_ISO; then
 echo "  Boot: ISO → install with Calamares"
