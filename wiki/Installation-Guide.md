@@ -128,10 +128,7 @@ Calamares `partition.conf` in `airootfs/etc/calamares/modules/` defines ArchTita
 
 ## Bootloader
 
-GRUB is the default bootloader, installed to the EFI System Partition with graphical theme and unicode font support (`unicode.pf2`). Theme files live in:
-
-- `grub/themes/archtitan/` (ISO)
-- `/usr/share/grub/themes/archtitan/` (installed system)
+GRUB is the default bootloader, configured for clean standard default text console output (`terminal_output console`, `gfxmode="auto"`) with unicode font support (`unicode.pf2`) on the live ISO.
 
 After kernel updates on an installed system:
 

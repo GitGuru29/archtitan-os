@@ -108,14 +108,33 @@ The helper exports `XDG_RUNTIME_DIR=/run/user/1000` and configures `xhost +local
 
 ## Live ISO Boot & Immutability Guard Issues
 
-### 1. Live ISO Boot Hangs on Systemd Service `archtitan-immutable-guard`
+### 1. Live ISO Boot Delay (Hangs for 3–5 Minutes before Plymouth/Hyprland)
 
-**Symptom**: ISO boot hangs or logs `chattr: Read-only file system` repeatedly when starting `archtitan-immutable-guard.service`.
+**Symptom**: ISO boot hangs for up to 5 minutes on a black screen or early systemd targets after selecting an entry in GRUB before Plymouth or Hyprland starts.
 
-**Cause**: `chattr +i` commands failing on squashfs/overlayfs read-only live filesystems and aborting systemd targets.
+**Cause**:
+1. `systemd-time-wait-sync.service` was linked inside `sysinit.target.wants`, forcing early boot (`sysinit.target`) to pause until Network Time Protocol (NTP) synchronized over the network.
+2. `archtitan-immutable-guard.service` was placed in `sysinit.target.wants` and called `systemctl mask --now` before D-Bus (`dbus.service`) was running.
+3. GPG keyring initialization (`pacman-key --init`) stalled during live boot in virtual machines due to `/dev/random` entropy exhaustion.
 
 **Solution**:
-`archtitan-immutable-guard.service` is configured with `ExecStart=-` and `SuccessExitStatus=0 1 2 255`, and `archtitan-apply-immutable` uses `set -u` (without `-e`), ensuring `chattr` warnings on live squashfs overlays never block SDDM or the boot sequence.
+1. **Unlinked Time Wait Sync**: Removed `systemd-time-wait-sync.service` from `airootfs/etc/systemd/system/sysinit.target.wants/` so clock sync does not block early boot.
+2. **Deferred Immutability Guard**: Moved `archtitan-immutable-guard.service` to `multi-user.target` so it runs after D-Bus initialization without delaying early boot.
+3. **Entropy Daemon (`haveged`)**: Added `haveged` to `packages.x86_64` and enabled `haveged.service` in `multi-user.target.wants` to supply instant entropy for GPG initialization in VMs.
+
+---
+
+### 2. Custom GRUB Highlight Cyan Box or Text Formatting Issues
+
+**Symptom**: GRUB selection bar appears as an opaque cyan block (`black/cyan`) with graphical layout glitches.
+
+**Cause**: Experimental `gfxterm` color definitions (`set menu_color_highlight=black/cyan`) overriding default GRUB text console mode.
+
+**Solution**:
+Reverted `grub/grub.cfg` to clean standard default `archiso` GRUB configuration:
+- `terminal_output console`
+- `gfxmode="auto"`
+- Default GRUB menu styling without custom cyan overrides.
 
 ---
 
