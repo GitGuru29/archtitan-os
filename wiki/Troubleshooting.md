@@ -54,7 +54,7 @@ sudo pacman -S qt6-base qt6-webengine cmake base-devel
 **Cause**: `mksquashfs` attempting to use all available CPU cores and excessive thread memory on a system with limited RAM.
 
 **Solution**:
-Ensure `profiledef.sh` restricts `-processors 2` in squashfs options, or build with an active swap file.
+Ensure `profiledef.sh` restricts `-processors` option (e.g. `-processors 6` or lower depending on system RAM), or build with an active swap file.
 
 ---
 
