@@ -65,14 +65,18 @@ void ExecutionDetector::detect(ProcessNode& node,
                                 const std::vector<pid_t>& prev_children) {
     const pid_t pid = node.pid;
 
-    // ── Signal 1: CPU tick delta ───────────────────────────────────────────
-    long t0 = prev_ticks_.count(pid) ? prev_ticks_[pid] : read_cpu_ticks(pid);
-    std::this_thread::sleep_for(std::chrono::milliseconds(cfg_.sample_ms));
+    // ── Signal 1: CPU tick delta (tick-to-tick non-blocking observation) ─
+    long t0 = prev_ticks_.count(pid) ? prev_ticks_[pid] : -1;
     long t1 = read_cpu_ticks(pid);
 
     bool cpu_active = false;
-    if (t0 >= 0 && t1 >= 0)
+    if (t0 >= 0 && t1 >= 0) {
         cpu_active = cpu_pct(t0, t1, cfg_.sample_ms) >= cfg_.idle_cpu_pct;
+    } else if (t1 >= 0) {
+        // First observation: initialize baseline; if kernel state is R or D, flag active
+        if (node.proc_state == 'R' || node.proc_state == 'D')
+            cpu_active = true;
+    }
 
     // Update baseline for next call
     if (t1 >= 0) prev_ticks_[pid] = t1;

@@ -109,6 +109,9 @@ public:
     // remaining fields to be completed by WorkloadManager).
     std::vector<Workload> bootstrap(uint32_t& next_id);
 
+    // Infer workload type from filesystem markers in CWD
+    static WorkloadType infer_from_cwd(const std::string& cwd);
+
 private:
     mutable std::mutex mtx_;
 
@@ -119,7 +122,6 @@ private:
     std::unordered_map<uint32_t, std::unordered_set<pid_t>> wl_to_pids_;
 
     // ── Helpers ───────────────────────────────────────────────────────────────
-    static WorkloadType infer_from_cwd(const std::string& cwd);
     static std::string  read_cwd(pid_t pid);
     static std::string  read_comm(pid_t pid);
     static pid_t        read_ppid(pid_t pid);

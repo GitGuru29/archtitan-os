@@ -112,6 +112,25 @@ int main(int argc, char* argv[]) {
     signal(SIGTERM, handle_signal);
     signal(SIGINT,  handle_signal);
 
+    // ── Command-line arguments ──────────────────────────────────────────────
+    bool dry_run = false;
+    int max_ticks = -1;
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--dry-run") {
+            dry_run = true;
+            std::cout << "[THM] Dry-run mode enabled: decisions logged without kernel enforcement.\n";
+        } else if (arg == "--ticks" && i + 1 < argc) {
+            try { max_ticks = std::stoi(argv[++i]); } catch (...) {}
+            std::cout << "[THM] Scheduled to run for " << max_ticks << " ticks.\n";
+        } else if (arg == "--help" || arg == "-h") {
+            std::cout << "Usage: titan-hwm-v3 [--dry-run] [--ticks N]\n"
+                      << "  --dry-run    Evaluate policy and log decisions without issuing signals\n"
+                      << "  --ticks N    Run for N ticks (200ms each) then exit cleanly\n";
+            return 0;
+        }
+    }
+
     // ── Configuration ────────────────────────────────────────────────────────
     const int tick_ms = 200; // 5 Hz tick rate
 
@@ -171,7 +190,13 @@ int main(int argc, char* argv[]) {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     std::cout << "[THM] Entering main tick loop (" << tick_ms << "ms interval)\n";
 
+    int tick_count = 0;
     while (!g_shutdown) {
+        if (max_ticks > 0 && ++tick_count > max_ticks) {
+            std::cout << "[THM] Reached target tick count (" << max_ticks << "). Exiting cleanly.\n";
+            break;
+        }
+
         auto tick_start = std::chrono::steady_clock::now();
 
         // ── (a) Refresh /proc snapshot ──────────────────────────────────────
@@ -254,17 +279,28 @@ int main(int argc, char* argv[]) {
                                                             pressure, registry);
 
             // Enforce
-            if (decision == thm::PolicyDecision::RECLAIM) {
-                if (reclaimer.reclaim(*wl, proc_graph, all_workloads))
-                    wl->state = thm::WorkloadState::TERMINATED;
+            if (dry_run) {
+                static const char* dec_names[] = {
+                    "KEEP_FULL", "KEEP_BACKGROUND", "THROTTLE", "FREEZE", "RECLAIM"
+                };
+                int d_idx = static_cast<int>(decision);
+                std::cout << "[DRY-RUN] Workload " << wl->id << " (" << wl->pids.size()
+                          << " PIDs) -> Decision: " << (d_idx >= 0 && d_idx <= 4 ? dec_names[d_idx] : "UNKNOWN") << "\n";
             } else {
-                enforcement.apply(*wl, decision);
+                if (decision == thm::PolicyDecision::RECLAIM) {
+                    if (reclaimer.reclaim(*wl, proc_graph, all_workloads))
+                        wl->state = thm::WorkloadState::TERMINATED;
+                } else {
+                    enforcement.apply(*wl, decision);
+                }
             }
         }
 
         // ── (g) Governor update ─────────────────────────────────────────────
         auto gov = thm::WorkspaceMonitor::compute_governor(all_workloads, pressure);
-        thm::WorkspaceMonitor::apply_governor(gov);
+        if (!dry_run) {
+            thm::WorkspaceMonitor::apply_governor(gov);
+        }
 
         // ── (h) Clean up dead processes ─────────────────────────────────────
         std::vector<pid_t> dead;
@@ -288,11 +324,13 @@ int main(int argc, char* argv[]) {
     std::cout << "\n[THM] Shutdown initiated.\n";
 
     // Thaw all frozen processes before exiting
-    for (uint32_t id : workload_mgr.all_ids()) {
-        auto* wl = workload_mgr.get(id);
-        if (wl) enforcement.sigcont_tree(wl->pids);
+    if (!dry_run) {
+        for (uint32_t id : workload_mgr.all_ids()) {
+            auto* wl = workload_mgr.get(id);
+            if (wl) enforcement.sigcont_tree(wl->pids);
+        }
+        cgroup.set_freeze(thm::SLICE_FROZEN, false);
     }
-    cgroup.set_freeze(thm::SLICE_FROZEN, false);
 
     ws_monitor.stop();
 

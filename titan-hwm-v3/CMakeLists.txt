@@ -61,6 +61,12 @@ target_include_directories(thm_core PUBLIC ${CMAKE_SOURCE_DIR})
 add_executable(titan-hwm-v3 daemon/daemon.cpp)
 target_link_libraries(titan-hwm-v3 PRIVATE thm_core pthread)
 
+# ── Test Suite Executable ───────────────────────────────────────────────────
+enable_testing()
+add_executable(thm_test_runner tests/test_runner.cpp)
+target_link_libraries(thm_test_runner PRIVATE thm_core pthread)
+add_test(NAME thm_os_tests COMMAND thm_test_runner)
+
 # ── Install targets ──────────────────────────────────────────────────────────
 install(TARGETS titan-hwm-v3 RUNTIME DESTINATION bin)
 install(FILES archtitan.slice
