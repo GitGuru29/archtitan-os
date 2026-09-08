@@ -146,6 +146,8 @@ struct WorkspaceState {
     bool          is_visible   = false; // on a physical monitor right now
     bool          is_focused   = false; // receiving keyboard input
     time_point    last_user_activity;
+    std::string   active_window_class;  // Hyprland window class of focused window
+    std::string   active_window_title;  // Hyprland window title of focused window
     std::vector<uint32_t> workload_ids; // workloads associated with this WS
 };
 
