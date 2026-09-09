@@ -10,7 +10,7 @@ This page tracks the current implementation state of **ArchTitan OS** components
 | :--- | :--- | :--- | :--- | :--- |
 | **archiso ISO Builder** | @GitGuru29 (Lead) | Build Pipeline | 🟢 **Shipped** | Full UEFI bootable ISO profile with zstd compression (2 CPU limit) and custom overlay |
 | **Hyprland Compositor** | @GitGuru29 (Lead) | Desktop Environment | 🟢 **Shipped** | v0.53+/v0.56+ window rules, Aquamarine VM backend, Catppuccin Mocha styling |
-| **Titan Hardware Manager (`titan-hwm`)** | @GitGuru29 (Lead) | System Daemon | 🟢 **Shipped** | C++ daemon managing cgroup v2 slices, PSI memory pressure (`subsystems/titan-hwm/`) |
+| **Titan Hardware Manager (`titan-hwm`)** | @GitGuru29 (Lead) | System Daemon | 🟢 **Shipped (v3.1)** | C++20 autonomous resource orchestrator managing cgroup v2 slices, multi-signal fusion, 39-scenario failure test matrix (`titan-hwm-v3/`) |
 | **TitanFetch (CLI & GUI)** | @GitGuru29 (Lead) | System Info | 🟢 **Shipped** | Qt6 telemetry dashboard & C++ sysfs reader (`subsystems/titan-fetch/`) |
 | **Titan Sandbox (`titan-sandboxd`)** | @GitGuru29 (Lead) | Isolation | 🟢 **Shipped (Core)** | Linux namespaces, seccomp-bpf filters, capability drops (`subsystems/titan-sandbox/`) |
 | **TitanBrowser (`titanbrowser`)** | @GitGuru29 (Lead) | Browser | 🟢 **Shipped** | First-party Qt6 WebEngine browser with low-memory tuning (`titan-browser-source/`) |

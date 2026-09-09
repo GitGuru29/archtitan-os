@@ -14,8 +14,13 @@
 #include <climits>
 #include <unistd.h>
 #include <algorithm>
+#include <unordered_set>
 
 namespace fs = std::filesystem;
+
+// Track CWD paths we've already warned about for container/namespace unreachability.
+// Prevents log spam — fires once per unique CWD per daemon lifetime.
+static std::unordered_set<std::string> s3_warned_cwds_;
 
 namespace thm {
 
@@ -249,8 +254,11 @@ std::optional<WorkloadType> FusionClassifier::from_cwd(pid_t pid) {
     fs::path p(cwd);
     std::error_code ec;
     if (!fs::exists(p, ec) || ec) {
-        std::cout << "[S3] cwd " << cwd
-                  << " unreachable from host ns (container/overlay?) — S3 skipped\n";
+        // Log once per unique CWD path, suppress duplicates across ticks
+        if (s3_warned_cwds_.insert(cwd).second) {
+            std::cout << "[S3] cwd " << cwd
+                      << " unreachable from host ns (container/overlay?) — S3 skipped\n";
+        }
         return std::nullopt;
     }
 

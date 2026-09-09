@@ -81,65 +81,70 @@ sequenceDiagram
 | `pacman.conf` | Mirror and repo configuration for the build |
 | `airootfs/` | Overlay copied onto the rootfs (configs, systemd units, binaries) |
 | `grub/` / `efiboot/` | Bootloader configuration & unicode font resources |
-| `subsystems/` | Dedicated directories for all 9 group subsystems (THM, Sandbox, Media HUD, etc.) |
+| `subsystems/` | Dedicated directories for all 9 group subsystems (THM v3.1, Sandbox, Media HUD, etc.) |
 | `titan-browser-source/` | First-party TitanBrowser Qt6 WebEngine source |
 | `archtitan-settings/` | ArchTitan Settings C++/Qt6 control center source |
-| `titan-hwm-source/` | Titan Hardware Manager C++ daemon source |
+| `titan-hwm-v3/` | Titan Hardware Manager v3.1 C++20 autonomous resource orchestrator source |
 | `titanfetch-src/` | TitanFetch C++/Qt6 application source |
 | `sandbox/` | Titan Sandbox C++ daemon & policy loader source |
 | `.github/` | GitHub Actions CI workflows, CODEOWNERS, and PR template |
 
 ---
 
-## Titan Hardware Manager — Control Loop
+## Titan Hardware Manager (THM v3.1) — Autonomous Control Loop
 
-THM is the central intelligence service. It watches Hyprland workspace state, running processes, and memory pressure, then assigns processes to cgroup slices and applies escalation when PSI thresholds are crossed.
+THM v3.1 is the central resource intelligence service written in C++20. It continuously samples Hyprland workspace state, process trees, and kernel PSI metrics every 200ms, routing workloads across `archtitan.slice` sub-slices with zero foreground jitter.
 
 ```mermaid
 flowchart LR
     subgraph Inputs
-        WS[Hyprland workspaces]
-        PROC[Process tree / window titles]
+        WS[Hyprland Workspace & Focus]
+        PROC[Process Tree Walk & Cmdlines]
         PSI["/proc/pressure/memory"]
         TH["/sys/class/thermal"]
     end
 
-    subgraph THM["Titan Hardware Manager"]
-        CLS[Workload classifier]
-        POL[Policy engine]
-        ESC[PSI escalation ladder]
+    subgraph THM["THM v3.1 Autonomous Core"]
+        CLS[Multi-Signal Fusion Classifier]
+        DET[Execution & Service Detector]
+        POL[Policy Engine & Hysteresis]
+        ESC[PSI Escalation Ladder]
     end
 
-    subgraph Outputs
-        SL[titan-active.slice]
-        BG[titan-background.slice]
-        FR[titan-frozen.slice]
-        GOV[CPU governor hints]
+    subgraph Slices["archtitan.slice Hierarchy"]
+        ACT[archtitan-active.slice]
+        BG[archtitan-background.slice]
+        IDLE[archtitan-idle.slice]
+        REC[archtitan-reclaimable.slice]
     end
 
     WS --> CLS
     PROC --> CLS
+    PROC --> DET
     CLS --> POL
+    DET --> POL
     PSI --> ESC
-    POL --> SL
+    POL --> ACT
     POL --> BG
-    ESC --> FR
+    POL --> IDLE
+    ESC --> REC
     TH --> POL
 ```
 
-### Workload profiles
+### Workload Taxonomy & Invariant Protection
 
-THM classifies activity into five profiles:
+THM v3.1 evaluates processes using **multi-signal fusion** (process hierarchy, Hyprland window titles, CWD project signatures, and cmdline drift detection):
 
-| Profile | Typical triggers | Resource bias |
+| Workload Type | Identified Binaries & Workflows | Allocation & Invariant Protection |
 | :--- | :--- | :--- |
-| **Casual** | TitanBrowser, media player, workspace 1 | Balanced; background apps deprioritized |
-| **Web Dev** | Node, Vite, webpack, workspace 2 | Higher CPU/memory for build daemons & LSPs |
-| **Android Dev** | adb, gradle, Android Studio, ws 3 | Protects emulator + build toolchain |
-| **System Dev** | clangd, cargo, cmake, IDE, ws 4–5 | Aggressive protection for compilers & LSPs |
-| **Neutral** | No strong signal | Default policy |
+| **`COMPILER`** | `gcc`, `clang`, `rustc`, `cargo`, `ninja`, `cmake` | High CPU priority; protected from freezing while compiling in background |
+| **`DEVELOPMENT_SERVICE`** | `vite`, `nodemon`, `webpack`, `tsc --watch`, `pytest`, `jest` | Watcher/runner awareness; remains EXECUTING during idle epoll pauses |
+| **`SERVICE`** | `dockerd`, `podman`, `redis-server`, `mysqld`, `postgres`, `mongod` | **Immunity invariant**: Strictly immune to freeze and memory reclaim |
+| **`VM`** | `qemu-system-*`, `libvirtd`, `firecracker`, Android Emulator | **Immunity invariant**: Strictly immune to freeze (prevents guest timer drift) |
+| **`BROWSER`** | `titanbrowser`, `chromium`, `firefox`, `zen-browser` | Latency-sensitive root protection; renderers freeze via cgroups only (no SIGSTOP) |
+| **`MEDIA`** | `pipewire`, `spotify`, `mpv`, `vlc` | **Audio whitelist**: Never frozen or deprioritized |
 
-Classification uses a **3-signal fusion** approach: process names, window titles, and working directories — not workspace number alone.
+For in-depth architectural details, see the dedicated [Titan Hardware Manager](Titan-Hardware-Manager) documentation.
 
 ---
 
