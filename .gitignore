@@ -1,6 +1,9 @@
 # ─── Separate projects (not part of this repo) ────────────────────────────────
-# archtitan-settings (Qt6 Settings App) lives at ~/Desktop/archtitan-settings
-# It has its own git repo — do NOT include here.
+archtitan-settings/
+titan-browser-source/
+subsystems/titan-media-hud/
+titan-hardware-manager-test-system/
+.vscode/
 
 # Archiso build artifacts
 out/
