@@ -100,6 +100,50 @@ static void refresh_proc_graph(std::unordered_map<pid_t, thm::ProcessNode>& grap
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// HC-11 FIX: startup_thaw_sweep
+// Scans /proc for any user-owned processes in state 'T' (stopped by SIGSTOP)
+// and issues SIGCONT to recover from a previous unexpected THM crash.
+// Called once before the main loop on every daemon start.
+// ─────────────────────────────────────────────────────────────────────────────
+static int startup_thaw_sweep() {
+    uid_t my_uid = getuid();
+    int thawed = 0;
+    for (const auto& entry : fs::directory_iterator("/proc")) {
+        if (!entry.is_directory()) continue;
+        const std::string d = entry.path().filename().string();
+        if (!std::all_of(d.begin(), d.end(), ::isdigit)) continue;
+        pid_t pid = 0;
+        try { pid = static_cast<pid_t>(std::stoi(d)); } catch (...) { continue; }
+        if (pid <= 1) continue;
+
+        // Check UID ownership — only thaw our own processes
+        std::ifstream status_f("/proc/" + d + "/status");
+        uid_t proc_uid = UINT32_MAX;
+        char state = '?';
+        std::string key, val;
+        while (status_f >> key) {
+            if (key == "Uid:") { status_f >> proc_uid; }
+            if (key == "State:") { status_f >> val; if (!val.empty()) state = val[0]; }
+            if (proc_uid != UINT32_MAX && state != '?') break;
+        }
+        if (proc_uid != my_uid) continue;      // not ours
+        if (state != 'T' && state != 't') continue; // not stopped
+
+        // Issue SIGCONT to recover from previous crash
+        if (::kill(pid, SIGCONT) == 0) {
+            std::cout << "[THM] Startup thaw: sent SIGCONT to frozen PID " << pid << "\n";
+            ++thawed;
+        }
+    }
+    if (thawed > 0)
+        std::cout << "[THM] Startup thaw sweep complete: " << thawed
+                  << " process(es) recovered from previous crash.\n";
+    else
+        std::cout << "[THM] Startup thaw sweep: no frozen processes found.\n";
+    return thawed;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // main
 // ─────────────────────────────────────────────────────────────────────────────
 int main(int argc, char* argv[]) {
@@ -138,6 +182,11 @@ int main(int argc, char* argv[]) {
     thm::ProtectedRegistry registry;
     registry.register_pid(getpid(), "THM-self");
     registry.bootstrap_from_systemd();
+
+    // ── HC-11: Startup thaw sweep (crash recovery) ───────────────────────────
+    // Must run before the main loop so that any processes frozen by a previous
+    // THM crash are immediately released before new policy kicks in.
+    startup_thaw_sweep();
 
     // ── Phase 7: cgroup hierarchy ───────────────────────────────────────────
     thm::CgroupController cgroup;
@@ -213,15 +262,64 @@ int main(int argc, char* argv[]) {
 
         // ── (d) Classify + assign new processes ─────────────────────────────
         for (auto& [pid, node] : proc_graph) {
-            if (ownership.workload_of(pid) != 0) continue; // already assigned
             if (registry.is_protected(pid, node.comm)) continue; // skip protected
 
+            uint32_t existing_wl_id = ownership.workload_of(pid);
+
+            if (existing_wl_id != 0) {
+                // HC-10: Dynamic re-classification — detect cmdline drift
+                // If the root PID's cmdline changed significantly (e.g. npm → cargo),
+                // mark the workload as reclassifiable and re-run classifier.
+                auto* wl = workload_mgr.get(existing_wl_id);
+                if (wl && wl->root_pid == pid && wl->is_reclassifiable) {
+                    if (!node.cmdline.empty() && node.cmdline != wl->root_cmdline) {
+                        std::cout << "[THM] Cmdline drift on workload " << existing_wl_id
+                                  << ": '" << wl->root_cmdline << "' → '" << node.cmdline << "'\n";
+                        int ws_id = ws_monitor.focused_workspace();
+                        std::string title;
+                        auto ws_it = workspaces.find(ws_id);
+                        if (ws_it != workspaces.end()) title = ws_it->second.active_window_title;
+                        auto result = classifier.classify(pid, title, proc_graph);
+                        if (result.type != thm::WorkloadType::NEUTRAL) {
+                            wl->type          = result.type;
+                            wl->confidence    = result.confidence;
+                            wl->is_building   = result.is_building;
+                            wl->root_cmdline  = node.cmdline;
+                            wl->is_reclassifiable = false; // reset until next drift
+                        }
+                    }
+                }
+                continue; // already assigned
+            }
+
             // Get window title for this workspace
-            int ws_id = ws_monitor.focused_workspace();
+            // HC-03: Headless processes (no window root) must NOT inherit the
+            // focused workspace. Assign WS=-2 to avoid polluting WS telemetry.
+            bool has_window = false;
+            int ws_id = -2; // HC-03: default = headless / unknown workspace
+            {
+                // A process is considered window-rooted if its cmdline matches
+                // a known IDE, terminal, or browser command.
+                // Simple heuristic: check if any workspace reports it as focused.
+                auto focused_ws = ws_monitor.focused_workspace();
+                auto ws_it2 = workspaces.find(focused_ws);
+                if (ws_it2 != workspaces.end()) {
+                    // Only assign to focused WS if the process comm matches
+                    // the active window class (i.e., it IS the foreground app).
+                    const auto& ws_state = ws_it2->second;
+                    if (!ws_state.active_window_class.empty() &&
+                        node.comm.find(ws_state.active_window_class.substr(0,8)) != std::string::npos) {
+                        ws_id = focused_ws;
+                        has_window = true;
+                    }
+                }
+            }
+
             std::string title;
-            auto ws_it = workspaces.find(ws_id);
-            if (ws_it != workspaces.end())
-                title = ws_it->second.active_window_title;
+            if (has_window) {
+                auto ws_it = workspaces.find(ws_id);
+                if (ws_it != workspaces.end()) title = ws_it->second.active_window_title;
+            }
 
             auto result = classifier.classify(pid, title, proc_graph);
             if (result.type != thm::WorkloadType::NEUTRAL) {
@@ -232,9 +330,12 @@ int main(int argc, char* argv[]) {
                 wl.ai_owned         = result.ai_modifier;
                 wl.is_building      = result.is_building;
                 wl.latency_sensitive = result.latency_sensitive;
+                wl.is_browser_root  = result.is_browser_root;  // HC-05/06
+                wl.is_reclassifiable = true;                   // HC-10: all new workloads eligible
                 wl.root_pid         = pid;
+                wl.root_cmdline     = node.cmdline;            // HC-10: drift baseline
                 wl.state            = thm::WorkloadState::DISCOVERED;
-                wl.workspace_id     = ws_id;
+                wl.workspace_id     = ws_id;                   // HC-03: -2 if headless
                 wl.created_at       = thm::ms_clock::now();
                 wl.last_active      = thm::ms_clock::now();
                 wl.pids.push_back(pid);

@@ -38,6 +38,7 @@ struct ExecutionConfig {
 // ─────────────────────────────────────────────────────────────────────────────
 inline bool is_known_build_command(const std::string& cmdline) {
     static const std::vector<std::string> BUILD_CMDS = {
+        // Compilers / linkers
         "gradle", "gradlew", "./gradlew",
         "cargo",  "cargo build", "cargo run", "cargo test",
         "cmake",  "cmake --build",
@@ -49,8 +50,46 @@ inline bool is_known_build_command(const std::string& cmdline) {
         "webpack","rollup",  "parcel",
         "bazel",  "buck2",   "meson",
         "aarch64-linux-gnu-ld",             // cross-compile linkers
+        // HC-02: dev file-watchers (sleep on inotify — always treat as building)
+        "vite",          "webpack-dev-server", "webpack serve",
+        "tsc --watch",   "nodemon",
+        "next dev",      "next",
+        // HC-04: test runners that sleep between suites
+        "pytest",  "py.test",
+        "jest",    "vitest",
+        "mocha",   "jasmine",
+        "go test",
     };
     for (const auto& cmd : BUILD_CMDS)
+        if (cmdline.find(cmd) != std::string::npos)
+            return true;
+    return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HC-01, HC-04, HC-07, HC-08: Persistent service / infrastructure processes
+// that must NEVER be classified as idle regardless of CPU delta.
+// Includes headless DB servers, emulators, container runtimes, VM hosts.
+// ─────────────────────────────────────────────────────────────────────────────
+inline bool is_persistent_service(const std::string& cmdline) {
+    static const std::vector<std::string> PERSISTENT_CMDS = {
+        // HC-01: Android emulator host process
+        "qemu-system-x86_64", "qemu-system-aarch64", "qemu-system-arm",
+        "emulator",           "android-emulator",    "qemu-img",
+        // HC-07: Database servers (headless, sleep between queries)
+        "postgres", "mysqld", "mariadbd",
+        "redis-server", "mongod", "sqlite3",
+        "cassandra",  "elasticsearch",
+        // HC-07: Container / orchestration runtimes
+        "dockerd",    "docker",
+        "containerd", "crun",  "runc",
+        "podman",     "buildkitd",
+        // HC-07: Dev-stack reverse proxies / API servers
+        "nginx",  "caddy",  "traefik", "haproxy",
+        // HC-08: VM hypervisor hosts
+        "qemu-kvm", "kvm",
+    };
+    for (const auto& cmd : PERSISTENT_CMDS)
         if (cmdline.find(cmd) != std::string::npos)
             return true;
     return false;

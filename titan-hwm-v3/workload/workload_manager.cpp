@@ -68,12 +68,19 @@ void WorkloadManager::tick(Workload&           wl,
 
     case WorkloadState::ACTIVE:
         if (!(ws.is_focused || ws.is_visible)) {
-            // Workspace left focus/visibility — activity is the authority
-            // ai_owned does NOT keep a workload BACKGROUND_EXECUTING if idle
+            // Workspace left focus/visibility — start hysteresis window (HC-09)
+            // Gives rapid workspace switches time to "bounce back" without
+            // issuing unnecessary STOP/CONT signals.
+            if (wl.ws_hysteresis_ticks == 0)
+                wl.ws_hysteresis_ticks = cfg_.hysteresis_ticks;
+            // Activity is the authority — ai_owned does NOT keep BACKGROUND_EXECUTING if idle
             if (activity == ActivityState::EXECUTING)
                 wl.state = WorkloadState::BACKGROUND_EXECUTING;
             else
                 wl.state = WorkloadState::IDLE;
+        } else {
+            // Still in focused/visible workspace — reset hysteresis
+            wl.ws_hysteresis_ticks = 0;
         }
         // else: still visible/focused → stay ACTIVE
         break;
@@ -81,7 +88,14 @@ void WorkloadManager::tick(Workload&           wl,
     case WorkloadState::BACKGROUND_EXECUTING:
         // Workspace return always upgrades to ACTIVE
         if (ws.is_focused || ws.is_visible) {
+            wl.ws_hysteresis_ticks = 0; // reset on return
             wl.state = WorkloadState::ACTIVE;
+            break;
+        }
+        // HC-09: Decrement hysteresis counter each tick
+        if (wl.ws_hysteresis_ticks > 0) {
+            --wl.ws_hysteresis_ticks;
+            // Stay in BACKGROUND_EXECUTING during hysteresis window
             break;
         }
         // Activity signal is the sole authority — ai_owned does NOT prevent IDLE

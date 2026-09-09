@@ -20,6 +20,7 @@ namespace thm {
 struct DecayConfig {
     int age_soft_decay_min = 5;   // IDLE → AGING
     int age_hard_decay_min = 15;  // AGING → RECLAIMABLE
+    int hysteresis_ticks   = 10;  // HC-09: ticks before downgrade after WS leave (10×200ms = 2s)
 };
 
 class WorkloadManager {
