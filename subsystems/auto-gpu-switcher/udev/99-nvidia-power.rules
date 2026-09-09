@@ -1,0 +1,11 @@
+# Titan GPU Switcher — NVIDIA power management udev rules
+# These rules help manage dGPU power state on Intel+NVIDIA hybrid systems.
+
+# Enable runtime PM for NVIDIA GPU on add
+ACTION=="add", SUBSYSTEM=="pci", ATTR{vendor}=="0x10de", ATTR{power/control}="auto"
+
+# When AC is plugged in, allow dGPU to wake
+SUBSYSTEM=="power_supply", ATTR{type}=="Mains", ATTR{online}=="1", RUN+="/bin/sh -c 'echo on > /sys/bus/pci/devices/0000:01:00.0/power/control 2>/dev/null || true'"
+
+# When on battery, aggressively power down dGPU
+SUBSYSTEM=="power_supply", ATTR{type}=="Mains", ATTR{online}=="0", RUN+="/bin/sh -c 'echo auto > /sys/bus/pci/devices/0000:01:00.0/power/control 2>/dev/null || true'"

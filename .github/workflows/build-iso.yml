@@ -17,6 +17,7 @@ jobs:
 
       - name: Initialize Pacman Keyring
         run: |
+        
           pacman-key --init
           pacman-key --populate archlinux
 

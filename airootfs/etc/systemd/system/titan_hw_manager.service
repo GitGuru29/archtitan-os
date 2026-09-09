@@ -1,7 +1,7 @@
 [Unit]
 Description=Titan Hardware Manager (ArchTitan Daemon)
 After=graphical-session.target archtitan-immutable-guard.service
-Requires=archtitan-immutable-guard.service
+Wants=archtitan-immutable-guard.service
 PartOf=graphical-session.target
 
 [Service]
@@ -18,8 +18,8 @@ RestartSec=500ms
 StartLimitInterval=0
 
 # Re-lock own binary each start in case chattr was cleared on disk
-# (e.g. root mounted overlay). Safe no-op if already locked.
-ExecStartPre=/usr/bin/chattr +i /usr/local/bin/titan_hw_manager
+# (e.g. root mounted overlay). Safe no-op if already locked or unsupported.
+ExecStartPre=-/usr/bin/chattr +i /usr/local/bin/titan_hw_manager
 
 # Needs root to read /proc system-wide, write /sys governors,
 # and send signals to processes owned by other users.

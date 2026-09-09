@@ -1,4 +1,2 @@
-# Auto-start Hyprland on login
-if [[ -z $DISPLAY && $(tty) == /dev/tty1 ]]; then
-    exec Hyprland
-fi
+# Root shell profile - graphical session is managed by SDDM for archtitan user
+[[ -f ~/.bashrc ]] && . ~/.bashrc

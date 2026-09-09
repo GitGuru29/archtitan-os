@@ -1,7 +1,5 @@
 [Unit]
-Description=ArchTitan Live ISO — system-level idle/sleep inhibitor
-# Only active on live ISO media (ConditionPathExists checks for archiso marker)
-ConditionPathExists=/run/archiso
+Description=ArchTitan OS — system-level idle/sleep inhibitor
 After=systemd-logind.service
 Wants=systemd-logind.service
 

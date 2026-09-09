@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# titan-bar-next — advance the rolling viewport forward one page
+PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/titan-bar-daemon.pid"
+[[ -f "$PID_FILE" ]] && kill -SIGUSR1 "$(cat "$PID_FILE")" 2>/dev/null

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# titan-hud-gpu — Lightweight GPU Telemetry Provider for ArchTitan HUD
+# Reads NVIDIA / AMD / Intel GPU utilization with graceful fallback.
+
+gpu_pct=""
+
+# 1. Try NVIDIA
+if command -v nvidia-smi >/dev/null 2>&1; then
+    nv_val=$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null | head -n1 | tr -d ' %')
+    if [[ "$nv_val" =~ ^[0-9]+$ ]]; then
+        gpu_pct="$nv_val"
+    fi
+fi
+
+# 2. Try AMD DRM sysfs
+if [[ -z "$gpu_pct" ]]; then
+    for busy_file in /sys/class/drm/card*/device/gpu_busy_percent; do
+        if [[ -r "$busy_file" ]]; then
+            amd_val=$(cat "$busy_file" 2>/dev/null)
+            if [[ "$amd_val" =~ ^[0-9]+$ ]]; then
+                gpu_pct="$amd_val"
+                break
+            fi
+        fi
+    done
+fi
+
+# 3. Output JSON
+if [[ -n "$gpu_pct" ]]; then
+    printf '{"text":"GPU %s%%","class":"active","tooltip":"GPU Utilization: %s%%"}\n' "$gpu_pct" "$gpu_pct"
+else
+    # Output empty text so Waybar cleanly hides the module when no GPU data is available
+    printf '{"text":"","class":"hidden","tooltip":"GPU Telemetry: Not Available"}\n'
+fi

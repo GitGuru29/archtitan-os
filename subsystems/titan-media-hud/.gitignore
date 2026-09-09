@@ -1,0 +1,11 @@
+build/
+CMakeLists.txt.user
+*.o
+*.a
+*.so
+.moc/
+.rcc/
+.uic/
+compile_commands.json
+.clangd
+

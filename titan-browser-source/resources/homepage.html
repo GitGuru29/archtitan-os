@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titan Browser</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════════════════════════════
+           TITAN BROWSER — CINEMATIC OBSIDIAN GLOW DASHBOARD
+           ═══════════════════════════════════════════════════════════════════════ */
+        :root {
+            --cyan: #38bdf8;
+            --cyan-glow: rgba(56, 189, 248, 0.4);
+            --blue: #0ea5e9;
+            --blue-glow: rgba(14, 165, 233, 0.35);
+
+            --bg-glass-card: rgba(8, 20, 48, 0.45);
+            --bg-glass-card-hover: rgba(14, 30, 68, 0.65);
+            --bg-glass-rail: rgba(4, 10, 26, 0.65);
+
+            --border-glass: rgba(56, 189, 248, 0.22);
+            --border-glass-hover: rgba(56, 189, 248, 0.55);
+
+            --text-white: #ffffff;
+            --text-main: #f0f6fc;
+            --text-sub: #93c5fd;
+
+            --radius-xs: 6px;
+            --radius-sm: 10px;
+            --radius-md: 14px;
+            --radius-lg: 18px;
+            --radius-full: 9999px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+            background-color: #020713;
+            background-image:
+                radial-gradient(ellipse at 50% 30%, rgba(14, 165, 233, 0.15) 0%, transparent 65%),
+                radial-gradient(circle at 50% 100%, rgba(2, 6, 23, 0.8) 0%, transparent 60%),
+                url('background.png');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            color: var(--text-main);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            position: relative;
+        }
+
+        /* Ambient Canvas overlay */
+        #sparkCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           1. LEFT GLASS RAIL (CLEAN MINIMALIST SVG ICONS)
+           ═══════════════════════════════════════════════════════════════════════ */
+        .glass-rail {
+            width: 52px;
+            height: calc(100vh - 28px);
+            margin: 14px 0 14px 14px;
+            background: var(--bg-glass-rail);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            backdrop-filter: blur(24px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 14px 0;
+            gap: 12px;
+            z-index: 30;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55);
+        }
+
+        .rail-btn-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--radius-sm);
+            background: transparent;
+            border: 1px solid transparent;
+            color: rgba(224, 242, 254, 0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+        }
+
+        .rail-btn-icon svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+        }
+
+        .rail-btn-icon:hover {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: rgba(56, 189, 248, 0.35);
+            color: #ffffff;
+            transform: scale(1.05);
+        }
+
+        .rail-btn-icon.active {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(14, 165, 233, 0.12) 100%);
+            border: 1px solid var(--cyan);
+            color: #ffffff;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+        }
+
+        .rail-spacer {
+            flex: 1;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           2. MAIN VIEWPORT
+           ═══════════════════════════════════════════════════════════════════════ */
+        .main-viewport {
+            flex: 1;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 24px 36px;
+            position: relative;
+            z-index: 10;
+            overflow-x: hidden;
+        }
+
+        /* ── Top Bar ───────────────────────────────────────────────────────── */
+        .top-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        /* Brand Title */
+        .brand-block {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            cursor: pointer;
+        }
+
+        .titan-shield-logo {
+            width: 36px;
+            height: 36px;
+            filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.7));
+            transition: transform 0.3s ease;
+        }
+
+        .brand-block:hover .titan-shield-logo {
+            transform: scale(1.08) rotate(2deg);
+        }
+
+        .brand-text-col {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .brand-main-title {
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #ffffff;
+            line-height: 1.1;
+        }
+
+        .brand-subtitle-line {
+            font-size: 11px;
+            color: rgba(224, 242, 254, 0.9);
+            font-weight: 500;
+            letter-spacing: 0.6px;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+        }
+
+        .brand-accent-bar {
+            width: 42px;
+            height: 2px;
+            background: linear-gradient(90deg, #38bdf8 0%, transparent 100%);
+            box-shadow: 0 0 8px #38bdf8;
+            margin-top: 3px;
+        }
+
+        /* Top Right: Weather & Clock */
+        .top-right-meta {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+        }
+
+        .weather-chip-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .weather-icon-symbol {
+            width: 22px;
+            height: 22px;
+            color: #38bdf8;
+            filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.5));
+        }
+
+        .weather-text-col {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.15;
+        }
+
+        .weather-temp-bold {
+            font-size: 14px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        .weather-sub-desc {
+            font-size: 10px;
+            color: rgba(224, 242, 254, 0.7);
+        }
+
+        .clock-block {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            line-height: 1.1;
+        }
+
+        .clock-time-huge {
+            font-size: 26px;
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .clock-ampm-sup {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--cyan);
+            margin-left: 3px;
+            margin-top: 3px;
+        }
+
+        .clock-date-line {
+            font-size: 10.5px;
+            color: rgba(224, 242, 254, 0.75);
+            font-weight: 400;
+            margin-top: 2px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           3. CENTER HERO & SEARCH AREA
+           ═══════════════════════════════════════════════════════════════════════ */
+        .center-hero-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin: auto 0;
+            width: 100%;
+        }
+
+        /* Tech Slogan with HUD Brackets */
+        .slogan-frame {
+            position: relative;
+            padding: 8px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .bracket-edge {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-color: rgba(56, 189, 248, 0.6);
+            border-style: solid;
+            pointer-events: none;
+        }
+
+        .b-tl {
+            top: 0;
+            left: 0;
+            border-width: 2px 0 0 2px;
+            border-top-left-radius: 4px;
+        }
+
+        .b-tr {
+            top: 0;
+            right: 0;
+            border-width: 2px 2px 0 0;
+            border-top-right-radius: 4px;
+        }
+
+        .b-bl {
+            bottom: 0;
+            left: 0;
+            border-width: 0 0 2px 2px;
+            border-bottom-left-radius: 4px;
+        }
+
+        .b-br {
+            bottom: 0;
+            right: 0;
+            border-width: 0 2px 2px 0;
+            border-bottom-right-radius: 4px;
+        }
+
+        .slogan-title-text {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: 4px;
+            color: #ffffff;
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+            text-transform: uppercase;
+        }
+
+        .slogan-sub-rules {
+            font-size: 13px;
+            color: rgba(224, 242, 254, 0.85);
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        /* Futuristic Separator Line & Floating Emblem */
+        .hero-emblem-row {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hero-line-dots {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 140px;
+        }
+
+        .line-segment {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.6), transparent);
+        }
+
+        .center-light-dot {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: var(--cyan);
+            box-shadow: 0 0 8px var(--cyan);
+        }
+
+        .floating-titan-emblem {
+            width: 24px;
+            height: 24px;
+            filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.8));
+            animation: floatEmblem 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes floatEmblem {
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(-4px);
+            }
+        }
+
+        /* ── Center Omnibox Search Bar ─────────────────────────────────────── */
+        .search-pill-box {
+            width: 100%;
+            max-width: 600px;
+            background: rgba(10, 24, 56, 0.68);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            border-radius: var(--radius-full);
+            padding: 11px 22px;
+            display: flex;
+            align-items: center;
+            backdrop-filter: blur(24px);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 16px rgba(56, 189, 248, 0.12);
+            position: relative;
+        }
+
+        .search-pill-box:hover {
+            border-color: rgba(56, 189, 248, 0.58);
+            background: rgba(14, 30, 68, 0.78);
+            box-shadow: 0 10px 36px rgba(0, 0, 0, 0.6), 0 0 24px rgba(56, 189, 248, 0.22);
+        }
+
+        .search-pill-box:focus-within {
+            border-color: var(--cyan);
+            background: rgba(14, 32, 74, 0.88);
+            box-shadow: 0 0 0 1px var(--cyan), 0 0 35px rgba(56, 189, 248, 0.45), 0 12px 40px rgba(0, 0, 0, 0.7);
+        }
+
+        .search-loop-icon {
+            color: rgba(56, 189, 248, 0.85);
+            margin-right: 12px;
+            flex-shrink: 0;
+            filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.4));
+        }
+
+        .search-input-element {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #ffffff;
+            font-size: 13.5px;
+            font-family: inherit;
+        }
+
+        .search-input-element::placeholder {
+            color: rgba(224, 242, 254, 0.55);
+            font-weight: 400;
+        }
+
+        .search-star-btn {
+            background: transparent;
+            border: none;
+            color: rgba(224, 242, 254, 0.75);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.15s ease;
+        }
+
+        .search-star-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+        }
+
+        .search-star-btn:hover {
+            color: var(--cyan);
+            filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
+        }
+
+        /* ── Search Engine Quick Switcher Bar ────────────────────────────── */
+        .search-engines-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+            margin-bottom: 4px;
+        }
+
+        .engine-chip {
+            background: rgba(6, 16, 42, 0.6);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: var(--radius-full);
+            padding: 4px 12px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: rgba(240, 246, 252, 0.75);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            backdrop-filter: blur(16px);
+            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .engine-chip:hover {
+            border-color: var(--cyan);
+            color: #ffffff;
+            background: rgba(56, 189, 248, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .engine-chip.active {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.25), rgba(14, 165, 233, 0.12));
+            border-color: var(--cyan);
+            color: var(--cyan);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+        }
+
+        /* ── Quick Access Launcher Squircles (Row of 7) ────────────────────── */
+        .launcher-squircles-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin-top: 4px;
+        }
+
+        .squircle-card {
+            width: 74px;
+            height: 74px;
+            border-radius: var(--radius-md);
+            background: var(--bg-glass-card);
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(18px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+            text-decoration: none;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+        }
+
+        .squircle-card:hover {
+            background: var(--bg-glass-card-hover);
+            border-color: var(--border-glass-hover);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55), 0 0 20px rgba(56, 189, 248, 0.3);
+        }
+
+        .squircle-icon-wrap {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .squircle-icon-wrap svg {
+            filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.35));
+        }
+
+        .squircle-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: rgba(240, 246, 252, 0.9);
+            letter-spacing: 0.2px;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           4. BOTTOM ROW (HUD TERMINAL QUOTE & HARDWARE MONITOR)
+           ═══════════════════════════════════════════════════════════════════════ */
+        .bottom-hud-row {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        /* Bottom-Left Cyber Terminal Quote Card */
+        .cyber-terminal-card {
+            background: rgba(4, 12, 32, 0.65);
+            border-left: 2px solid var(--cyan);
+            border-bottom: 2px solid var(--cyan);
+            border-radius: 0 0 0 12px;
+            padding: 14px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            max-width: 290px;
+            backdrop-filter: blur(20px);
+            position: relative;
+            box-shadow: -4px 8px 28px rgba(0, 0, 0, 0.55);
+        }
+
+        .cyber-terminal-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 10px;
+            height: 2px;
+            background: var(--cyan);
+        }
+
+        .cyber-terminal-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 2px;
+            height: 10px;
+            background: var(--cyan);
+        }
+
+        .terminal-header-prompt {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--cyan);
+            text-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+        }
+
+        .terminal-code-quote {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10.5px;
+            color: #ffffff;
+            line-height: 1.5;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .terminal-author-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--cyan);
+            margin-top: 2px;
+            letter-spacing: 0.4px;
+        }
+
+        /* Bottom-Right System Hardware Monitor HUD */
+        .hardware-hud-card {
+            background: rgba(4, 12, 32, 0.55);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 14px 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 270px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+        }
+
+        .hud-metric-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .metric-icon-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--cyan);
+            width: 54px;
+            flex-shrink: 0;
+        }
+
+        .metric-svg {
+            width: 14px;
+            height: 14px;
+            stroke: var(--cyan);
+            filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.4));
+            flex-shrink: 0;
+        }
+
+        .metric-progress-track {
+            flex: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .metric-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0ea5e9, #38bdf8);
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--cyan);
+            transition: width 1s ease;
+        }
+
+        .metric-value-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #ffffff;
+            width: 72px;
+            text-align: right;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════
+           MODAL SYSTEM
+           ═══════════════════════════════════════════════════════════════════════ */
+        .modal-shade {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 110;
+        }
+
+        .modal-shade.active {
+            display: flex;
+        }
+
+        .modal-box-card {
+            background: rgba(8, 20, 48, 0.95);
+            border: 1px solid var(--border-glass-hover);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            width: 90%;
+            max-width: 460px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+        }
+
+        .modal-input-field {
+            width: 100%;
+            background: rgba(14, 30, 68, 0.85);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-xs);
+            padding: 8px 12px;
+            color: #ffffff;
+            font-size: 12.5px;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .modal-input-field:focus {
+            border-color: var(--cyan);
+        }
+
+        .modal-confirm-btn {
+            background: var(--cyan);
+            border: none;
+            border-radius: var(--radius-xs);
+            padding: 7px 14px;
+            color: #040a1a;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.12s ease;
+            font-family: inherit;
+            align-self: flex-start;
+        }
+
+        .modal-confirm-btn:hover {
+            background: #7dd3fc;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Ambient Spark Canvas -->
+    <canvas id="sparkCanvas"></canvas>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         1. LEFT VERTICAL GLASS NAVIGATION RAIL (CLEAN VECTOR SVG ICONS)
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <aside class="glass-rail">
+        <!-- Home Icon (Active) -->
+        <a class="rail-btn-icon active" title="Home" href="titan://home">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+        </a>
+
+        <!-- Bookmarks Icon -->
+        <button class="rail-btn-icon" title="Bookmarks (Ctrl+B)" onclick="showToast('Bookmarks ready')">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <polygon
+                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                </polygon>
+            </svg>
+        </button>
+
+        <!-- History Icon -->
+        <button class="rail-btn-icon" title="History (Ctrl+H)" onclick="showToast('History ready')">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+        </button>
+
+        <!-- Downloads Icon -->
+        <button class="rail-btn-icon" title="Downloads (Ctrl+J)" onclick="showToast('Downloads ready')">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+        </button>
+
+        <div class="rail-spacer"></div>
+
+        <!-- Settings Icon -->
+        <button class="rail-btn-icon" title="Settings (Ctrl+,)" onclick="window.location.href='titan://settings'">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                </path>
+            </svg>
+        </button>
+    </aside>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         2. MAIN VIEWPORT
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <main class="main-viewport">
+
+        <!-- ── Top Header Row ────────────────────────────────────────────── -->
+        <header class="top-row">
+            <!-- Brand Logo & Title -->
+            <div class="brand-block" onclick="window.location.href='titan://home'">
+                <svg class="titan-shield-logo" viewBox="0 0 64 64" fill="none">
+                    <!-- Crystalline Shield Logo -->
+                    <polygon points="32,6 8,20 16,54 32,60 48,54 56,20" fill="url(#shield-core)" />
+                    <polygon points="32,6 8,20 32,38" fill="url(#shield-left)" />
+                    <polygon points="32,6 56,20 32,38" fill="url(#shield-right)" />
+                    <polygon points="32,38 16,54 32,60" fill="url(#shield-bot-l)" />
+                    <polygon points="32,38 48,54 32,60" fill="url(#shield-bot-r)" />
+                    <defs>
+                        <linearGradient id="shield-core" x1="8" y1="6" x2="56" y2="60">
+                            <stop stop-color="#0284c7" />
+                            <stop offset="1" stop-color="#0369a1" />
+                        </linearGradient>
+                        <linearGradient id="shield-left" x1="8" y1="6" x2="32" y2="38">
+                            <stop stop-color="#38bdf8" />
+                            <stop offset="1" stop-color="#0284c7" />
+                        </linearGradient>
+                        <linearGradient id="shield-right" x1="56" y1="6" x2="32" y2="38">
+                            <stop stop-color="#7dd3fc" />
+                            <stop offset="1" stop-color="#38bdf8" />
+                        </linearGradient>
+                        <linearGradient id="shield-bot-l" x1="16" y1="38" x2="32" y2="60">
+                            <stop stop-color="#0369a1" />
+                            <stop offset="1" stop-color="#0c4a6e" />
+                        </linearGradient>
+                        <linearGradient id="shield-bot-r" x1="48" y1="38" x2="32" y2="60">
+                            <stop stop-color="#0284c7" />
+                            <stop offset="1" stop-color="#0369a1" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <div class="brand-text-col">
+                    <span class="brand-main-title">TITAN BROWSER</span>
+                    <span class="brand-subtitle-line">Built for focus. Engineered for freedom.</span>
+                    <div class="brand-accent-bar"></div>
+                </div>
+            </div>
+
+            <!-- Top Right: Weather & Clock -->
+            <div class="top-right-meta">
+                <div class="weather-chip-block" onclick="showToast('Weather: Colombo, Sri Lanka')">
+                    <svg class="weather-icon-symbol" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+                    </svg>
+                    <div class="weather-text-col">
+                        <span class="weather-temp-bold">27°C</span>
+                        <span class="weather-sub-desc">Partly Cloudy</span>
+                    </div>
+                </div>
+
+                <div class="clock-block">
+                    <div class="clock-time-huge">
+                        <span id="liveClockHourMin">10:29</span>
+                        <span class="clock-ampm-sup" id="liveClockAmpm">PM</span>
+                    </div>
+                    <span class="clock-date-line" id="liveClockDate">Thursday, 15 August 2026</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ── Center Hero & Omnibox ─────────────────────────────────────── -->
+        <section class="center-hero-container">
+
+            <!-- Tech Slogan Brackets -->
+            <div class="slogan-frame">
+                <span class="bracket-edge b-tl"></span>
+                <span class="bracket-edge b-tr"></span>
+                <h1 class="slogan-title-text">FOCUS. SPEED. FREEDOM.</h1>
+                <p class="slogan-sub-rules">Your world. Your rules.</p>
+                <span class="bracket-edge b-bl"></span>
+                <span class="bracket-edge b-br"></span>
+            </div>
+
+            <!-- Glowing Separator & Titan Emblem -->
+            <div class="hero-emblem-row">
+                <div class="hero-line-dots">
+                    <span class="line-segment"></span>
+                    <span class="center-light-dot"></span>
+                    <span class="line-segment"></span>
+                </div>
+                <svg class="floating-titan-emblem" viewBox="0 0 64 64" fill="none">
+                    <polygon points="32,6 8,20 16,54 32,60 48,54 56,20" fill="#38bdf8" opacity="0.9" />
+                    <polygon points="32,14 16,24 22,48 32,52 42,48 48,24" fill="#0284c7" />
+                    <polygon points="32,22 22,28 32,44 42,28" fill="#ffffff" opacity="0.95" />
+                </svg>
+            </div>
+
+            <!-- Glassmorphic Search Omnibox -->
+            <div class="search-pill-box">
+                <svg class="search-loop-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" />
+                </svg>
+                <input type="text" id="mainSearchInput" class="search-input-element"
+                    placeholder="Search the web or type a URL" autocomplete="off"
+                    onkeydown="if(event.key==='Enter') executeSearch(this.value)" />
+                <button class="search-star-btn" title="Add Bookmark" onclick="showToast('Page bookmarked')">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                        </polygon>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Engine Quick Switcher Chips -->
+            <div class="search-engines-bar" id="searchEnginesBar">
+                <button class="engine-chip active" id="chip-google" onclick="setSearchEngine('google')">
+                    <svg width="12" height="12" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.98 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
+                    Google
+                </button>
+                <button class="engine-chip" id="chip-duckduckgo" onclick="setSearchEngine('duckduckgo')">
+                    🦆 DuckDuckGo
+                </button>
+                <button class="engine-chip" id="chip-brave" onclick="setSearchEngine('brave')">
+                    🦁 Brave
+                </button>
+                <button class="engine-chip" id="chip-bing" onclick="setSearchEngine('bing')">
+                    ⊞ Bing
+                </button>
+                <button class="engine-chip" id="chip-kagi" onclick="setSearchEngine('kagi')">
+                    ★ Kagi
+                </button>
+            </div>
+
+            <!-- Quick Access Launcher (7 Glass Squircles) -->
+            <div class="launcher-squircles-row" id="launcherGrid">
+                <a class="squircle-card" href="https://github.com">
+                    <div class="squircle-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff">
+                            <path
+                                d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+                        </svg>
+                    </div>
+                    <span class="squircle-label">GitHub</span>
+                </a>
+
+                <a class="squircle-card" href="https://youtube.com">
+                    <div class="squircle-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ef4444">
+                            <path
+                                d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                        </svg>
+                    </div>
+                    <span class="squircle-label">YouTube</span>
+                </a>
+
+                <a class="squircle-card" href="https://wiki.archlinux.org">
+                    <div class="squircle-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                            <line x1="16" y1="13" x2="8" y2="13" />
+                            <line x1="16" y1="17" x2="8" y2="17" />
+                            <polyline points="10 9 9 9 8 9" />
+                        </svg>
+                    </div>
+                    <span class="squircle-label">Docs</span>
+                </a>
+
+                <a class="squircle-card" href="https://wiki.archlinux.org">
+                    <div class="squircle-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#38bdf8">
+                            <path d="M12 2L2 21.5h4.8l4.8-9.5 4.8 9.5H22L12 2zm0 6.5l2.7 5.5h-5.4L12 8.5z" />
+                        </svg>
+                    </div>
+                    <span class="squircle-label">ArchWiki</span>
+                </a>
+
+                <a class="squircle-card" href="https://reddit.com">
+                    <div class="squircle-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff4500">
+                            <path
+                                d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.702zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.688-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.197-2.512-.73a.326.326 0 0 0-.232-.095z" />
+                        </svg>
+                    </div>
+                    <span class="squircle-label">Reddit</span>
+                </a>
+
+                <a class="squircle-card" href="https://mail.google.com">
+                    <div class="squircle-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
+                        </svg>
+                    </div>
+                    <span class="squircle-label">Email</span>
+                </a>
+
+                <div class="squircle-card" onclick="openAddShortcutDialog()">
+                    <div class="squircle-icon-wrap">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                    </div>
+                    <span class="squircle-label">Add</span>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ── Bottom HUD Row (Terminal Quote & Hardware Monitor) ─────────── -->
+        <footer class="bottom-hud-row">
+
+            <!-- Cyber Terminal Quote Card -->
+            <div class="cyber-terminal-card">
+                <span class="terminal-header-prompt">&gt;_</span>
+                <p class="terminal-code-quote">
+                    In the chaos of the world,<br>
+                    we build systems.<br>
+                    In the silence of the code,<br>
+                    we find freedom.
+                </p>
+                <span class="terminal-author-tag">— Titan Developer</span>
+            </div>
+
+            <!-- System Hardware Monitor HUD -->
+            <div class="hardware-hud-card">
+                <!-- CPU -->
+                <div class="hud-metric-row">
+                    <div class="metric-icon-label">
+                        <svg class="metric-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+                            <rect x="9" y="9" width="6" height="6"></rect>
+                            <line x1="9" y1="1" x2="9" y2="4"></line>
+                            <line x1="15" y1="1" x2="15" y2="4"></line>
+                            <line x1="9" y1="20" x2="9" y2="23"></line>
+                            <line x1="15" y1="20" x2="15" y2="23"></line>
+                            <line x1="20" y1="9" x2="23" y2="9"></line>
+                            <line x1="20" y1="14" x2="23" y2="14"></line>
+                            <line x1="1" y1="9" x2="4" y2="9"></line>
+                            <line x1="1" y1="14" x2="4" y2="14"></line>
+                        </svg>
+                        <span>CPU</span>
+                    </div>
+                    <div class="metric-progress-track">
+                        <div class="metric-progress-fill" id="cpuTrackBar" style="width: 0%;"></div>
+                    </div>
+                    <span class="metric-value-text" id="cpuValueText">0%</span>
+                </div>
+
+                <!-- RAM -->
+                <div class="hud-metric-row">
+                    <div class="metric-icon-label">
+                        <svg class="metric-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 19v-3"></path>
+                            <path d="M10 19v-3"></path>
+                            <path d="M14 19v-3"></path>
+                            <path d="M18 19v-3"></path>
+                            <path d="M2 5h20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"></path>
+                            <circle cx="6" cy="10" r="1.5"></circle>
+                            <circle cx="12" cy="10" r="1.5"></circle>
+                            <circle cx="18" cy="10" r="1.5"></circle>
+                        </svg>
+                        <span>RAM</span>
+                    </div>
+                    <div class="metric-progress-track">
+                        <div class="metric-progress-fill" id="ramTrackBar" style="width: 0%;"></div>
+                    </div>
+                    <span class="metric-value-text" id="ramValueText">0%</span>
+                </div>
+
+                <!-- NET -->
+                <div class="hud-metric-row">
+                    <div class="metric-icon-label">
+                        <svg class="metric-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                            <circle cx="12" cy="20" r="1"></circle>
+                        </svg>
+                        <span>NET</span>
+                    </div>
+                    <div class="metric-progress-track">
+                        <div class="metric-progress-fill" id="netTrackBar" style="width: 0%;"></div>
+                    </div>
+                    <span class="metric-value-text" id="netValueText">0 KB/s</span>
+                </div>
+            </div>
+
+        </footer>
+
+    </main>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         MODAL SYSTEM
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="modal-shade" id="globalModalShade">
+        <div class="modal-box-card">
+            <h3 id="modalDialogTitle" style="font-size: 14.5px; color: #ffffff; font-weight: 700;">Modal</h3>
+            <div id="modalDialogBody"></div>
+            <button class="modal-confirm-btn" onclick="closeModalShade()">Close</button>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         SCRIPT CORE
+         ═══════════════════════════════════════════════════════════════════════ -->
+    <script>
+        /* 1. Live Clock & Date */
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours();
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12;
+
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+            const dayName = days[now.getDay()];
+            const dayNum = now.getDate();
+            const monthName = months[now.getMonth()];
+            const year = now.getFullYear();
+
+            const hourMinEl = document.getElementById('liveClockHourMin');
+            const ampmEl = document.getElementById('liveClockAmpm');
+            const dateEl = document.getElementById('liveClockDate');
+
+            if (hourMinEl) hourMinEl.innerText = `${hours}:${minutes}`;
+            if (ampmEl) ampmEl.innerText = ampm;
+            if (dateEl) dateEl.innerText = `${dayName}, ${dayNum} ${monthName} ${year}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        /* 2. Omnibox Search Logic & Engine Switcher */
+        const searchEngines = {
+            google: 'https://www.google.com/search?q=',
+            duckduckgo: 'https://duckduckgo.com/?q=',
+            brave: 'https://search.brave.com/search?q=',
+            bing: 'https://www.bing.com/search?q=',
+            kagi: 'https://kagi.com/search?q=',
+            ecosia: 'https://www.ecosia.org/search?q=',
+            yahoo: 'https://search.yahoo.com/search?p='
+        };
+
+        function setSearchEngine(engine) {
+            localStorage.setItem('titan_search_engine', engine);
+            document.querySelectorAll('.engine-chip').forEach(c => c.classList.remove('active'));
+            const activeChip = document.getElementById('chip-' + engine);
+            if (activeChip) activeChip.classList.add('active');
+
+            const inp = document.getElementById('mainSearchInput');
+            if (inp) {
+                const names = {
+                    google: 'Google',
+                    duckduckgo: 'DuckDuckGo',
+                    brave: 'Brave',
+                    bing: 'Bing',
+                    kagi: 'Kagi'
+                };
+                inp.placeholder = `Search with ${names[engine] || engine} or enter URL...`;
+            }
+        }
+
+        function getSearchUrl(val) {
+            val = (val || '').trim();
+            // Command Aliases / Prefix Shortcuts
+            if (val.startsWith('gh ')) return 'https://github.com/search?q=' + encodeURIComponent(val.substring(3).trim());
+            if (val.startsWith('yt ')) return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(val.substring(3).trim());
+            if (val.startsWith('wiki ')) return 'https://en.wikipedia.org/wiki/Special:Search?search=' + encodeURIComponent(val.substring(5).trim());
+            if (val.startsWith('g ')) return 'https://www.google.com/search?q=' + encodeURIComponent(val.substring(2).trim());
+            if (val.startsWith('ddg ')) return 'https://duckduckgo.com/?q=' + encodeURIComponent(val.substring(4).trim());
+            if (val.startsWith('b ') || val.startsWith('brave ')) {
+                const off = val.startsWith('b ') ? 2 : 6;
+                return 'https://search.brave.com/search?q=' + encodeURIComponent(val.substring(off).trim());
+            }
+            if (val.startsWith('bing ')) return 'https://www.bing.com/search?q=' + encodeURIComponent(val.substring(5).trim());
+
+            const currentEngine = localStorage.getItem('titan_search_engine') || 'google';
+            const base = searchEngines[currentEngine] || searchEngines.google;
+            return base + encodeURIComponent(val);
+        }
+
+        function executeSearch(val) {
+            val = (val || '').trim();
+            if (!val) return;
+            if (val.startsWith('http://') || val.startsWith('https://')) {
+                window.location.href = val;
+            } else if (val.includes('.') && !val.includes(' ')) {
+                window.location.href = 'https://' + val;
+            } else {
+                window.location.href = getSearchUrl(val);
+            }
+        }
+
+        // Initialize active search engine chip on load
+        window.addEventListener('DOMContentLoaded', () => {
+            const currentEngine = localStorage.getItem('titan_search_engine') || 'google';
+            setSearchEngine(currentEngine);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                const inp = document.getElementById('mainSearchInput');
+                if (inp) { inp.focus(); inp.select(); }
+            }
+        });
+
+        /* 3. Add Shortcut Dialog */
+        function openAddShortcutDialog() {
+            openModal('Add Quick Access Shortcut', `
+                <input type="text" id="shortcutNameInput" class="modal-input-field" placeholder="Name (e.g. GitLab)" style="margin-bottom:8px;" />
+                <input type="text" id="shortcutUrlInput" class="modal-input-field" placeholder="URL (e.g. https://gitlab.com)" style="margin-bottom:8px;" />
+                <button class="modal-confirm-btn" onclick="submitNewShortcut()">Add Shortcut</button>
+            `);
+        }
+
+        function submitNewShortcut() {
+            const name = document.getElementById('shortcutNameInput').value.trim();
+            let url = document.getElementById('shortcutUrlInput').value.trim();
+            if (!name || !url) return;
+            if (!url.startsWith('http')) url = 'https://' + url;
+            const grid = document.getElementById('launcherGrid');
+            const addBtn = grid.querySelector('.squircle-card:last-child');
+            const a = document.createElement('a');
+            a.className = 'squircle-card';
+            a.href = url;
+            a.innerHTML = `
+                <div class="squircle-icon-wrap" style="color:var(--cyan); font-weight:800; font-size:14px;">${name.charAt(0).toUpperCase()}</div>
+                <span class="squircle-label">${name}</span>
+            `;
+            grid.insertBefore(a, addBtn);
+            closeModalShade();
+            showToast(`Shortcut "${name}" added`);
+        }
+
+        /* 4. Modal Handlers */
+        function openModal(title, bodyHtml) {
+            document.getElementById('modalDialogTitle').innerText = title;
+            document.getElementById('modalDialogBody').innerHTML = bodyHtml;
+            document.getElementById('globalModalShade').classList.add('active');
+        }
+        function closeModalShade() {
+            document.getElementById('globalModalShade').classList.remove('active');
+        }
+
+        /* 5. Floating Toast Notification */
+        let toastId = null;
+        function showToast(msg) {
+            let t = document.getElementById('titanToast');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'titanToast';
+                t.style.cssText = `
+                    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+                    background: rgba(8, 20, 48, 0.95); border: 1px solid rgba(56, 189, 248, 0.4);
+                    border-radius: 8px; color: #ffffff; font-size: 12px; font-weight: 600;
+                    padding: 8px 16px; z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+                    font-family: 'Outfit', sans-serif; backdrop-filter: blur(16px);
+                    transition: opacity 0.2s ease;
+                `;
+                document.body.appendChild(t);
+            }
+            t.innerText = msg;
+            t.style.opacity = '1';
+            clearTimeout(toastId);
+            toastId = setTimeout(() => { t.style.opacity = '0'; }, 2400);
+        }
+
+        /* 6. Hardware HUD Live Animation (Handled by C++ Bridge) */
+
+        /* 7. Ambient Bioluminescent Water Sparkles */
+        const canvas = document.getElementById('sparkCanvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+        let sparks = [];
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initSparks();
+        });
+
+        function initSparks() {
+            sparks = [];
+            const count = Math.min(40, Math.floor(width / 40));
+            for (let i = 0; i < count; i++) {
+                sparks.push({
+                    x: Math.random() * width,
+                    y: height * 0.5 + Math.random() * (height * 0.45),
+                    vx: (Math.random() - 0.5) * 0.3,
+                    vy: (Math.random() - 0.5) * 0.2,
+                    r: Math.random() * 1.6 + 0.6,
+                    alpha: Math.random() * 0.6 + 0.2
+                });
+            }
+        }
+        initSparks();
+
+        function renderSparks() {
+            if (document.hidden) return;
+            ctx.clearRect(0, 0, width, height);
+            for (let i = 0; i < sparks.length; i++) {
+                const s = sparks[i];
+                s.x += s.vx;
+                s.y += s.vy;
+                if (s.x < 0) s.x = width;
+                if (s.x > width) s.x = 0;
+                if (s.y < height * 0.45) s.y = height * 0.9;
+                if (s.y > height) s.y = height * 0.5;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(56, 189, 248, ${s.alpha})`;
+                ctx.shadowColor = '#38bdf8';
+                ctx.shadowBlur = 8;
+                ctx.fill();
+            }
+            requestAnimationFrame(renderSparks);
+        }
+        renderSparks();
+
+        /* 8. Preserved C++ Bridge APIs */
+        window.updateShieldStats = function (b) { showToast(`TitanShield: ${b} blocked`); };
+        window.toggleAIPanel = function () { showToast('Titan AI Assistant Ready'); };
+        window.focusCommandBar = function () {
+            const inp = document.getElementById('mainSearchInput');
+            if (inp) { inp.focus(); inp.select(); }
+        };
+        window.toggleTheme = function () { showToast('Obsidian Theme Active'); };
+    </script>
+</body>
+
+</html>

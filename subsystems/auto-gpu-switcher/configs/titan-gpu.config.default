@@ -1,0 +1,45 @@
+# Titan GPU Switcher Configuration
+# Auto GPU Switcher for Intel + NVIDIA hybrid systems
+
+[power]
+# Default power profile: balanced | saver | performance | auto
+default_profile = balanced
+# Profile to use on battery power (when default_profile = auto)
+battery_profile = saver
+# Seconds of dGPU idleness before power-off (0 = never auto-off)
+dgpu_idle_timeout_sec = 30
+# Max time (ms) to wait for dGPU power-on before fallback to iGPU
+power_transition_timeout_ms = 1000
+
+[detector]
+# NVIDIA driver in use: proprietary | nouveau | auto
+nvidia_driver = auto
+# Render node paths (auto-detected if left empty)
+render_node_igpu =
+render_node_dgpu =
+
+[classifier]
+# Default GPU target when no per-app rule matches.
+# Matches THM workload profiles → GPU assignment.
+thm_casual_gpu = igpu
+thm_web_dev_gpu = igpu
+thm_system_dev_gpu = igpu
+thm_android_dev_gpu = igpu
+thm_neutral_gpu = igpu
+
+[apps]
+# Per-app GPU rules (wm_class = dgpu | igpu | auto)
+# wm_class comes from Hyprland (lowercase, as reported by hyprctl clients)
+steam = dgpu
+lutris = dgpu
+blender = dgpu
+obs-studio = dgpu
+mpv = dgpu
+kitty = igpu
+falkon = igpu
+code = igpu
+
+[patterns]
+# Wildcard class matching (fnmatch-style)
+# *game* = dgpu
+# *browser* = igpu

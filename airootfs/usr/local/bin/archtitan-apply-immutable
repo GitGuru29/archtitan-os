@@ -11,7 +11,9 @@
 #    after making your change, re-run this script.
 # =================================================================
 
-set -euo pipefail
+# Live ISO note: chattr +i may not be supported on squashfs/overlayfs.
+# Using set -u (not -e) so individual lock failures don't abort the whole script.
+set -u
 
 LOG_TAG="archtitan-immutable-guard"
 

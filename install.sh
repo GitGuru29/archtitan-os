@@ -29,7 +29,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now titan_hw_manager.service
 
 echo ""
-echo "✅ Installation complete!"
+echo "   Installation complete!"
 echo "   Daemon status : systemctl status titan_hw_manager"
 echo "   CLI usage     : titan-hwm switch web|android|system|casual"
 echo "   Live status   : titan-hwm status"
