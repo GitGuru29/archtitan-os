@@ -33,6 +33,12 @@ public:
     Workload* get(uint32_t workload_id);
     const std::vector<uint32_t>& all_ids() const;
 
+    // Remove every workload in a dead state (TERMINATED — i.e. reclaimed) from the
+    // registry. The daemon calls this once per policy tick so the registry stays
+    // bounded to live worklets — without it, reclaimed workloads accumulate for
+    // the lifetime of the daemon (unbounded memory growth).
+    void prune_dead();
+
     // ── State machine tick ───────────────────────────────────────────────────
     // Drive one state transition for a workload.
     // Called every policy tick for every registered workload.

@@ -398,6 +398,9 @@ int main(int argc, char* argv[]) {
         }
 
         // ── (g) Governor update ─────────────────────────────────────────────
+        // Prune reclaimed/exited worklets so the registry stays bounded to live
+        // processes (unbounded registry retention is a slow memory leak).
+        workload_mgr.prune_dead();
         auto gov = thm::WorkspaceMonitor::compute_governor(all_workloads, pressure);
         if (!dry_run) {
             thm::WorkspaceMonitor::apply_governor(gov);
@@ -412,6 +415,23 @@ int main(int argc, char* argv[]) {
             ownership.remove(pid);
             detector.remove_baseline(pid);
             prev_children.erase(pid);
+        }
+
+        // Evict worklets whose member processes have all exited (or were
+        // reclaimed this tick) so the workload registry never outlives its
+        // processes. ::kill(pid, 0) == 0 means the pid still exists.
+        std::vector<uint32_t> expired;
+        for (uint32_t wl_id : workload_mgr.all_ids()) {
+            auto* wl = workload_mgr.get(wl_id);
+            if (!wl) continue;
+            bool any_live = false;
+            for (pid_t p : wl->pids) {
+                if (p > 1 && ::kill(p, 0) == 0) { any_live = true; break; }
+            }
+            if (!any_live) expired.push_back(wl_id);
+        }
+        for (uint32_t wl_id : expired) {
+            workload_mgr.remove(wl_id);
         }
 
         // ── Sleep remaining tick budget ─────────────────────────────────────
