@@ -113,6 +113,9 @@ ClassificationResult FusionClassifier::from_children(
     std::unordered_set<std::string> bld_set(cfg_.build_daemons.begin(), cfg_.build_daemons.end());
     std::unordered_set<std::string> ai_set (cfg_.ai_inference.begin(),  cfg_.ai_inference.end());
     std::unordered_set<std::string> lat_set(cfg_.latency_sensitive.begin(), cfg_.latency_sensitive.end());
+    // v3.1: service / VM sets
+    std::unordered_set<std::string> svc_set(cfg_.container_runtimes.begin(), cfg_.container_runtimes.end());
+    std::unordered_set<std::string> vm_set (cfg_.vm_processes.begin(), cfg_.vm_processes.end());
 
     std::unordered_map<int, float> scores; // keyed by WorkloadType cast to int
 
@@ -124,6 +127,18 @@ ClassificationResult FusionClassifier::from_children(
         if (cmd.empty()) continue;
         // ISSUE-11: verify exe path
         if (!is_valid_executable_path(cpid)) continue;
+
+        // HC-08: VM host process
+        if (vm_set.count(cmd)) {
+            scores[static_cast<int>(WorkloadType::VM)] += 0.9f;
+            continue;
+        }
+
+        // HC-07: Container/service runtime child
+        if (svc_set.count(cmd)) {
+            scores[static_cast<int>(WorkloadType::SERVICE)] += 0.9f;
+            continue;
+        }
 
         // Latency-sensitive modifier (TitanMirror, OBS, ffmpeg)
         if (lat_set.count(cmd)) { r.latency_sensitive = true; continue; }
@@ -253,6 +268,7 @@ std::optional<WorkloadType> FusionClassifier::from_cwd(pid_t pid) {
 // classify — fuse all 3 signals with weighted voting
 // TC-1.1: seed from full S1 score_map (not just winner) to preserve all votes
 // TC-1.3: boost S2 weight to 0.5 when high-specificity ext is present
+// HC-05/06: detect browser root from root cmdline — set is_browser_root + latency_sensitive
 // ─────────────────────────────────────────────────────────────────────────────
 ClassificationResult FusionClassifier::classify(
         pid_t pid,
@@ -261,6 +277,15 @@ ClassificationResult FusionClassifier::classify(
 {
     // Signal 1
     ClassificationResult r = from_children(pid, graph);
+
+    // HC-05/06: check if the root PID itself is a browser process
+    // If so, mark it as browser_root and latency_sensitive (video/WebRTC calls)
+    std::string root_cmd = read_cmdline(pid);
+    std::unordered_set<std::string> br_set(cfg_.browser_roots.begin(), cfg_.browser_roots.end());
+    if (br_set.count(root_cmd)) {
+        r.is_browser_root    = true;
+        r.latency_sensitive  = true; // browser may have active WebRTC call
+    }
 
     // TC-1.1: seed unified vote from full S1 score_map
     std::unordered_map<int, float> vote;

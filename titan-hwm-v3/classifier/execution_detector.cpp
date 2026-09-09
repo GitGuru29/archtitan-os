@@ -92,7 +92,12 @@ void ExecutionDetector::detect(ProcessNode& node,
     // ── Signal 4: Known build command ─────────────────────────────────────
     bool known_build = is_known_build_command(node.cmdline);
 
-    // ── Signal 5: Zombie = completed ──────────────────────────────────────
+    // ── Signal 5 (HC-01/07/08): Persistent service — never idle ───────────
+    // DB servers, container runtimes, emulators, VMs sleep between requests
+    // but must never be frozen or reclaimed by THM.
+    bool persistent = is_persistent_service(node.cmdline);
+
+    // ── Signal 6: Zombie = completed ──────────────────────────────────────
     if (node.proc_state == 'Z') {
         node.activity   = ActivityState::COMPLETED;
         node.idle_count = 0;
@@ -100,7 +105,7 @@ void ExecutionDetector::detect(ProcessNode& node,
     }
 
     // ── Aggregate ─────────────────────────────────────────────────────────
-    bool is_active = cpu_active || children_changed || state_active || known_build;
+    bool is_active = cpu_active || children_changed || state_active || known_build || persistent;
 
     if (is_active) {
         node.activity   = ActivityState::EXECUTING;

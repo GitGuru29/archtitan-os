@@ -98,13 +98,26 @@ bool EnforcementPlane::apply(const Workload& wl, PolicyDecision decision) {
         break;
 
     case PolicyDecision::FREEZE:
-        // SIGSTOP first — cgroup freeze alone doesn't stop kernel threads
-        signal_tree(wl.pids, SIGSTOP);
-        cgroup_.move_to_slice(wl.pids, SLICE_FROZEN);
-        cgroup_.set_freeze(SLICE_FROZEN, true);
-        cgroup_.set_oom_score(wl.pids, OOM_EXPOSE);
-        std::cout << "[Enforce] Froze workload " << wl.id
-                  << " (" << wl.pids.size() << " PIDs)\n";
+        // HC-05: Browser roots must NOT receive SIGSTOP — their network utility
+        // processes (TCP keepalive, WebSocket, WebRTC DTLS) run in child threads
+        // that share the parent's file descriptors and will lose their connections.
+        // For browsers: use cgroup CPU throttle + freeze slice only (no signal).
+        if (wl.is_browser_root) {
+            cgroup_.move_to_slice(wl.pids, SLICE_FROZEN);
+            cgroup_.set_freeze(SLICE_FROZEN, true);
+            cgroup_.set_cpu_weight(SLICE_BACKGROUND, CPU_WEIGHT_THROTTLE);
+            cgroup_.set_oom_score(wl.pids, OOM_EXPOSE);
+            std::cout << "[Enforce] Cgroup-froze browser workload " << wl.id
+                      << " (SIGSTOP skipped — keeping network alive)\n";
+        } else {
+            // Normal FREEZE: SIGSTOP first — cgroup freeze alone doesn't stop kernel threads
+            signal_tree(wl.pids, SIGSTOP);
+            cgroup_.move_to_slice(wl.pids, SLICE_FROZEN);
+            cgroup_.set_freeze(SLICE_FROZEN, true);
+            cgroup_.set_oom_score(wl.pids, OOM_EXPOSE);
+            std::cout << "[Enforce] Froze workload " << wl.id
+                      << " (" << wl.pids.size() << " PIDs)\n";
+        }
         break;
 
     case PolicyDecision::RECLAIM:

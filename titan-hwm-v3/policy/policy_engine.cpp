@@ -19,6 +19,28 @@ PolicyDecision PolicyEngine::evaluate(
     if (wl.is_protected) return PolicyDecision::KEEP_FULL;
     if (registry.is_protected_any(wl.pids)) return PolicyDecision::KEEP_FULL;
 
+    // ── Step 1b (HC-07): SERVICE workloads — DB servers, containers ──────────
+    // These headless services have no window and low CPU but must stay alive.
+    // Minimum decision: KEEP_BACKGROUND. Never FREEZE or RECLAIM.
+    if (wl.type == WorkloadType::SERVICE) {
+        if (ws.is_focused || ws.is_visible || activity == ActivityState::EXECUTING)
+            return PolicyDecision::KEEP_BACKGROUND;
+        // Under CRITICAL pressure: throttle but never freeze or reclaim
+        if (pressure >= PressureLevel::CRITICAL) return PolicyDecision::THROTTLE;
+        return PolicyDecision::KEEP_BACKGROUND;
+    }
+
+    // ── Step 1c (HC-08): VM workloads — QEMU/KVM virtual machines ────────────
+    // Guest kernel has its own timer wheel. Host SIGSTOP stalls the guest hard.
+    // Minimum decision: KEEP_BACKGROUND. Never FREEZE.
+    if (wl.type == WorkloadType::VM) {
+        if (activity == ActivityState::EXECUTING || ws.is_focused || ws.is_visible)
+            return PolicyDecision::KEEP_BACKGROUND;
+        // Allow throttle under extreme pressure, but never freeze
+        if (pressure >= PressureLevel::CRITICAL) return PolicyDecision::THROTTLE;
+        return PolicyDecision::KEEP_BACKGROUND;
+    }
+
     // ── Step 2: Execution is the primary authority ────────────────────────────
     // A workload doing real work gets resources, regardless of which workspace
     // is focused. Workspace visibility only determines the priority tier.
@@ -34,6 +56,28 @@ PolicyDecision PolicyEngine::evaluate(
     if ((ws.is_focused || ws.is_visible) &&
          wl.state == WorkloadState::ACTIVE)
         return PolicyDecision::KEEP_FULL;
+
+    // ── Step 3b (HC-09): Workspace hysteresis — protect recently-left workloads
+    // If the workspace was left within the hysteresis window, do not downgrade
+    // below KEEP_BACKGROUND. Prevents signal churn on rapid WS oscillation.
+    if (wl.ws_hysteresis_ticks > 0)
+        return PolicyDecision::KEEP_BACKGROUND;
+
+    // ── Step 3c (HC-05/06): Browser with latency_sensitive — keep network alive
+    // Browsers with active WebRTC/WebSocket sessions must not receive SIGSTOP.
+    // Policy returns max THROTTLE; enforcement will skip SIGSTOP for browser roots.
+    if (wl.is_browser_root && wl.latency_sensitive) {
+        switch (pressure) {
+        case PressureLevel::NORMAL:
+        case PressureLevel::MODERATE:
+            return PolicyDecision::KEEP_BACKGROUND;
+        case PressureLevel::HIGH:
+        case PressureLevel::CRITICAL:
+            // Return FREEZE so cgroup throttle fires, but enforcement_plane
+            // will skip SIGSTOP for is_browser_root workloads (HC-05 fix).
+            return PolicyDecision::FREEZE;
+        }
+    }
 
     // ── Step 4: Idle workload — pressure determines the severity ─────────────
     // ai_owned raises the minimum action from RECLAIM to FREEZE for IDLE, but
@@ -74,3 +118,4 @@ PolicyDecision PolicyEngine::evaluate(
 }
 
 } // namespace thm
+

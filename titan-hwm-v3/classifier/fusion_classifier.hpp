@@ -52,6 +52,27 @@ struct ClassifierConfig {
         "obs", "obs-studio",
         "ffmpeg", "gst-launch-1.0"
     };
+    // ── v3.1 additions ────────────────────────────────────────────────────
+    // HC-05/06: Browser root process names. These get is_browser_root=true and
+    // latency_sensitive=true (video calls). SIGSTOP is skipped for FREEZE.
+    std::vector<std::string> browser_roots = {
+        "chrome", "chromium", "google-chrome", "google-chrome-stable",
+        "firefox", "firefox-bin", "gecko-main",
+        "brave", "brave-browser",
+        "titan-browser",   // ArchTitan native browser
+        "microsoft-edge", "msedge",
+        "opera",
+        "vivaldi-bin", "vivaldi"
+    };
+    // HC-07: Container runtime root processes — WorkloadType::SERVICE
+    std::vector<std::string> container_runtimes = {
+        "dockerd", "docker", "containerd", "crun", "runc", "podman"
+    };
+    // HC-08: VM host process names — WorkloadType::VM
+    std::vector<std::string> vm_processes = {
+        "qemu-system-x86_64", "qemu-system-aarch64", "qemu-system-arm",
+        "qemu-kvm", "kvm"
+    };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

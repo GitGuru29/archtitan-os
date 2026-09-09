@@ -24,6 +24,9 @@ enum class WorkloadType {
     SYSTEM_DEV,
     CASUAL,
     AI_TASK,
+    // ── v3.1 additions ────────────────────────────────────────────────────
+    SERVICE,    // HC-07: headless Docker/Podman containers, DBs, daemons
+    VM,         // HC-08: QEMU/KVM virtual machines (host process)
     NEUTRAL     // unclassified / unknown
 };
 
@@ -127,6 +130,11 @@ struct Workload {
     bool          is_protected       = false; // hard block — never touch
     bool          ai_owned           = false; // AI agent owns this workload
     bool          latency_sensitive  = false; // TitanMirror, audio, real-time
+    // ── v3.1 additions ────────────────────────────────────────────────────
+    bool          is_browser_root    = false; // HC-05/06: browser root — skip SIGSTOP on FREEZE
+    bool          is_reclassifiable  = false; // HC-10: allow WorkloadType re-evaluation
+    int           ws_hysteresis_ticks = 0;   // HC-09: countdown ticks before downgrade on WS leave
+    std::string   root_cmdline;              // HC-10: snapshot of root PID cmdline for drift detection
 
     // Lifecycle timestamps
     time_point    created_at;
@@ -171,6 +179,7 @@ struct ClassificationResult {
     bool         has_lsp     = false;  // LSP server child detected
     bool         ai_modifier = false;  // AI agent child detected
     bool         latency_sensitive = false; // streaming / media detected
+    bool         is_browser_root   = false; // HC-05/06: root is a browser process
     // Full per-type score map for polyglot / multi-context detection
     std::unordered_map<int, float> score_map;
 };
@@ -185,6 +194,8 @@ inline const char* to_string(WorkloadType t) {
         case WorkloadType::SYSTEM_DEV:  return "SYSTEM_DEV";
         case WorkloadType::CASUAL:      return "CASUAL";
         case WorkloadType::AI_TASK:     return "AI_TASK";
+        case WorkloadType::SERVICE:     return "SERVICE";    // v3.1
+        case WorkloadType::VM:          return "VM";         // v3.1
         default:                        return "NEUTRAL";
     }
 }
