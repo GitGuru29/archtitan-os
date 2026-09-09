@@ -3,6 +3,10 @@ archtitan-settings/build/
 archtitan-settings/archtitan-settings
 archtitan-settings/.cache/
 
+# Local/standalone projects & editor config
+titan-hardware-manager-test-system/
+.vscode/
+
 # Archiso build artifacts
 out/
 tmp-work/
@@ -59,6 +63,7 @@ sandbox/tests/
 # Catch-all safety net — anything else added under sandbox/
 sandbox/
 airootfs/var/
+!airootfs/var/**/.gitkeep
 
 # ─── Titan Hardware Manager (THM) compiled binaries ────────────────────────
 titan-hwm-source/titan_hw_manager
