@@ -69,6 +69,14 @@ void ExecutionDetector::detect(ProcessNode& node,
     long t0 = prev_ticks_.count(pid) ? prev_ticks_[pid] : -1;
     long t1 = read_cpu_ticks(pid);
 
+    if (t1 < 0) {
+        // Process is gone (or /proc unreadable) — drop its baseline so
+        // prev_ticks_ stays bounded to live processes. Without this, every
+        // PID ever observed (including short-lived and reclaimed workloads)
+        // is retained for the lifetime of the daemon.
+        prev_ticks_.erase(pid);
+    }
+
     bool cpu_active = false;
     if (t0 >= 0 && t1 >= 0) {
         cpu_active = cpu_pct(t0, t1, cfg_.sample_ms) >= cfg_.idle_cpu_pct;

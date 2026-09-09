@@ -35,6 +35,22 @@ const std::vector<uint32_t>& WorkloadManager::all_ids() const {
     return id_list_;
 }
 
+void WorkloadManager::prune_dead() {
+    std::lock_guard<std::mutex> lk(mtx_);
+    std::vector<uint32_t> dead;
+    for (uint32_t id : id_list_) {
+        auto it = registry_.find(id);
+        if (it == registry_.end()) continue;
+        if (it->second.state == WorkloadState::TERMINATED)
+            dead.push_back(id);
+    }
+    for (uint32_t id : dead) {
+        registry_.erase(id);
+        id_list_.erase(std::remove(id_list_.begin(), id_list_.end(), id),
+                       id_list_.end());
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // State machine tick
 //
