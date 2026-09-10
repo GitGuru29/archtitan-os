@@ -81,9 +81,10 @@ graph TD
 ArchTitan provides a suite of native C++ and Qt6 applications built specifically for the OS:
 
 ### 1. ⚙️ Titan Hardware Manager (`titan-hwm`)
-* **Lead:** `@GitGuru29` | **Location:** `titan-hwm-source/` & `subsystems/titan-hwm/`
-* Privileged systemd daemon orchestrating CPU, RAM, and background workloads using `cgroups v2`.
-* Real-time thermal and power-state throttling with Wayland session awareness to guarantee frame rates for active desktop workflows.
+* **Lead:** `@GitGuru29` | **Location:** `titan-hwm-v3/` & `subsystems/titan-hwm/`
+* High-performance C++20 autonomous resource orchestrator running as `titan-hwm.service` with `archtitan.slice` cgroup v2 delegation (`OOMScoreAdjust=-1000`).
+* Dynamically routes workloads across `archtitan-active.slice`, `archtitan-background.slice`, `archtitan-idle.slice`, and `archtitan-reclaimable.slice` based on multi-signal fusion classification (process trees, Hyprland window/workspace focus, CWD project signatures, and cmdline drift).
+* Features 2-second workspace leave hysteresis, browser-safe cgroup freezing, first-class VM & database service immunity, and automated orphan thaw sweep on startup.
 
 ### 2. 🎛️ ArchTitan Settings (`archtitan-settings`)
 * **Lead:** `@GitGuru29` | **Location:** `archtitan-settings/`
@@ -266,7 +267,7 @@ ArchTitan is developed as a modular group project with 4 members. The repository
 
 | Component | Category | Owner | Status | Directory |
 | :--- | :--- | :--- | :--- | :--- |
-| **Titan Hardware Manager** | Core Daemon | @GitGuru29 (Lead) | 🟢 Shipped | `titan-hwm-source/` & `subsystems/titan-hwm/` |
+| **Titan Hardware Manager** | Core Daemon | @GitGuru29 (Lead) | 🟢 Shipped (v3.1) | `titan-hwm-v3/` & `subsystems/titan-hwm/` |
 | **ArchTitan Settings** | Core App | @GitGuru29 (Lead) | 🟢 Shipped | `archtitan-settings/` |
 | **Titan Browser** | Core App | @GitGuru29 (Lead) | 🟢 Shipped | `titan-browser-source/` |
 | **Titan Sandbox** | Core Subsystem | @GitGuru29 (Lead) | 🟢 Shipped | `sandbox/` & `subsystems/titan-sandbox/` |
@@ -301,7 +302,7 @@ Changes affecting base OS configurations and core tooling require explicit revie
 | `airootfs/` | Rootfs overlay (systemd units, dotfiles, desktop configs, binary overlays) |
 | `archtitan-settings/` | ArchTitan Settings application source |
 | `titan-browser-source/` | Titan Browser source and resources |
-| `titan-hwm-source/` | Titan Hardware Manager daemon source |
+| `titan-hwm-v3/` | Titan Hardware Manager v3 C++20 daemon source |
 | `titanfetch-src/` | TitanFetch utility source |
 | `sandbox/` | Titan Sandbox daemon & policy parser source |
 | `efiboot/` & `grub/` | EFI & GRUB bootloader configurations |
