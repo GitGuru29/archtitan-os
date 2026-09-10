@@ -74,7 +74,7 @@ The date comes from `profiledef.sh` → `iso_version`.
 flowchart TD
     A[mkarchiso starts] --> B[pacstrap packages.x86_64]
     B --> C[Copy airootfs overlay]
-    C --> D[Compile titan_hw_manager + titan-hwm]
+    C --> D[Compile titan-hwm-daemon (THM v3) + titan-hwm]
     C --> E[Compile titanfetch via CMake/Qt6]
     C --> F[Compile titanbrowser & archtitan-settings]
     C --> G[Compile titan-media-hud overlay]
@@ -95,7 +95,7 @@ flowchart TD
 - **ISO identity** — name, label, publisher, version string
 - **Boot mode** — UEFI via GRUB (`bootmodes=('uefi.grub')`)
 - **Compression** — SquashFS with zstd, limited CPU thread budget to prevent build OOM
-- **File permissions** — shadow files, sandbox log dirs, executable permissions for binaries and HUD scripts
+- **File permissions** — shadow files, sandbox log dirs, executable permissions for binaries (`titan-hwm-daemon`, `titan-media-hud`, etc.) and systemd units
 
 ---
 
@@ -105,7 +105,14 @@ During development you can rebuild individual applications and services without 
 
 ### Titan Hardware Manager (`titan-hwm`)
 ```bash
+# Option A: Build and install via root script
 ./install.sh
+
+# Option B: Manual CMake build
+cd titan-hwm-v3
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+sudo cp build/titan-hwm-daemon /usr/local/bin/titan-hwm-daemon
 ```
 
 ### TitanFetch (`titanfetch`)

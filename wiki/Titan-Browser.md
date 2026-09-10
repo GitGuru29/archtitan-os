@@ -35,7 +35,7 @@ flowchart TD
     end
 
     subgraph THM["Resource Management"]
-        TS --> THM_SLICE["titan-active.slice / titan-background.slice"]
+        TS --> THM_SLICE["archtitan-active.slice / archtitan-background.slice"]
     end
 ```
 

@@ -237,6 +237,78 @@ titan-hwm thaw
 
 ---
 
+## System Integration & Configuration
+
+### File Locations
+
+| Path | Purpose |
+| :--- | :--- |
+| `/usr/local/bin/titan-hwm-daemon` | C++20 autonomous resource orchestrator daemon executable |
+| `/usr/local/bin/titan-hwm` | Native CLI interface for control and telemetry queries |
+| `/usr/local/bin/titan-hwm-waybar` | Status pill helper script for Waybar UI integration |
+| `/etc/titan-hwm/config` | Daemon configuration file (thresholds, tool whitelists, tier weights) |
+| `/etc/systemd/system/archtitan.slice` | Systemd cgroup delegation slice (`Delegate=yes`) |
+| `/etc/systemd/system/titan-hwm.service` | Hardened systemd unit with OOMScoreAdjust=-1000 and anti-tamper restart |
+| `/tmp/titan_hwm.sock` | UNIX domain IPC socket |
+| `/tmp/titan_hwm_state` | Telemetry state JSON file |
+
+### Configuration File (`/etc/titan-hwm/config`)
+
+```toml
+# Titan Hardware Manager Config v3 (System Root-Owned)
+debounce_ms = 800
+ram_freeze_pct = 50
+ram_kill_pct = 25
+thermal_hot_temp = 80
+oom_protect_score = -200
+oom_expose_score = 300
+sigterm_grace_ms = 500
+casual_workspaces = [1]
+web_workspaces = [2]
+android_workspaces = [3]
+system_workspaces = [4, 5]
+
+[classifier]
+lsp_binaries = ["clangd","ccls","rust-analyzer","tsserver","eslint_d"]
+build_daemons = ["gradle","cargo","webpack","vite","java","cmake"]
+ai_inference = ["ollama","llama-server","python3"]
+known_ides = ["code","cursor","zed","windsurf","antigravity","fleet","idea","android-studio"]
+
+[workspace_tiers]
+active_ceiling = 0.70
+active_reserve = 0.40
+protected_reserve = 0.20
+age_soft_decay_min = 5
+age_hard_decay_min = 15
+
+[multi_context]
+lsp_protection = true
+aggressive_swap = false
+daemon_idle_cpu_pct = 0.5
+daemon_idle_sample_ms = 30
+```
+
+### Build and Deployment
+
+```bash
+# Build daemon and test suite from source
+cd titan-hwm-v3
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+
+# Run test suite
+ctest --test-dir build --output-on-failure
+
+# Install binaries and systemd units (or run ./install.sh from repo root)
+sudo cp build/titan-hwm-daemon /usr/local/bin/titan-hwm-daemon
+sudo cp archtitan.slice /etc/systemd/system/archtitan.slice
+sudo cp titan-hwm.service /etc/systemd/system/titan-hwm.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now titan-hwm.service
+```
+
+---
+
 ## Standalone Test Suite & Source Verification
 
 THM v3.1 is verified using an independent, auditable test harness:
@@ -245,3 +317,4 @@ THM v3.1 is verified using an independent, auditable test harness:
 - **Source Code in OS Repo**: `titan-hwm-v3/` (subsystem in `archtitan-os`)
 - **Systemd Service**: `titan-hwm.service` (`/etc/systemd/system/titan-hwm.service`)
 - **Binary Target**: `/usr/local/bin/titan-hwm-daemon` and `/usr/local/bin/titan-hwm`
+
