@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# titan-wallpaper-picker — ArchTitan wallpaper selector (Super+\ / Super+|)
+#
+# Scans /usr/share/backgrounds/archtitan/ and ~/.local/share/backgrounds/ for
+# image files, presents them in Rofi with thumbnail icons, then calls
+# titan-set-wallpaper to apply and persist the selection.
+#
+# Dependencies: rofi, titan-set-wallpaper, notify-send (optional)
+
+set -euo pipefail
+
+# ── Wallpaper search paths ──────────────────────────────────────────────────
+SYSTEM_DIR="/usr/share/backgrounds/archtitan"
+USER_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/backgrounds"
+
+# ── Build candidate list ────────────────────────────────────────────────────
+mapfile -t CANDIDATES < <(
+    find "$SYSTEM_DIR" "${USER_DIR}" -maxdepth 2 \
+        \( -iname "*.png" -o -iname "*.jpg" -o -iname "*.jpeg" \
+           -o -iname "*.webp" -o -iname "*.gif" \) \
+        -type f 2>/dev/null | sort -u
+)
+
+if [[ ${#CANDIDATES[@]} -eq 0 ]]; then
+    notify-send -u normal -i dialog-warning \
+        "Wallpaper Picker" "No wallpapers found in:\n${SYSTEM_DIR}\n${USER_DIR}" 2>/dev/null || true
+    exit 0
+fi
+
+# ── Build Rofi display list (icon|label) ────────────────────────────────────
+# Rofi icon mode: each entry is  "Display Name\0icon\x1f/path/to/icon"
+# We use the image itself as its own thumbnail (Rofi scales it automatically).
+ROFI_ENTRIES=()
+declare -A PATH_MAP   # label → full path
+
+for path in "${CANDIDATES[@]}"; do
+    label="$(basename "${path%.*}")"        # filename without extension
+    # Rofi icon markup — full path used as icon (rofi loads it as pixbuf)
+    ROFI_ENTRIES+=("${label}\0icon\x1f${path}")
+    PATH_MAP["$label"]="$path"
+done
+
+# ── Launch Rofi ─────────────────────────────────────────────────────────────
+CHOSEN=$(
+    printf '%b\n' "${ROFI_ENTRIES[@]}" | \
+    rofi -dmenu \
+        -i \
+        -p "󰸉  Wallpaper" \
+        -mesg "󰆟 Super+\\ to open · Enter to apply · Esc to cancel" \
+        -theme /usr/share/rofi/themes/archtitan-wallpaper.rasi \
+        -show-icons \
+        -icon-theme Papirus-Dark \
+        -display-column-separator " " \
+        -no-custom \
+        2>/dev/null
+) || true
+
+[[ -z "$CHOSEN" ]] && exit 0   # user cancelled
+
+# Strip Rofi icon metadata — keep only the label
+LABEL="${CHOSEN%%$'\0'*}"
+LABEL="${LABEL%% *}"            # trim trailing spaces
+
+WALLPAPER_PATH="${PATH_MAP[$LABEL]:-}"
+
+# Fallback: if label map lookup failed, try a direct path match
+if [[ -z "$WALLPAPER_PATH" ]]; then
+    for path in "${CANDIDATES[@]}"; do
+        if [[ "$(basename "${path%.*}")" == "$LABEL" ]]; then
+            WALLPAPER_PATH="$path"
+            break
+        fi
+    done
+fi
+
+if [[ -z "$WALLPAPER_PATH" || ! -f "$WALLPAPER_PATH" ]]; then
+    notify-send -u normal -i dialog-error \
+        "Wallpaper Picker" "Could not resolve wallpaper path for: $LABEL" 2>/dev/null || true
+    exit 1
+fi
+
+# ── Apply the wallpaper ─────────────────────────────────────────────────────
+exec titan-set-wallpaper "$WALLPAPER_PATH"
