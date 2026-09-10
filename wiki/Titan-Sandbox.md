@@ -74,7 +74,7 @@ Policies are authored in clean TOML format and installed into `/etc/titan-sandbo
 Titan Sandbox collaborates directly with the **Titan Hardware Manager (`titan-hwm`)** via `sandbox/thm_sandbox_integration.h`:
 
 - When `titan-exec-hook` spawns a sandboxed process, `titan-sandboxd` emits `SANDBOX_PID=<pid>`.
-- THM intercepts this PID to place the sandboxed application inside `titan-active.slice` or `titan-background.slice` without losing track of child processes across namespace boundaries.
+- THM intercepts this PID to place the sandboxed application inside `archtitan-active.slice` or `archtitan-background.slice` without losing track of child processes across namespace boundaries.
 
 ---
 

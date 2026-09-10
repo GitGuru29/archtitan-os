@@ -58,7 +58,7 @@ timeline
 ### Milestone 1.0 — Core Foundation (Shipped)
 - **Goal**: Deliver a stable, bootable developer-focused Arch distribution with first-party cgroup resource management and custom Qt6 desktop applications.
 - **Key Deliverables**:
-  - `titan_hw_manager` C++ privilege daemon running as systemd service.
+  - `titan-hwm-daemon` (THM v3.1) C++20 autonomous resource daemon running as `titan-hwm.service` with `archtitan.slice` cgroup delegation.
   - Hyprland Wayland environment preconfigured with Catppuccin Mocha styling, updated v0.53+/v0.56+ window rules, and VM GPU rendering support (`AQ_NO_MODIFIERS=1`).
   - Compiled C++/Qt6 `titanfetch` system information tool.
   - Native `titanbrowser` Qt6 WebEngine browser with low-memory tuning as default browser (`Super + W`).

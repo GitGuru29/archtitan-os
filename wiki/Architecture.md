@@ -20,7 +20,7 @@ graph TD
         THM[Titan Hardware Manager]
         TS[Titan Sandbox]
         HUD[Titan Media HUD Dynamic Island]
-        Slices[titan-*.slice cgroups]
+        Slices[archtitan.slice cgroups]
     end
 
     subgraph L2["Desktop Environment Layer"]
@@ -184,7 +184,7 @@ Policies define filesystem allowlists, network access, device nodes, and syscall
 
 ## Security Model
 
-- **THM runs as root** — required for cgroup management, cross-user signals, and governor writes. It is scoped to graphical-session lifecycle via systemd.
+- **THM runs as root** — required for cgroup management, cross-user signals, and governor writes. It is managed via `titan-hwm.service` and scoped to `graphical-session.target` lifecycle with OOMScoreAdjust=-1000 immunity.
 - **Sandbox runs per-app** — reduces blast radius of compromised GUI apps; not a replacement for firejail/bubblewrap for untrusted code review.
 - **Live ISO Immutability Guard** — `archtitan-immutable-guard.service` handles squashfs/overlayfs immutability with non-blocking error flags (`ExecStart=-`, `SuccessExitStatus=0 1 2 255`) ensuring live booting never hangs.
 - **Live ISO** — screen lock is disabled (`Super+L` noop) to prevent lockout; Calamares runs via `launch-installer` handling Wayland/XWayland root socket permissions.

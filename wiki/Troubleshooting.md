@@ -165,23 +165,45 @@ cursor {
 **Symptom**: Running `titan-hwm status` displays:
 ```
 titan-hwm: daemon socket not found at /tmp/titan_hwm.sock
-           Is titan_hw_manager running?
+           Is titan-hwm daemon running?
 ```
 
-**Cause**: The `titan_hw_manager.service` is stopped or failed to start.
+**Cause**: The `titan-hwm.service` is stopped or failed to start.
 
 **Solution**:
 1. Check the systemd service status:
    ```bash
-   systemctl status titan_hw_manager
+   systemctl status titan-hwm
    ```
 2. View detailed journal logs:
    ```bash
-   journalctl -u titan_hw_manager -b --no-pager -n 50
+   journalctl -u titan-hwm -b --no-pager -n 50
    ```
 3. Restart the service:
    ```bash
-   sudo systemctl restart titan_hw_manager
+   sudo systemctl restart titan-hwm
+   ```
+
+### 2. cgroup Sub-Slice Delegation Failure (`EACCES` on cgroup.procs)
+
+**Symptom**: Journal logs show `failed to write pid to /sys/fs/cgroup/archtitan.slice/...: Permission denied`.
+
+**Cause**: `archtitan.slice` is missing `Delegate=yes` or is not loaded.
+
+**Solution**:
+1. Verify `archtitan.slice` unit exists:
+   ```bash
+   systemctl status archtitan.slice
+   ```
+2. Verify delegation is active:
+   ```bash
+   systemctl show -p Delegate archtitan.slice
+   # Should output: Delegate=yes
+   ```
+3. Reload systemd and restart THM:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl restart titan-hwm
    ```
 
 ---

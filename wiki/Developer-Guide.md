@@ -15,7 +15,8 @@ custom-os-build/
 ├── airootfs/                # Rootfs overlay copied into the ISO image
 │   ├── etc/
 │   │   ├── skel/.config/    # Default user dotfiles (Hyprland, Waybar, Kitty, Fish, etc.)
-│   │   ├── systemd/system/  # Custom systemd units (titan_hw_manager.service)
+│   │   ├── systemd/system/  # Custom systemd units (titan-hwm.service, archtitan.slice)
+│   │   ├── titan-hwm/       # THM v3 configuration (config)
 │   │   └── titan-sandbox/   # Sandbox security policies
 │   └── usr/
 │       └── local/bin/       # Pre-installed helper scripts and binaries
@@ -37,7 +38,8 @@ custom-os-build/
 │   ├── titan-share/         # TITAN Share (Team Subsystem)
 │   └── titan-task-manager/  # TITAN Task Manager (Team Subsystem)
 ├── titan-browser-source/    # First-party TitanBrowser Qt6 WebEngine source
-├── titan-hwm-source/        # Titan Hardware Manager source staging
+├── titan-hwm-v3/            # Titan Hardware Manager v3 source tree (C++20)
+├── titan-hwm-source/        # Titan Hardware Manager legacy v2 source archive
 ├── titanfetch-src/          # TitanFetch C++/Qt6 source code
 ├── wiki/                    # Project Wiki documentation (Markdown)
 ├── install.sh               # Local host installation script for THM daemon
@@ -66,7 +68,7 @@ subsystems/<subsystem-name>/
 
 | Subsystem / Application | Assigned Owner | Role | Location |
 | :--- | :--- | :--- | :--- |
-| **Titan Hardware Manager** | @GitGuru29 (Lead) | Lead Subsystem | `subsystems/titan-hwm/` & `titan-hwm-source/` |
+| **Titan Hardware Manager** | @GitGuru29 (Lead) | Lead Subsystem | `titan-hwm-v3/` & `subsystems/titan-hwm/` |
 | **TitanFetch** | @GitGuru29 (Lead) | Lead Subsystem | `subsystems/titan-fetch/` & `titanfetch-src/` |
 | **Titan Sandbox** | @GitGuru29 (Lead) | Lead Subsystem | `subsystems/titan-sandbox/` & `sandbox/` |
 | **Titan Media HUD** | @GitGuru29 (Lead) | Lead Subsystem | `subsystems/titan-media-hud/` |
@@ -101,14 +103,25 @@ Building a full ISO image with `mkarchiso` takes several minutes. To test and it
 To compile and install `titan-hwm` onto your current host machine:
 
 ```bash
-# From repository root
+# Option A: Build and install via root script
 ./install.sh
+
+# Option B: Manual CMake build
+cd titan-hwm-v3
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+sudo cp build/titan-hwm-daemon /usr/local/bin/titan-hwm-daemon
+sudo cp titan-hwm.service /etc/systemd/system/titan-hwm.service
+sudo cp archtitan.slice /etc/systemd/system/archtitan.slice
+sudo systemctl daemon-reload
+sudo systemctl enable --now titan-hwm.service
 ```
 
 To test manually:
 
 ```bash
-systemctl status titan_hw_manager
+systemctl status titan-hwm
+titan-hwm status
 titan-hwm switch system
 titan-hwm metrics
 ```
