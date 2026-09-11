@@ -10,7 +10,7 @@ ArchTitan is a custom, high-performance Linux distribution built on top of Arch 
 
 ---
 
-## 🎯 Core Philosophy
+##  Core Philosophy
 
 ArchTitan embraces the Unix philosophy while providing a cohesive, pre-configured premium experience out of the box.
 
@@ -23,7 +23,7 @@ ArchTitan embraces the Unix philosophy while providing a cohesive, pre-configure
 
 ---
 
-## 🏗️ System Architecture
+##  System Architecture
 
 ArchTitan bridges the gap between the modern Wayland compositor, custom middleware, and low-level Linux kernel subsystems:
 
@@ -74,9 +74,6 @@ graph TD
     BTRFS -.->|Creates Snapshots| CG
 ```
 
----
-
-## 🧩 Core Components & Ecosystem
 
 ArchTitan provides a suite of native C++ and Qt6 applications built specifically for the OS:
 
