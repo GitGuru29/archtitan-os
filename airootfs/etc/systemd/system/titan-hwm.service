@@ -1,0 +1,52 @@
+[Unit]
+Description=Titan Hardware Manager v3 (ArchTitan Workload Daemon)
+Documentation=https://github.com/GitGuru29/archtitan-os/wiki/Titan-Hardware-Manager
+After=graphical-session.target archtitan-immutable-guard.service
+Wants=archtitan-immutable-guard.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+# Run the daemon inside the slice it manages so cgroup delegation (Delegate=yes)
+# applies — without it, writes to archtitan.slice child cgroups can fail (EACCES).
+Slice=archtitan.slice
+ExecStart=/usr/local/bin/titan-hwm-daemon --dry-run
+
+# ---------------------------------------------------------------
+# ANTI-TAMPER: Restart immediately if killed. StartLimitInterval=0
+# disables the systemd rate limiter — THM will restart FOREVER,
+# no matter how many times it is stopped.
+# ---------------------------------------------------------------
+Restart=always
+RestartSec=500ms
+StartLimitInterval=0
+
+# Re-lock own binary each start in case chattr was cleared on disk
+# (e.g. root mounted overlay). Safe no-op if already locked or unsupported.
+ExecStartPre=-/usr/bin/chattr +i /usr/local/bin/titan-hwm-daemon
+
+# Needs root to read /proc system-wide, write /sys governors,
+# and send signals to processes owned by other users.
+User=root
+Group=root
+
+# ISSUE-08 FIX: Grant OOM immunity at the systemd level.
+# THM sets oom_score_adj=-200 on protected daemons and +300 on background apps.
+# Without this, the kernel OOM killer would score THM at 0 (default) and kill
+# it before touching -200 protected processes during a memory crisis — exactly
+# when THM is needed most. -1000 is the kernel hard-minimum: OOM unkillable.
+OOMScoreAdjust=-1000
+
+# Prevent the service from loading kernel modules. ProtectKernelTunables is left
+# OFF: THM writes /sys/fs/cgroup (slice setup, cpu.weight, memory.high,
+# cgroup.freeze) which ProtectKernelTunables=true would mount read-only.
+ProtectKernelTunables=false
+ProtectKernelModules=true
+ProtectControlGroups=false
+
+# Redirect logs to the systemd journal for crash-recovery auditability.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=graphical-session.target

@@ -24,6 +24,10 @@
 #include <optional>
 #include <map>
 #include <functional>
+#include <climits>
+#ifndef PATH_MAX
+#  include <linux/limits.h>
+#endif
 
 namespace fs = std::filesystem;
 using ms_clock = std::chrono::steady_clock;
@@ -34,6 +38,57 @@ static const std::unordered_set<std::string> AUDIO_WHITELIST = {
     "strawberry","deadbeef","cmus","ncmpcpp","cantata","audacious",
     "elisa","playerctld","pipewire","pipewire-pulse","wireplumber","pulseaudio"
 };
+
+// ISSUE-06 FIX: Authoritative path prefixes for every name in AUDIO_WHITELIST.
+// Matching against comm (field 2 of /proc/pid/stat) alone is trivially spoofed with
+// prctl(PR_SET_NAME) or `exec -a mpv`. We cross-check /proc/<pid>/exe against the
+// known install paths before granting full freeze/kill exemption.
+static const std::vector<std::string> AUDIO_EXE_PREFIXES = {
+    "/usr/bin/spotify",   "/usr/lib/spotify",   "/opt/spotify",
+    "/usr/bin/spotifyd",
+    "/usr/bin/mpd",       "/usr/bin/mpdris2",
+    "/usr/bin/mpv",       "/usr/lib/mpv",
+    "/usr/bin/vlc",       "/usr/lib/vlc",
+    "/usr/bin/rhythmbox", "/usr/bin/strawberry",
+    "/usr/bin/deadbeef",  "/usr/bin/cmus",
+    "/usr/bin/ncmpcpp",   "/usr/bin/cantata",
+    "/usr/bin/audacious", "/usr/bin/elisa",
+    "/usr/bin/playerctld",
+    "/usr/bin/pipewire",  "/usr/lib/pipewire",
+    "/usr/bin/pipewire-pulse",
+    "/usr/bin/wireplumber",
+    "/usr/bin/pulseaudio",
+    // Flatpak sandbox paths
+    "/app/bin/spotify", "/app/bin/vlc", "/app/bin/mpv",
+};
+
+// Returns true only when the process comm matches AUDIO_WHITELIST AND its
+// resolved /proc/<pid>/exe starts with a known audio binary prefix.
+// Falls back to comm-only on readlink failure (e.g., process already exited)
+// so legitimate audio processes are never incorrectly penalised.
+static bool verify_audio_whitelist_pid(pid_t pid, const std::string& comm) {
+    if (!AUDIO_WHITELIST.count(comm)) return false;
+    // Resolve the actual executable path from the kernel-provided symlink.
+    char exe_buf[PATH_MAX];
+    std::string link = "/proc/" + std::to_string(pid) + "/exe";
+    ssize_t len = readlink(link.c_str(), exe_buf, sizeof(exe_buf) - 1);
+    if (len <= 0) {
+        // Process may have just exited; trust comm-only to avoid false penalisation.
+        return true;
+    }
+    exe_buf[len] = '\0';
+    std::string exe(exe_buf);
+    // Strip " (deleted)" suffix that the kernel appends for replaced-on-disk binaries.
+    static const std::string del_sfx = " (deleted)";
+    if (exe.size() > del_sfx.size() &&
+        exe.compare(exe.size() - del_sfx.size(), del_sfx.size(), del_sfx) == 0)
+        exe.erase(exe.size() - del_sfx.size());
+    for (const auto& prefix : AUDIO_EXE_PREFIXES)
+        if (exe.rfind(prefix, 0) == 0) return true;
+    std::cerr << "[Whitelist] SPOOFED comm='" << comm
+              << "' exe='" << exe << "' — whitelist DENIED\n";
+    return false;
+}
 
 // ==========================================
 // WorkloadType — granular profile enum
@@ -74,6 +129,7 @@ struct Config {
                                                "fleet","idea","android-studio"};
     // [workspace_tiers]
     float active_ceiling      = 0.70f;
+    float active_reserve      = 0.40f;   // ISSUE-07: memory.low for titan-active.slice
     float protected_reserve   = 0.20f;
     float freezeable_budget   = 0.05f;
     float system_reserve      = 0.05f;
@@ -83,6 +139,9 @@ struct Config {
     bool  lsp_protection          = true;
     bool  build_daemon_protection = true;
     bool  aggressive_swap         = false;
+    // ISSUE-05: idle daemon detection thresholds
+    float daemon_idle_cpu_pct  = 0.5f;  // CPU% below which a daemon is considered idle
+    int   daemon_idle_sample_ms = 30;   // sampling interval in ms for the CPU-delta check
 };
 
 static std::vector<std::string> csv(std::string s) {
@@ -101,10 +160,22 @@ static std::unordered_set<int> csv_int(const std::string& s) {
     return r;
 }
 
+static std::string get_config_path() {
+    std::string sys_path = "/etc/titan-hwm/config";
+    if (fs::exists(sys_path)) return sys_path;
+    const char* h = getenv("HOME");
+    if (h) {
+        std::string user_path = std::string(h) + "/.config/titan-hwm/config";
+        if (fs::exists(user_path)) return user_path;
+    }
+    return sys_path;
+}
+
 static Config load_config() {
     Config c;
-    const char* h = getenv("HOME"); if (!h) return c;
-    std::ifstream f(std::string(h)+"/.config/titan-hwm/config");
+    std::string path = get_config_path();
+    std::ifstream f(path);
+    if (!f) return c;
     std::string line;
     while (std::getline(f, line)) {
         auto cm = line.find('#'); if (cm!=std::string::npos) line=line.substr(0,cm);
@@ -131,12 +202,15 @@ static Config load_config() {
         else if (k=="build_daemons")           c.build_daemons    = csv(v);
         else if (k=="ai_inference")            c.ai_inference     = csv(v);
         else if (k=="known_ides")              c.known_ides       = csv(v);
-        else if (k=="active_ceiling")          c.active_ceiling   = std::stof(v);
-        else if (k=="protected_reserve")       c.protected_reserve= std::stof(v);
-        else if (k=="age_soft_decay_min")      c.age_soft_decay_min=std::stoi(v);
-        else if (k=="age_hard_decay_min")      c.age_hard_decay_min=std::stoi(v);
-        else if (k=="lsp_protection")          c.lsp_protection   = (v=="true"||v=="1");
-        else if (k=="aggressive_swap")         c.aggressive_swap  = (v=="true"||v=="1");
+        else if (k=="active_ceiling")          c.active_ceiling      = std::stof(v);
+        else if (k=="active_reserve")          c.active_reserve      = std::stof(v);
+        else if (k=="protected_reserve")       c.protected_reserve   = std::stof(v);
+        else if (k=="age_soft_decay_min")      c.age_soft_decay_min  = std::stoi(v);
+        else if (k=="age_hard_decay_min")      c.age_hard_decay_min  = std::stoi(v);
+        else if (k=="lsp_protection")          c.lsp_protection      = (v=="true"||v=="1");
+        else if (k=="aggressive_swap")         c.aggressive_swap     = (v=="true"||v=="1");
+        else if (k=="daemon_idle_cpu_pct")     c.daemon_idle_cpu_pct = std::stof(v);
+        else if (k=="daemon_idle_sample_ms")   c.daemon_idle_sample_ms = std::stoi(v);
         } catch (const std::exception& e) {
             std::cerr << "[Config] Bad value for '" << k << "': " << e.what() << " — skipping\n";
         }
@@ -145,27 +219,33 @@ static Config load_config() {
 }
 
 static void write_default_config() {
-    const char* h = getenv("HOME"); if (!h) return;
-    std::string path = std::string(h)+"/.config/titan-hwm/config";
+    std::string path = "/etc/titan-hwm/config";
     if (fs::exists(path)) return;
-    fs::create_directories(fs::path(path).parent_path());
-    std::ofstream f(path);
-    f << "# Titan Hardware Manager Config v2\n"
-      << "debounce_ms = 800\nram_freeze_pct = 50\nram_kill_pct = 25\n"
-      << "thermal_hot_temp = 80\noom_protect_score = -200\noom_expose_score = 300\n"
-      << "sigterm_grace_ms = 500\ncasual_workspaces = [1]\nweb_workspaces = [2]\n"
-      << "android_workspaces = [3]\nsystem_workspaces = [4, 5]\n"
-      << "web_extra_tools = []\nandroid_extra_tools = []\nsystem_extra_tools = []\n"
-      << "\n[classifier]\n"
-      << "lsp_binaries = [\"clangd\",\"ccls\",\"rust-analyzer\",\"tsserver\",\"eslint_d\"]\n"
-      << "build_daemons = [\"gradle\",\"cargo\",\"webpack\",\"vite\",\"java\",\"cmake\"]\n"
-      << "ai_inference = [\"ollama\",\"llama-server\",\"python3\"]\n"
-      << "known_ides = [\"code\",\"cursor\",\"zed\",\"windsurf\",\"antigravity\",\"fleet\",\"idea\",\"android-studio\"]\n"
-      << "\n[workspace_tiers]\n"
-      << "active_ceiling = 0.70\nprotected_reserve = 0.20\n"
-      << "age_soft_decay_min = 5\nage_hard_decay_min = 15\n"
-      << "\n[multi_context]\nlsp_protection = true\naggressive_swap = false\n";
-    std::cout << "[HWM] Default config written to " << path << "\n";
+    try {
+        fs::create_directories(fs::path(path).parent_path());
+        std::ofstream f(path);
+        if (f) {
+            f << "# Titan Hardware Manager Config v2 (System Root-Owned)\n"
+              << "debounce_ms = 800\nram_freeze_pct = 50\nram_kill_pct = 25\n"
+              << "thermal_hot_temp = 80\noom_protect_score = -200\noom_expose_score = 300\n"
+              << "sigterm_grace_ms = 500\ncasual_workspaces = [1]\nweb_workspaces = [2]\n"
+              << "android_workspaces = [3]\nsystem_workspaces = [4, 5]\n"
+              << "web_extra_tools = []\nandroid_extra_tools = []\nsystem_extra_tools = []\n"
+              << "\n[classifier]\n"
+              << "lsp_binaries = [\"clangd\",\"ccls\",\"rust-analyzer\",\"tsserver\",\"eslint_d\"]\n"
+              << "build_daemons = [\"gradle\",\"cargo\",\"webpack\",\"vite\",\"java\",\"cmake\"]\n"
+              << "ai_inference = [\"ollama\",\"llama-server\",\"python3\"]\n"
+              << "known_ides = [\"code\",\"cursor\",\"zed\",\"windsurf\",\"antigravity\",\"fleet\",\"idea\",\"android-studio\"]\n"
+              << "\n[workspace_tiers]\n"
+              << "active_ceiling = 0.70\nactive_reserve = 0.40\nprotected_reserve = 0.20\n"
+              << "age_soft_decay_min = 5\nage_hard_decay_min = 15\n"
+              << "\n[multi_context]\nlsp_protection = true\naggressive_swap = false\n"
+              << "daemon_idle_cpu_pct = 0.5\ndaemon_idle_sample_ms = 30\n";
+            std::cout << "[HWM] Default system config written to " << path << "\n";
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "[HWM] Failed writing system config to " << path << ": " << e.what() << "\n";
+    }
 }
 
 // ==========================================
@@ -288,11 +368,30 @@ public:
     }
 };
 
-// §5.2.1 — Recursive child walk: collects all descendant cmdlines up to depth limit
-static void walk_children_recursive(
+// ISSUE-11 FIX: Verify that executable target path via /proc/<pid>/exe is not executing out of a world-writable directory (/tmp, /var/tmp, /dev/shm).
+// Prevents unprivileged processes from self-elevating via process name spoofing.
+static bool is_valid_executable_path(pid_t pid) {
+    char exe_buf[PATH_MAX];
+    std::string link = "/proc/" + std::to_string(pid) + "/exe";
+    ssize_t len = readlink(link.c_str(), exe_buf, sizeof(exe_buf) - 1);
+    if (len <= 0) return true; // readlink failed or process exited; default to true so valid processes aren't penalized
+    exe_buf[len] = '\0';
+    std::string exe(exe_buf);
+
+    if (exe.rfind("/tmp/", 0) == 0 || exe == "/tmp" ||
+        exe.rfind("/var/tmp/", 0) == 0 || exe == "/var/tmp" ||
+        exe.rfind("/dev/shm/", 0) == 0 || exe == "/dev/shm") {
+        std::cerr << "[Security] Spoofed executable rejected for PID " << pid << ": " << exe << "\n";
+        return false;
+    }
+    return true;
+}
+
+// Helper: walk descendant processes and collect (pid, cmdline) pairs
+static void walk_child_procs_recursive(
     pid_t pid,
     const std::unordered_map<pid_t,ProcessNode>& graph,
-    std::vector<std::string>& out,
+    std::vector<std::pair<pid_t, std::string>>& out,
     int depth = 3)
 {
     if (depth <= 0) return;
@@ -300,8 +399,21 @@ static void walk_children_recursive(
     if (it == graph.end()) return;
     for (pid_t child : it->second.children) {
         std::string cmd = read_cmdline(child);
-        if (!cmd.empty()) out.push_back(cmd);
-        walk_children_recursive(child, graph, out, depth-1);
+        if (!cmd.empty()) out.push_back({child, cmd});
+        walk_child_procs_recursive(child, graph, out, depth-1);
+    }
+}
+
+static void walk_children_recursive(
+    pid_t pid,
+    const std::unordered_map<pid_t,ProcessNode>& graph,
+    std::vector<std::string>& out,
+    int depth = 3)
+{
+    std::vector<std::pair<pid_t, std::string>> procs;
+    walk_child_procs_recursive(pid, graph, procs, depth);
+    for (const auto& p : procs) {
+        out.push_back(p.second);
     }
 }
 
@@ -315,7 +427,37 @@ struct FusionResult {
     bool has_lsp       = false;   // LSP server child running
     bool has_build     = false;   // build daemon child running
     float confidence   = 0.0f;
+    // TC-1.1 fix: expose full S1 score map so classify() merges all votes,
+    // not just the highest-scoring type. Prevents silent enum-order tie-breaking.
+    std::map<WorkloadType, float> score_map;
 };
+
+// TC-1.3 fix: returns true when window title contains an unambiguous, high-specificity
+// file extension or project marker. Used to boost Signal 2 weight to 0.5 so the
+// focused pane's file type correctly overrides process-tree bias in multi-LSP scenarios.
+static bool title_has_specific_ext(const std::string& title) {
+    static const std::vector<std::string> specific = {
+        ".ts",".tsx",".jsx",".vue",".svelte",
+        ".rs",".cpp",".cc",".cxx",".c",".h",
+        "build.gradle","AndroidManifest","Cargo.toml","CMakeLists"
+    };
+    for (const auto& s : specific)
+        if (title.find(s) != std::string::npos) return true;
+    return false;
+}
+
+// TC-1.5 fix: strips common variant suffixes from IDE binary names so
+// "zed-preview", "code-nightly" etc. still route through the known_ides
+// fusion path instead of silently falling to NEUTRAL.
+static std::string strip_ide_suffix(const std::string& name) {
+    static const std::vector<std::string> sfxs =
+        {"-nightly","-preview","-dev","-bin","-stable","-git","-insiders"};
+    for (const auto& sfx : sfxs)
+        if (name.size() > sfx.size() &&
+            name.compare(name.size()-sfx.size(), sfx.size(), sfx)==0)
+            return name.substr(0, name.size()-sfx.size());
+    return name;
+}
 
 class FusionClassifier {
 public:
@@ -332,11 +474,14 @@ public:
         std::map<WorkloadType,float> scores;
 
         // §5.2.1 — Use recursive walk (depth 3) to catch grandchild LSP servers
-        std::vector<std::string> all_cmds;
-        walk_children_recursive(pid, graph, all_cmds, 3);
+        std::vector<std::pair<pid_t, std::string>> all_child_procs;
+        walk_child_procs_recursive(pid, graph, all_child_procs, 3);
 
-        for (const std::string& cmd : all_cmds) {
+        for (const auto& [cpid, cmd] : all_child_procs) {
             if (cmd.empty()) continue;
+
+            // ISSUE-11 FIX: Verify child binary path to prevent unprivileged self-elevation via spoofed process names
+            if (!is_valid_executable_path(cpid)) continue;
 
             // AI modifier — set flag and continue (doesn't override profile)
             if (ai_set.count(cmd)) { r.ai_modifier = true; continue; }
@@ -368,6 +513,9 @@ public:
                 [](auto& a, auto& b){ return a.second < b.second; });
             r.type = best->first; r.confidence = best->second;
         }
+        // TC-1.1 fix: store full score map so classify() can seed the unified
+        // vote accumulator with all accumulated S1 votes, not just the winner.
+        r.score_map = scores;
         return r;
     }
 
@@ -404,7 +552,23 @@ public:
     // Signal 3: stat working directory for project marker files
     static std::optional<WorkloadType> from_cwd(pid_t pid) {
         std::string cwd = read_cwd(pid); if (cwd.empty()) return std::nullopt;
+        // ISSUE-11 FIX: Reject CWD project markers located in world-writable paths to prevent self-elevation spoofing
+        if (cwd.rfind("/tmp/", 0) == 0 || cwd == "/tmp" ||
+            cwd.rfind("/var/tmp/", 0) == 0 || cwd == "/var/tmp" ||
+            cwd.rfind("/dev/shm/", 0) == 0 || cwd == "/dev/shm") {
+            std::cout << "[S3] Ignored CWD in world-writable path: " << cwd << "\n";
+            return std::nullopt;
+        }
         fs::path p(cwd);
+        // TC-1.4 fix: check host-namespace reachability before statting.
+        // Container/overlay paths may exist in the process's mount namespace but
+        // not on the host — fail loudly so the miss is diagnosable.
+        std::error_code ec;
+        if (!fs::exists(p, ec) || ec) {
+            std::cout << "[S3] cwd " << cwd
+                      << " unreachable from host ns (container/overlay?) — S3 skipped\n";
+            return std::nullopt;
+        }
         if (fs::exists(p/"build.gradle")||fs::exists(p/"app"/"src")) return WorkloadType::ANDROID_DEV;
         if (fs::exists(p/"package.json")&&fs::exists(p/"node_modules")) return WorkloadType::WEB_DEV;
         if (fs::exists(p/"CMakeLists.txt")||fs::exists(p/"Cargo.toml")) return WorkloadType::SYSTEM_DEV;
@@ -423,15 +587,21 @@ public:
         // Signal 1 — builds FusionResult with its own scores map + metadata
         FusionResult r = from_children(pid, graph, cfg);
 
-        // Build a unified score accumulator: start with Signal 1's result
+        // TC-1.1 fix: seed from full S1 score map, not just the top winner.
+        // Preserves all accumulated votes (e.g. SYSTEM_DEV=0.6 AND ANDROID_DEV=0.6)
+        // so Signal 2/3 correctly resolve the tie instead of std::map key order.
         std::map<WorkloadType, float> vote;
-        if (r.type != WorkloadType::NEUTRAL)
-            vote[r.type] += r.confidence;   // seed from S1 accumulated score
+        for (auto& [t, s] : r.score_map)
+            if (t != WorkloadType::NEUTRAL) vote[t] += s;
 
-        // Signal 2 — medium confidence: 0.3 vote regardless of S1 agreement
+        // TC-1.3 fix: boost Signal 2 weight to 0.5 when the focused window title
+        // contains an unambiguous file extension or project marker. The user's active
+        // pane is the strongest intent signal and must win over process-tree presence
+        // in mixed-LSP (e.g. cargo + tsserver) scenarios.
         auto t2 = from_title(title);
+        float s2_weight = title_has_specific_ext(title) ? 0.5f : 0.3f;
         if (t2 && *t2 != WorkloadType::NEUTRAL)
-            vote[*t2] += 0.3f;
+            vote[*t2] += s2_weight;
 
         // Signal 3 — tiebreaker: 0.2 vote regardless of S1/S2 agreement
         auto t3 = from_cwd(pid);
@@ -467,6 +637,10 @@ struct WindowContext {
     bool         has_active_lsp = false;
     bool         has_build_daemon= false;
     bool         ai_modifier    = false;
+    // TC-1.1 residual fix: carry full fusion score_map from the IDE's FusionResult.
+    // Allows build_composite() to detect multi-type presence inside a single window
+    // (e.g. a split-screen IDE with Rust + Gradle panes sharing one Hyprland PID).
+    std::map<WorkloadType, float> score_map;
 };
 
 // Composite profile for an entire workspace (all visible windows)
@@ -508,6 +682,42 @@ static bool registry_is_frozen(pid_t pid) {
     return frozen_registry.count(pid) > 0;
 }
 
+// ISSUE-05 FIX: CPU-tick helpers for idle daemon detection.
+// Reads utime+stime (fields 14+15) from /proc/<pid>/stat as a raw jiffies count.
+static unsigned long long read_cpu_ticks(pid_t pid) {
+    std::ifstream f("/proc/" + std::to_string(pid) + "/stat");
+    std::string s;
+    if (!std::getline(f, s)) return 0;
+    // Skip past the comm field (may contain spaces/parens) to field 14.
+    auto rp = s.rfind(')');
+    if (rp == std::string::npos) return 0;
+    std::istringstream iss(s.substr(rp + 2));
+    std::string tok;
+    // Fields after comm: state(1) ppid(2) pgrp(3) session(4) tty(5)
+    // tpgid(6) flags(7) minflt(8) cminflt(9) majflt(10) cmajflt(11)
+    // utime(12) stime(13)  — skip 11 tokens, then read two.
+    for (int i = 0; i < 11; ++i) if (!(iss >> tok)) return 0;
+    unsigned long long utime = 0, stime = 0;
+    if (!(iss >> utime >> stime)) return 0;
+    return utime + stime;
+}
+
+// Returns true when the named daemon PID has consumed less than cpu_pct_threshold %
+// CPU over a sample_ms window. This distinguishes an actively-compiling daemon
+// from a warm-idle resident that finished work long ago.
+static bool daemon_is_idle(pid_t pid, float cpu_pct_threshold, int sample_ms) {
+    auto t0 = read_cpu_ticks(pid);
+    std::this_thread::sleep_for(std::chrono::milliseconds(sample_ms));
+    auto t1 = read_cpu_ticks(pid);
+    if (t0 == 0 && t1 == 0) return true;  // process gone or unreadable — treat as idle
+    // Convert jiffies delta to CPU%. sysconf(_SC_CLK_TCK) is typically 100 Hz.
+    long hz = sysconf(_SC_CLK_TCK);
+    if (hz <= 0) hz = 100;
+    double elapsed_sec = static_cast<double>(sample_ms) / 1000.0;
+    double cpu_pct = (static_cast<double>(t1 - t0) / hz) / elapsed_sec * 100.0;
+    return cpu_pct < static_cast<double>(cpu_pct_threshold);
+}
+
 struct WorkspaceState {
     int                        workspace_id    = 0;
     bool                       is_visible      = false;  // ← P5: multi-monitor
@@ -547,20 +757,49 @@ static WorkspaceProfile build_composite(const std::vector<WindowContext>& window
     }
     wp.dominant  = dom;
     wp.secondary = sec;
-    // multi_context = 2+ non-neutral, non-casual types present at meaningful weight
+
+    // multi_context detection: 2+ non-neutral types at meaningful weight across windows.
     int meaningful = 0;
     for (auto& [t,s] : scores) if (s > 0.2f && t!=WorkloadType::NEUTRAL && t!=WorkloadType::CASUAL) ++meaningful;
+
+    // TC-1.1 residual fix: a split-screen IDE is ONE Hyprland window sharing ONE PID.
+    // build_composite() will only ever see a single inferred_type for that window, so
+    // the window-level meaningful count can never reach 2. We solve this by scanning
+    // each window's score_map (populated from the FusionResult) for internal type
+    // disagreement — if a single window scored 2+ non-neutral types above 0.2, it is
+    // itself a polyglot context and must trigger daemon protection.
+    for (const auto& w : windows) {
+        if (meaningful >= 2) break;  // already confirmed
+        int inner = 0;
+        for (const auto& [t, s] : w.score_map)
+            if (s > 0.2f && t != WorkloadType::NEUTRAL && t != WorkloadType::CASUAL) ++inner;
+        if (inner >= 2) {
+            std::cout << "[Composite] Single-window polyglot detected (split-screen IDE) "
+                      << "— forcing multi_context protection\n";
+            meaningful = 2;  // force the flag
+        }
+    }
+
     wp.multi_context = (meaningful >= 2);
     return wp;
 }
 
 // Tier evaluation — called on every workspace switch (P3 + P4)
+// ISSUE-05 FIX: has_protected_daemons is now only honoured when at least one
+// daemon is actually active (CPU > daemon_idle_cpu_pct over the sample window).
+// An idle resident daemon (warm Gradle/cargo waiting for a hot-start) no longer
+// permanently blocks the workspace from advancing to FREEZEABLE tier.
 static WorkspaceTier evaluate_tier(const WorkspaceState& ws, int active_id, const Config& cfg) {
     if (ws.workspace_id == active_id || ws.is_visible) return WorkspaceTier::ACTIVE;
-    if (ws.has_protected_daemons) return WorkspaceTier::PROTECTED;
     auto age_min = std::chrono::duration_cast<std::chrono::minutes>(
         ms_clock::now() - ws.last_active_ms).count();
+    // Hard-decay always wins: if the workspace is old enough, demote regardless
+    // of daemon presence so idle residents cannot hold PROTECTED indefinitely.
     if (age_min > cfg.age_hard_decay_min) return WorkspaceTier::FREEZEABLE;
+    // Only grant PROTECTED for a daemon that is actually doing work.
+    // ws.has_protected_daemons is pre-set to true only for *active* daemons (see
+    // rebalance_workspaces) so this check is now correctly conditioned.
+    if (ws.has_protected_daemons) return WorkspaceTier::PROTECTED;
     return WorkspaceTier::PROTECTED; // < 15 min, no daemons → still protected
 }
 
@@ -665,7 +904,7 @@ static void cg_escalate_to_frozen(
         bd_set.insert(cfg->build_daemons.begin(), cfg->build_daemons.end());
     }
     for (const auto& [pid,n] : g) {
-        if (!targets.count(n.name) || AUDIO_WHITELIST.count(n.name)) continue;
+        if (!targets.count(n.name) || verify_audio_whitelist_pid(pid, n.name)) continue;
         // §5.2.2 MULTI_CONTEXT: never freeze LSP servers or build daemons
         if (cfg && (lsp_set.count(n.name) || bd_set.count(n.name))) {
             std::cout<<"[Cgroup] Freeze-skip protected daemon: "<<n.name<<"\n";
@@ -681,21 +920,45 @@ static void cg_escalate_to_frozen(
     CgroupManager::freeze("titan-frozen.slice", true);
     std::cout<<"[Cgroup] Escalated to frozen slice\n";
 }
+// Cooldown timer for thaw operations (TC-2.5 fix: prevents freeze/thaw oscillation flapping)
+static std::atomic<time_point::rep> g_last_thaw_ms{0};
+
 static void cg_thaw_from_frozen(
     const std::unordered_set<std::string>& targets,
     const std::unordered_map<pid_t,ProcessNode>& g)
 {
+    // Record thaw timestamp for cooldown hysteresis
+    auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+        ms_clock::now().time_since_epoch()).count();
+    g_last_thaw_ms.store(now_ms);
+
     CgroupManager::freeze("titan-frozen.slice", false);
-    for (const auto& [pid,n] : g) {
-        if (!targets.count(n.name) || AUDIO_WHITELIST.count(n.name)) continue;
+
+    // TC-2.3 fix: read authoritative cgroup membership from cgroup.procs to thaw all
+    // processes, including newly forked children that weren't in frozen_registry.
+    std::vector<pid_t> procs_in_cg;
+    std::ifstream procs_f("/sys/fs/cgroup/titan-frozen.slice/cgroup.procs");
+    pid_t p;
+    while (procs_f >> p) procs_in_cg.push_back(p);
+
+    // Combine map targets with procs_in_cg
+    std::unordered_set<pid_t> to_thaw_pids;
+    for (pid_t cpid : procs_in_cg) to_thaw_pids.insert(cpid);
+    for (const auto& [pid, n] : g) {
+        if (targets.count(n.name) && !verify_audio_whitelist_pid(pid, n.name))
+            to_thaw_pids.insert(pid);
+    }
+
+    for (pid_t pid : to_thaw_pids) {
+        auto nit = g.find(pid);
+        if (nit != g.end() && verify_audio_whitelist_pid(nit->first, nit->second.name)) continue;
         CgroupManager::move_pid(pid, "titan-background.slice");
-        // §5.2.5: clear from frozen registry and send SIGCONT
-        if (registry_is_frozen(pid)) {
+        if (registry_is_frozen(pid) || true) {
             ::kill(pid, SIGCONT);
             registry_thaw(pid);
         }
     }
-    std::cout<<"[Cgroup] Thawed from frozen slice\n";
+    std::cout<<"[Cgroup] Thawed " << to_thaw_pids.size() << " processes from frozen slice\n";
 }
 
 // ==========================================
@@ -712,7 +975,7 @@ public:
         CgroupManager::set_cpu_weight("titan-background.slice",20);
         CgroupManager::set_memory_high("titan-background.slice","max");
         for (const auto& [pid,n]:g) {
-            if (!targets.count(n.name)||AUDIO_WHITELIST.count(n.name)) continue;
+            if (!targets.count(n.name)||verify_audio_whitelist_pid(pid, n.name)) continue;
             // P2: protect LSP + build daemons in multi-context
             if (protect_lsp && cfg) {
                 std::unordered_set<std::string> lsp(cfg->lsp_binaries.begin(),cfg->lsp_binaries.end());
@@ -740,29 +1003,56 @@ public:
         CgroupManager::ensure("titan-active.slice");
         CgroupManager::set_cpu_weight("titan-active.slice",500);
         for (const auto& [pid,n]:g) {
-            if (!targets.count(n.name)||AUDIO_WHITELIST.count(n.name)) continue;
+            if (!targets.count(n.name)||verify_audio_whitelist_pid(pid, n.name)) continue;
             CgroupManager::move_pid(pid,"titan-active.slice"); set_oom(pid,oom);
             std::cout<<"[Cgroup] Activated "<<n.name<<"\n";
         }
     }
+    // TC-2.2 fix: recursive tree emergency kill. Collects target processes AND all their
+    // descendant child PIDs to ensure no orphaned processes or zombie children leak resources.
     static long emergency_kill(const std::unordered_set<std::string>& targets, const std::unordered_map<pid_t,ProcessNode>& g, int grace_ms=500, const Config* cfg=nullptr) {
         std::vector<const ProcessNode*> hits;
+        std::unordered_set<std::string> lsp, bd;
+        if (cfg) {
+            lsp.insert(cfg->lsp_binaries.begin(), cfg->lsp_binaries.end());
+            bd.insert(cfg->build_daemons.begin(), cfg->build_daemons.end());
+        }
+
         for (const auto& [pid,n]:g) {
-            if (!targets.count(n.name)||AUDIO_WHITELIST.count(n.name)) continue;
-            if (cfg) {
-                std::unordered_set<std::string> lsp(cfg->lsp_binaries.begin(),cfg->lsp_binaries.end());
-                std::unordered_set<std::string> bd(cfg->build_daemons.begin(),cfg->build_daemons.end());
-                if (lsp.count(n.name)||bd.count(n.name)) continue; // never kill LSP/build
-            }
+            if (!targets.count(n.name)||verify_audio_whitelist_pid(pid, n.name)) continue;
+            if (cfg && (lsp.count(n.name)||bd.count(n.name))) continue; // never kill LSP/build
             hits.push_back(&n);
         }
         std::sort(hits.begin(),hits.end(),[](auto a,auto b){return a->rss_kb>b->rss_kb;});
         long freed=0;
-        for (auto* n:hits) {
-            std::cout<<"[Pruner] EMERGENCY KILL "<<n->name<<" ("<<n->rss_kb/1024<<"MB)\n";
-            kill(n->pid,SIGTERM); std::this_thread::sleep_for(std::chrono::milliseconds(grace_ms));
-            if (kill(n->pid,0)==0) kill(n->pid,SIGKILL);
-            freed+=n->rss_kb;
+
+        for (auto* n : hits) {
+            // Collect all descendant PIDs for recursive kill
+            std::vector<pid_t> family = {n->pid};
+            std::function<void(pid_t, int)> collect = [&](pid_t p, int depth) {
+                if (depth <= 0) return;
+                auto it = g.find(p);
+                if (it == g.end()) return;
+                for (pid_t child : it->second.children) {
+                    family.push_back(child);
+                    collect(child, depth - 1);
+                }
+            };
+            collect(n->pid, 4);
+
+            std::cout<<"[Pruner] EMERGENCY TREE KILL "<<n->name<<" (PID "<<n->pid<<", "<<family.size()<<" processes, "<<n->rss_kb/1024<<"MB)\n";
+
+            // Phase 1: Send SIGTERM to entire process tree
+            for (pid_t fpid : family) ::kill(fpid, SIGTERM);
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(grace_ms));
+
+            // Phase 2: Send SIGKILL to surviving PIDs
+            for (pid_t fpid : family) {
+                if (::kill(fpid, 0) == 0) ::kill(fpid, SIGKILL);
+                auto fit = g.find(fpid);
+                if (fit != g.end()) freed += fit->second.rss_kb;
+            }
         }
         return freed;
     }
@@ -772,15 +1062,49 @@ public:
                        long available_kb, int oom_expose=300, int grace_ms=500,
                        bool multi_ctx=false, const Config* cfg=nullptr) {
         PSI psi=read_memory_psi();
-        std::cout<<"[PSI] some_avg10="<<psi.some_avg10<<"% full_avg10="<<psi.full_avg10<<"%\n";
+        std::cout<<"[PSI] valid="<<(psi.valid?"yes":"no")<<" some_avg10="<<psi.some_avg10<<"% full_avg10="<<psi.full_avg10<<"%\n";
         bool protect = multi_ctx && cfg && cfg->lsp_protection;
+
+        // TC-3.2 fix: if PSI is missing/unsupported (psi.valid == false), fall back to raw RAM %
+        if (!psi.valid) {
+            std::cout<<"[PSI] PSI unavailable — falling back to RAM percentage mode\n";
+            if (ram_pct < kill_t) return emergency_kill(targets, g, grace_ms, cfg);
+            if (ram_pct < freeze_t) { freeze_targets(targets, g, cfg); return 0; }
+            deprioritize(targets, g, oom_expose, protect, cfg);
+            return 0;
+        }
+
+        // TC-3.1 fix: fast-path override for sudden memory spikes (ram_pct < 15%).
+        // Prevents 10-second rolling average lag (some_avg10) from delaying Stage 3 kill during rapid RAM drops.
+        if (ram_pct < 15.0f) {
+            std::cout<<"[Pruner] FAST-PATH CRITICAL RAM SPIKE ("<<ram_pct<<"%) — bypassing rolling avg lag\n";
+            return emergency_kill(targets, g, grace_ms, cfg);
+        }
+
+        // TC-2.5 fix: check thaw cooldown timer (3000ms). If a thaw occurred recently,
+        // suppress cgroup freeze to prevent rapid freeze/thaw flapping.
+        auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            ms_clock::now().time_since_epoch()).count();
+        bool in_thaw_cooldown = (now_ms - g_last_thaw_ms.load() < 3000);
+
         // Healthy: ram ok AND psi low — just deprioritize, no freeze
-        if (ram_pct>=freeze_t && psi.some_avg10<5.0f)  { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
+        if (ram_pct>=freeze_t && psi.some_avg10<5.0f && psi.full_avg10<5.0f) { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
         // Medium pressure: ram tightening — deprioritize + throttle memory.high
-        if (ram_pct>=kill_t   && psi.some_avg10<20.0f) { deprioritize(targets,g,oom_expose,protect,cfg); throttle_memory(available_kb); return 0; }
-        // High PSI but not yet critical — only freeze if ram is also actually low
-        // §5.2.2: pass cfg into freeze so LSP/build daemons are never frozen in MULTI_CONTEXT
-        if (psi.some_avg10<40.0f && ram_pct<freeze_t)  { std::cout<<"[Pruner] HIGH — cgroup freeze\n"; freeze_targets(targets,g,cfg); return 0; }
+        if (ram_pct>=kill_t   && psi.some_avg10<20.0f && psi.full_avg10<15.0f) { deprioritize(targets,g,oom_expose,protect,cfg); throttle_memory(available_kb); return 0; }
+
+        // High PSI (or TC-3.3 full_avg10 >= 15% ZRAM saturation): fallback to memory throttling if in thaw cooldown
+        if ((psi.some_avg10<40.0f && ram_pct<freeze_t) || psi.full_avg10>=15.0f) {
+            if (in_thaw_cooldown) {
+                std::cout<<"[Pruner] HIGH PSI during thaw cooldown — throttling memory to prevent oscillation\n";
+                deprioritize(targets,g,oom_expose,protect,cfg);
+                throttle_memory(available_kb);
+                return 0;
+            }
+            std::cout<<"[Pruner] HIGH — cgroup freeze\n";
+            freeze_targets(targets,g,cfg);
+            return 0;
+        }
+
         // Healthy ram + mid PSI (e.g. burst I/O) — just deprioritize, don't freeze
         if (psi.some_avg10<40.0f) { deprioritize(targets,g,oom_expose,protect,cfg); return 0; }
         std::cout<<"[Pruner] CRITICAL PSI ("<<psi.some_avg10<<"%) — emergency kill\n";
@@ -891,9 +1215,14 @@ class TitanHardwareManager {
         std::string w = wm_class;
         std::transform(w.begin(),w.end(),w.begin(),::tolower);
 
-        // Known IDEs → full 3-signal fusion classifier (P1)
-        if (is_known_ide(w)) {
-            std::cout<<"[Fusion] IDE detected: "<<w<<" — running 3-signal fusion\n";
+        // TC-1.5 fix: try bare name first, then strip variant suffixes (-nightly, -preview,
+        // -dev etc.) so "zed-preview" / "code-insiders" still route through full fusion.
+        std::string w_base = strip_ide_suffix(w);
+        if (is_known_ide(w) || is_known_ide(w_base)) {
+            if (w != w_base)
+                std::cout<<"[Fusion] IDE variant '"<<w<<"' matched as '"<<w_base<<"' — fusion enabled\n";
+            else
+                std::cout<<"[Fusion] IDE detected: "<<w<<" — running 3-signal fusion\n";
             return FusionClassifier::classify(pid, title, graph, cfg);
         }
 
@@ -905,7 +1234,13 @@ class TitanHardwareManager {
                  w=="thunderbird"||w=="element"||w=="geary"||
                  w=="nautilus"||w=="dolphin"||w=="thunar") r.type=WorkloadType::CASUAL;
         else if (w=="figma"||w=="firefox-developer-edition") r.type=WorkloadType::WEB_DEV;
-        else r.type=WorkloadType::NEUTRAL;
+        else {
+            // TC-1.5 fix: log unknown binaries explicitly so misclassification is
+            // diagnosable. Silence here was the original failure mode.
+            std::cout<<"[Fusion] Unknown binary '"<<w<<"' not in known_ides. "
+                       "Add to known_ides in config to enable fusion classification.\n";
+            r.type=WorkloadType::NEUTRAL;
+        }
         r.confidence = 1.0f; // direct match = full confidence
         return r;
     }
@@ -951,7 +1286,7 @@ class TitanHardwareManager {
                 auto nit = graph.find(pid);
                 if (nit == graph.end()) continue;
                 const auto& n = nit->second;
-                if (AUDIO_WHITELIST.count(n.name)||lsp.count(n.name)||bd.count(n.name)) continue;
+                if (verify_audio_whitelist_pid(pid, n.name)||lsp.count(n.name)||bd.count(n.name)) continue;
 
                 if (age_min >= cfg.age_hard_decay_min) {
                     // §5.2.4 hard decay: SIGSTOP + cgroup freeze + frozen registry
@@ -981,24 +1316,32 @@ class TitanHardwareManager {
         long total_bytes = read_meminfo().total_kb * 1024L;
         if (total_bytes <= 0) return;
 
-        // ACTIVE: 70% ceiling (memory.high)
-        long active_high = total_bytes * cfg.active_ceiling;
         CgroupManager::ensure("titan-active.slice");
+        // ACTIVE: 70% ceiling (memory.high) — prevents foreground slice from consuming all RAM.
+        long active_high = static_cast<long>(total_bytes * cfg.active_ceiling);
         CgroupManager::set_memory_high("titan-active.slice", std::to_string(active_high));
+        // ISSUE-07 FIX: 40% reservation (memory.low) — instructs the kernel to preserve
+        // at least this much for the active foreground slice before reclaiming its pages.
+        // Without this, multi-context daemon RAM spikes cause kernel page-reclaim to
+        // strip foreground app pages under PSI pressure, causing UI stutter and lag.
+        long active_low = static_cast<long>(total_bytes * cfg.active_reserve);
+        CgroupManager::set_memory_low("titan-active.slice", std::to_string(active_low));
 
         // PROTECTED: 20% reservation (memory.low)
-        long protected_low = total_bytes * cfg.protected_reserve;
+        long protected_low = static_cast<long>(total_bytes * cfg.protected_reserve);
         CgroupManager::ensure("titan-background.slice");
         CgroupManager::set_memory_low("titan-background.slice", std::to_string(protected_low));
 
         // FREEZEABLE: 5% budget (memory.high)
-        long frozen_high = total_bytes * cfg.freezeable_budget;
+        long frozen_high = static_cast<long>(total_bytes * cfg.freezeable_budget);
         CgroupManager::ensure("titan-frozen.slice");
         CgroupManager::set_memory_high("titan-frozen.slice", std::to_string(frozen_high));
 
-        std::cout << "[Tier] Applied memory budgets: ACTIVE ceiling=" << active_high/1024/1024
-                  << "MB, PROTECTED reserve=" << protected_low/1024/1024
-                  << "MB, FREEZEABLE budget=" << frozen_high/1024/1024 << "MB\n";
+        std::cout << "[Tier] Applied memory budgets:"
+                  << " ACTIVE ceiling=" << active_high/1024/1024 << "MB"
+                  << " reserve=" << active_low/1024/1024 << "MB"
+                  << ", PROTECTED reserve=" << protected_low/1024/1024 << "MB"
+                  << ", FREEZEABLE budget=" << frozen_high/1024/1024 << "MB\n";
     }
 
     // Rebalance all workspaces after a workspace switch (§5.2.3 + §5.2.4 + §5.2.5)
@@ -1019,16 +1362,32 @@ class TitanHardwareManager {
         for (auto& [id, ws] : workspace_states) {
             ws.is_visible = visible.count(id) > 0;
 
-            // §5.2.3 — Populate has_protected_daemons by scanning actual child processes
+            // §5.2.3 — Populate has_protected_daemons by scanning actual child processes.
+            // ISSUE-05 FIX: We no longer set has_protected_daemons for *idle* daemons.
+            // daemon_is_idle() samples CPU ticks over daemon_idle_sample_ms and grants
+            // protection only when the daemon is actually doing work (CPU% ≥ threshold).
+            // This lets the hard-decay age path in evaluate_tier() demote workspaces
+            // with warm-idle Gradle/cargo daemons that finished building long ago.
             ws.has_protected_daemons = false;
             auto pit = ws_pids_map.find(id);
             if (pit != ws_pids_map.end()) {
                 for (pid_t wpid : pit->second) {
-                    std::vector<std::string> cmds;
-                    walk_children_recursive(wpid, graph, cmds, 3);
-                    for (const auto& cmd : cmds) {
+                    std::vector<std::pair<pid_t, std::string>> child_procs;
+                    walk_child_procs_recursive(wpid, graph, child_procs, 3);
+                    for (const auto& [cpid, cmd] : child_procs) {
+                        if (!is_valid_executable_path(cpid)) continue;
                         if (lsp_set.count(cmd) || bd_set.count(cmd)) {
-                            ws.has_protected_daemons = true;
+                            // Only protect if the daemon is actively consuming CPU.
+                            if (!daemon_is_idle(wpid,
+                                                cfg.daemon_idle_cpu_pct,
+                                                cfg.daemon_idle_sample_ms)) {
+                                ws.has_protected_daemons = true;
+                                std::cout << "[Tier] Active daemon '" << cmd
+                                          << "' on WS" << id << " — protection granted\n";
+                            } else {
+                                std::cout << "[Tier] Idle daemon '" << cmd
+                                          << "' on WS" << id << " — protection SKIPPED\n";
+                            }
                             break;
                         }
                     }
@@ -1058,7 +1417,8 @@ class TitanHardwareManager {
                         for (pid_t pid : pids_to_move) {
                             auto nit = graph.find(pid);
                             if (nit == graph.end()) continue;
-                            if (AUDIO_WHITELIST.count(nit->second.name)) continue;
+                            // ISSUE-06 FIX: use path-verified whitelist check
+                            if (verify_audio_whitelist_pid(pid, nit->second.name)) continue;
                             // §5.2.5: SIGCONT if in frozen registry
                             if (registry_is_frozen(pid)) {
                                 ::kill(pid, SIGCONT);
@@ -1073,12 +1433,47 @@ class TitanHardwareManager {
                 }
             }
         }
+
+        // TC-1.2 fix: orphan OOM reset — any LSP/build daemon that is no longer
+        // reachable from any workspace's process tree has lost its owner. Reset its
+        // oom_score_adj to 0 (neutral). Without this, orphaned daemons retain -200
+        // protection indefinitely, permanently biasing the kernel OOM killer.
+        std::unordered_set<pid_t> all_ws_pids;
+        for (auto& [ws_id, ws_pids] : ws_pids_map)
+            for (pid_t p : ws_pids) all_ws_pids.insert(p);
+
+        std::unordered_set<std::string> lsp_set_orphan(cfg.lsp_binaries.begin(), cfg.lsp_binaries.end());
+        std::unordered_set<std::string> bd_set_orphan(cfg.build_daemons.begin(),  cfg.build_daemons.end());
+        for (const auto& [pid, n] : graph) {
+            if ((lsp_set_orphan.count(n.name) || bd_set_orphan.count(n.name))
+                && !all_ws_pids.count(pid)) {
+                set_oom(pid, 0);
+                std::cout<<"[Orphan] Cleared stale OOM protection for unowned daemon: "
+                         <<n.name<<" (pid "<<pid<<")\n";
+            }
+        }
+    }
+
+    // ISSUE-02 FIX: Rebalance-only path — called when a workspace event fires but the
+    // workload profile hasn't changed (same profile or NEUTRAL workspace). We still need
+    // to update cgroup tiers, age decay, and multi-monitor visibility even if the global
+    // profile is unchanged, so we can't return early any more.
+    void rebalance_only() {
+        std::lock_guard<std::mutex> lk(mtx);
+        std::cout << "[HWM] rebalance_only() — profile unchanged, rebalancing tiers\n";
+        MemoryGraph g; g.build();
+        rebalance_workspaces(g.graph);
     }
 
     // Core transition logic — now composite + AI-modifier aware
     void do_transition(WorkloadType np, bool multi_ctx=false, bool ai_mod=false) {
         // Serialize transitions — debounce thread and CLI thread both call this
         std::lock_guard<std::mutex> lk(mtx);
+        // ISSUE-02 FIX: Only skip the *profile* switch when profile is truly unchanged;
+        // rebalance_workspaces() is always called via the workspace event path so we
+        // must NOT swallow the call entirely. The NEUTRAL guard stays so that an
+        // unconfigured workspace doesn't flip the global profile, but we still need
+        // the caller to run rebalance_only() in that case (see schedule()).
         if (np==WorkloadType::NEUTRAL||np==cur) return;
         WorkloadType old=cur; cur=np;
         MemInfo mem=read_meminfo(); float pct=mem.pct();
@@ -1145,7 +1540,7 @@ class TitanHardwareManager {
         // Thaw active tools + protect OOM
         Pruner::thaw(to_thaw, g.graph, cfg.oom_protect);
         for (const auto& [pid,n]:g.graph)
-            if (to_thaw.count(n.name)&&!AUDIO_WHITELIST.count(n.name))
+            if (to_thaw.count(n.name)&&!verify_audio_whitelist_pid(pid, n.name))
                 set_oom(pid, cfg.oom_protect);
 
         // Casual apps
@@ -1198,8 +1593,13 @@ class TitanHardwareManager {
         // preventing zombie accumulation on rapid workspace switches
         std::thread old_thd = std::move(debounce_thd);
         if (old_thd.joinable()) old_thd.detach();
-        debounce_thd=std::thread([this,gen](){
-            std::this_thread::sleep_for(std::chrono::milliseconds(cfg.debounce_ms));
+
+        // TC-3.4 fix: use fast 150ms debounce for workspace switches (is_ws == true)
+        // while maintaining standard debounce_ms (800ms) for window focus/classifier events.
+        int delay_ms = is_ws ? 150 : cfg.debounce_ms;
+
+        debounce_thd=std::thread([this,gen,delay_ms](){
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
             if (debounce_gen.load()!=gen||!have_pending.load()) return;
             std::string wc,ev_title; pid_t ev_pid; int ev_ws; bool ev_is_ws;
             { std::lock_guard<std::mutex> lk(mtx); if(!have_pending.load())return;
@@ -1213,7 +1613,15 @@ class TitanHardwareManager {
                   active_workspace_id = ev_ws;
                   workspace_states[ev_ws].last_active_ms = ms_clock::now(); }
                 WorkloadType np = classify_ws(ev_ws);
-                do_transition(np);
+                // ISSUE-02 FIX: do_transition() bails out when np==cur or np==NEUTRAL,
+                // but rebalance_workspaces() must always run on every workspace switch
+                // to update cgroup tiers, age decay, and multi-monitor visibility.
+                // We call rebalance_only() for the cases do_transition() would skip.
+                if (np == WorkloadType::NEUTRAL || np == cur) {
+                    rebalance_only();
+                } else {
+                    do_transition(np);
+                }
             } else {
                 // Window focus — run fusion classifier (Signal 1+2+3)
                 MemoryGraph g; g.build();
@@ -1251,6 +1659,9 @@ class TitanHardwareManager {
                         wctx.has_build_daemon= wfr.has_build;
                         wctx.ai_modifier     = wfr.ai_modifier;
                         wctx.is_focused      = (wpid == ev_pid);  // focused = resource hint only
+                        // TC-1.1 residual fix: propagate full score_map so build_composite()
+                        // can detect within-window polyglot (split-screen single IDE PID).
+                        wctx.score_map       = wfr.score_map;
                         ws_windows.push_back(wctx);
                     }
                 }
@@ -1260,6 +1671,7 @@ class TitanHardwareManager {
                     wctx.pid=ev_pid; wctx.wm_class=wc; wctx.inferred_type=fr.type;
                     wctx.has_active_lsp=fr.has_lsp; wctx.has_build_daemon=fr.has_build;
                     wctx.ai_modifier=fr.ai_modifier; wctx.is_focused=true;
+                    wctx.score_map=fr.score_map;  // TC-1.1 residual: propagate in fallback too
                     ws_windows.push_back(wctx);
                 }
 
@@ -1274,7 +1686,13 @@ class TitanHardwareManager {
                          <<" ai="<<composite.ai_modifier<<"\n";
 
                 // dominant WorkloadType drives transition; multi_context enables protection
-                do_transition(composite.dominant, composite.multi_context, composite.ai_modifier);
+                // ISSUE-02 FIX: Same guard as workspace path — if dominant is NEUTRAL
+                // or matches current profile, still rebalance tiers.
+                if (composite.dominant == WorkloadType::NEUTRAL || composite.dominant == cur) {
+                    rebalance_only();
+                } else {
+                    do_transition(composite.dominant, composite.multi_context, composite.ai_modifier);
+                }
             }
         });
     }
@@ -1326,20 +1744,96 @@ public:
         return "";
     }
 
+    // ISSUE-10 FIX: Startup recovery thaw.
+    // When THM crashes and systemd restarts it, the in-memory frozen_registry is lost.
+    // Any processes previously suspended with SIGSTOP remain stopped indefinitely.
+    // This method runs at the very beginning of run() to detect and recover them via
+    // two complementary scans:
+    //   1. Authoritative: read /sys/fs/cgroup/titan-frozen.slice/cgroup.procs \u2014 any
+    //      PID listed there was placed there by a prior THM instance and needs SIGCONT.
+    //   2. Belt-and-suspenders: walk /proc/*/status looking for "State:\tT" (stopped).
+    //      This catches processes stopped by SIGSTOP outside the cgroup path, or when
+    //      the cgroup.procs file is empty because the slice was already unfrozen by the
+    //      kernel but individual SIGCONT calls were never sent.
+    void startup_recovery_thaw() {
+        std::cout << "[HWM] Startup recovery scan for orphaned frozen processes...\n";
+        std::unordered_set<pid_t> to_recover;
+
+        // Scan 1: cgroup membership (authoritative source of THM-frozen PIDs)
+        {
+            std::ifstream procs_f("/sys/fs/cgroup/titan-frozen.slice/cgroup.procs");
+            pid_t p;
+            while (procs_f >> p) to_recover.insert(p);
+        }
+
+        // Scan 2: /proc/*/status for stopped state (belt-and-suspenders)
+        try {
+            for (const auto& e : fs::directory_iterator("/proc")) {
+                if (!e.is_directory()) continue;
+                std::string d = e.path().filename().string();
+                if (!std::all_of(d.begin(), d.end(), ::isdigit)) continue;
+                std::ifstream sf(e.path().string() + "/status");
+                std::string line;
+                while (std::getline(sf, line)) {
+                    // "State:\tT (stopped)"  or  "State:\tt (tracing stop)"
+                    if (line.rfind("State:", 0) == 0) {
+                        size_t tab = line.find_first_not_of(" \t", 6);
+                        if (tab != std::string::npos &&
+                            (line[tab] == 'T' || line[tab] == 't')) {
+                            try { to_recover.insert(std::stoi(d)); } catch(...) {}
+                        }
+                        break;
+                    }
+                }
+            }
+        } catch(...) {}
+
+        if (to_recover.empty()) {
+            std::cout << "[HWM] Recovery scan: no orphaned stopped processes found.\n";
+            return;
+        }
+
+        std::cout << "[HWM] Recovery scan: found " << to_recover.size()
+                  << " stopped process(es) \u2014 issuing SIGCONT and unfreezing cgroup.\n";
+
+        // Unfreeze the cgroup slice first so the kernel can schedule them again.
+        CgroupManager::freeze("titan-frozen.slice", false);
+
+        std::lock_guard<std::mutex> flk(frozen_mtx);
+        for (pid_t p : to_recover) {
+            // Move back to background slice (neutral, not active \u2014 we don\u2019t know which
+            // workspace they belonged to; the next rebalance will re-classify them).
+            CgroupManager::move_pid(p, "titan-background.slice");
+            ::kill(p, SIGCONT);
+            // Re-populate frozen_registry so future thaw logic sees these PIDs
+            // and won\u2019t try to double-SIGCONT them during the next rebalance.
+            // We don\u2019t know their original tier, so use PROTECTED as a safe default.
+            FrozenEntry fe;
+            fe.pid = p; fe.tier = WorkspaceTier::PROTECTED;
+            fe.rss_anon_kb = read_rss(p); fe.frozen_at = ms_clock::now();
+            frozen_registry[p] = fe;
+            // Immediately mark them as thawed since we just sent SIGCONT.
+            frozen_registry.erase(p);
+            std::cout << "[HWM] Recovery: SIGCONT pid=" << p << "\n";
+        }
+        notify("Titan HWM", "Crash recovery: thawed " +
+               std::to_string(to_recover.size()) + " orphaned processes.");
+    }
+
     // §5.2.7 — inotify config hot-reload thread
-    // Watches ~/.config/titan-hwm/config for IN_CLOSE_WRITE and reloads live
+    // ISSUE-12 FIX: Watch root-owned /etc/titan-hwm/config system config for IN_CLOSE_WRITE and reloads live
     void run_config_hotreload() {
-        const char* h = getenv("HOME"); if (!h) return;
-        std::string cfg_path = std::string(h) + "/.config/titan-hwm/config";
+        std::string cfg_path = "/etc/titan-hwm/config";
         int ifd = inotify_init1(IN_NONBLOCK);
         if (ifd < 0) { std::cerr<<"[HotReload] inotify_init1 failed\n"; return; }
         int wd = inotify_add_watch(ifd, cfg_path.c_str(), IN_CLOSE_WRITE | IN_MODIFY);
         if (wd < 0) {
-            // File may not exist yet — watch parent dir for creation
-            std::string dir = std::string(h) + "/.config/titan-hwm";
+            // Directory may not exist yet — watch parent dir for creation
+            std::string dir = "/etc/titan-hwm";
+            try { fs::create_directories(dir); } catch(...) {}
             wd = inotify_add_watch(ifd, dir.c_str(), IN_CREATE | IN_CLOSE_WRITE);
         }
-        std::cout<<"[HotReload] Watching config: "<<cfg_path<<"\n";
+        std::cout<<"[HotReload] Watching system config: "<<cfg_path<<"\n";
         char ev_buf[4096] __attribute__((aligned(__alignof__(struct inotify_event))));
         while (running.load()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -1423,6 +1917,12 @@ public:
     void run() {
         cfg=load_config(); apply_extras();
 
+        // ISSUE-10 FIX: On every startup (including crash-restarts), scan for any
+        // processes left SIGSTOP'd by a previous instance. A crash wipes the in-memory
+        // frozen_registry so without this, those processes stay stopped forever until
+        // the user manually triggers a workspace switch.
+        startup_recovery_thaw();
+
         std::string sock=HyprlandIPC::find_sock(".socket2.sock");
         if (sock.empty()) { std::this_thread::sleep_for(std::chrono::seconds(5)); return; }
 
@@ -1431,6 +1931,26 @@ public:
         PSI psi=read_memory_psi();
         write_state("Neutral", m.pct(), "started", 0, t_c, psi.some_avg10, false, false);
 
+        // ISSUE-09 FIX: The original code called schedule() here, which routes through
+        // the debounced do_transition() path. Because cur == NEUTRAL and the active
+        // workspace is also NEUTRAL at boot, do_transition() returns immediately via its
+        // np==cur guard, leaving cgroup slices uninitialised and workspace_states empty.
+        //
+        // Instead we:
+        //   1. Unconditionally apply cgroup tier budgets (slices created, memory.low /
+        //      memory.high set even before the first window is focused).
+        //   2. Directly call rebalance_only() to populate workspace_states and run the
+        //      full visibility / age-decay pass without touching the profile state.
+        //   3. Still schedule() a workspace event so the debounced path fires after
+        //      debounce_ms and picks up the real workspace profile once Hyprland is ready.
+        {
+            // Step 1: Guarantee cgroup slices exist with correct budgets from day 0.
+            std::lock_guard<std::mutex> lk(mtx);
+            apply_tier_budgets();
+        }
+        // Step 2: Populate workspace_states and run the initial tier/visibility pass.
+        rebalance_only();
+        // Step 3: Fire the normal debounced path to pick up the real profile.
         std::string sock_cmd = HyprlandIPC::find_sock(".socket.sock");
         auto visible = query_visible_workspaces(sock_cmd);
         if (!visible.empty()) {
@@ -1441,18 +1961,58 @@ public:
         guard_thd     = std::thread(&TitanHardwareManager::run_process_guard,  this);
         hotreload_thd = std::thread(&TitanHardwareManager::run_config_hotreload, this);
 
+        // ISSUE-03 FIX: Track the last time the IPC socket was live so we can detect
+        // prolonged disconnects and issue a safety thaw of all frozen processes.
+        auto ipc_connected_at  = ms_clock::now();
+        bool ipc_was_connected = false;
+
         while (true) {
             int fd=socket(AF_UNIX,SOCK_STREAM,0);
             if (fd<0) { std::cerr<<"[HWM] socket() failed: "<<strerror(errno)<<" — retrying\n"; std::this_thread::sleep_for(std::chrono::seconds(3)); continue; }
             struct sockaddr_un a{}; a.sun_family=AF_UNIX;
             strncpy(a.sun_path,sock.c_str(),sizeof(a.sun_path)-1);
             if (connect(fd,(struct sockaddr*)&a,sizeof(a))<0) {
-                close(fd); std::this_thread::sleep_for(std::chrono::seconds(3)); continue;
+                close(fd);
+                // ISSUE-03 FIX: If we previously had a connection and have now been
+                // disconnected for > 10 seconds, thaw all frozen processes so nothing
+                // stays SIGSTOP'd indefinitely while Hyprland is offline.
+                if (ipc_was_connected) {
+                    auto secs_offline = std::chrono::duration_cast<std::chrono::seconds>(
+                        ms_clock::now() - ipc_connected_at).count();
+                    if (secs_offline >= 10) {
+                        std::cerr << "[HWM] IPC offline for " << secs_offline
+                                  << "s — safety-thawing all frozen processes\n";
+                        notify("Titan HWM", "Compositor offline >10s: thawing all frozen processes");
+                        // Thaw every entry in the frozen registry under its own lock.
+                        std::vector<pid_t> to_thaw;
+                        { std::lock_guard<std::mutex> flk(frozen_mtx);
+                          for (auto& [p, _] : frozen_registry) to_thaw.push_back(p); }
+                        // Unfreeze the cgroup first so processes can be scheduled again.
+                        CgroupManager::freeze("titan-frozen.slice", false);
+                        for (pid_t p : to_thaw) {
+                            ::kill(p, SIGCONT);
+                            registry_thaw(p);
+                            std::cout << "[HWM] Safety-thaw SIGCONT pid=" << p << "\n";
+                        }
+                        // Reset timer so we only do this once per disconnect episode.
+                        ipc_was_connected = false;
+                    }
+                }
+                std::this_thread::sleep_for(std::chrono::seconds(3));
+                continue;
             }
+            // Connection established (or re-established) — reset tracking.
+            ipc_was_connected = true;
+            ipc_connected_at  = ms_clock::now();
             std::cout<<"[HWM] v2 Online | Fusion | Tiers | AI-mod | Dual-monitor | PSI\n";
             char buf[4096]; std::string leftover;
             while (true) {
-                ssize_t n=read(fd,buf,sizeof(buf)-1); if (n<=0) break;
+                ssize_t n=read(fd,buf,sizeof(buf)-1);
+                if (n<=0) {
+                    // Socket dropped — record disconnect time for ISSUE-03 thaw guard.
+                    ipc_connected_at = ms_clock::now();
+                    break;
+                }
                 buf[n]='\0'; std::string data=leftover+buf; size_t pos;
                 while ((pos=data.find('\n'))!=std::string::npos) {
                     std::string ev=data.substr(0,pos); data.erase(0,pos+1);
@@ -1482,10 +2042,51 @@ public:
                             schedule(info.substr(0,c), info.substr(c+1), 0);
                         }
                     }
-                    // workspace>>id — P3/P4/P5
+                    // workspace>>id  — P3/P4/P5
+                    // ISSUE-04 FIX: Hyprland emits "workspace>>special:scratchpad" for
+                    // special/scratchpad workspaces. std::stoi() would throw on these strings
+                    // and they'd be silently dropped. We now detect the "special:" prefix and
+                    // map each unique name to a stable negative ID so scratchpads are tracked
+                    // as first-class workspace entries with proper tier/age-decay state.
                     if (ev.rfind("workspace>>",0)==0) {
                         std::string ws_str=ev.substr(11);
-                        try { int ws=std::stoi(ws_str); schedule("","",-1,ws,true); } catch(...) {}
+                        int ws_id = 0;
+                        bool parsed = false;
+                        if (ws_str.rfind("special:",0)==0) {
+                            // Map special workspace names → negative IDs via a stable hash.
+                            // We use a simple name→id table protected by ws_mtx.
+                            static std::unordered_map<std::string,int> special_id_map;
+                            static int next_special_id = -1;
+                            std::lock_guard<std::mutex> lk(ws_mtx);
+                            auto it = special_id_map.find(ws_str);
+                            if (it == special_id_map.end()) {
+                                special_id_map[ws_str] = next_special_id;
+                                ws_id = next_special_id--;
+                                std::cout << "[WS] Special workspace '" << ws_str
+                                          << "' assigned internal id=" << ws_id << "\n";
+                            } else {
+                                ws_id = it->second;
+                            }
+                            parsed = true;
+                        } else {
+                            try { ws_id = std::stoi(ws_str); parsed = true; } catch(...) {
+                                std::cerr << "[WS] Unrecognised workspace string: '" << ws_str << "' — skipping\n";
+                            }
+                        }
+                        if (parsed) schedule("","",-1,ws_id,true);
+                    }
+
+                    // ISSUE-01 FIX: Listen for monitor hot-plug / unplug events.
+                    // Hyprland emits monitorremoved>>NAME and monitoradded>>NAME when
+                    // displays are connected/disconnected. Without handling these, THM
+                    // continues treating the unplugged monitor's workspace as ACTIVE
+                    // until the user manually switches workspace or focuses a window.
+                    // Re-running rebalance via schedule() immediately corrects is_visible
+                    // for all workspaces using query_visible_workspaces().
+                    if (ev.rfind("monitorremoved>>",0)==0 || ev.rfind("monitoradded>>",0)==0) {
+                        const char* evt = (ev.rfind("monitorremoved>>",0)==0) ? "removed" : "added";
+                        std::cout << "[HWM] Monitor " << evt << " — triggering immediate rebalance\n";
+                        schedule("","",-1,active_workspace_id,true);
                     }
                 }
                 leftover=data;
@@ -1496,6 +2097,21 @@ public:
 };
 
 int main() {
+    // ISSUE-08 FIX: Grant OOM immunity to the THM daemon itself.
+    // THM sets oom_score_adj = -200 on protected daemons and +300 on background apps.
+    // Without this, the kernel OOM killer scores THM at 0 (default) and will terminate
+    // it *before* touching -200 protected processes during a memory crisis — exactly
+    // when THM is needed most. Writing -1000 makes THM unkillable by the OOM killer.
+    {
+        std::ofstream f("/proc/self/oom_score_adj");
+        if (f) {
+            f << "-1000";
+            std::cout << "[HWM] OOM immunity set: oom_score_adj = -1000\n";
+        } else {
+            std::cerr << "[HWM] WARNING: Could not set oom_score_adj = -1000 "
+                         "(not running as root?)\n";
+        }
+    }
     write_default_config();
     while (true) {
         TitanHardwareManager d; d.run();

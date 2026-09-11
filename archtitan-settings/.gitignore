@@ -1,0 +1,31 @@
+# ─── Build artifacts ──────────────────────────────────────────────────────────
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.so.*
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+
+# ─── Qt / QML cache ──────────────────────────────────────────────────────────
+.qmlc/
+qmlcache/
+*.qmlc
+
+# ─── Compiled binary ─────────────────────────────────────────────────────────
+archtitan-settings
+
+# ─── IDE ──────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.user
+*.creator
+*.pro.user
+
+# ─── System ───────────────────────────────────────────────────────────────────
+.DS_Store
+*.swp
+*~

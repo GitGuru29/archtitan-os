@@ -1,10 +1,20 @@
-# ─── Separate projects (not part of this repo) ────────────────────────────────
-# archtitan-settings (Qt6 Settings App) lives at ~/Desktop/archtitan-settings
-# It has its own git repo — do NOT include here.
+# Build artifacts for archtitan-settings
+archtitan-settings/build/
+archtitan-settings/archtitan-settings
+archtitan-settings/.cache/
+
+# Local/standalone projects & editor config
+titan-hardware-manager-test-system/
+.vscode/
 
 # Archiso build artifacts
 out/
 tmp-work/
+build/
+**/build/
+.cache/
+**/.cache/
+compile_commands.json
 
 # QEMU / VM artifacts
 *.qcow2
@@ -52,3 +62,15 @@ sandbox/tests/
 
 # Catch-all safety net — anything else added under sandbox/
 sandbox/
+airootfs/var/
+!airootfs/var/**/.gitkeep
+
+# ─── Titan Hardware Manager (THM) compiled binaries ────────────────────────
+titan-hwm-source/titan_hw_manager
+titan-hwm-source/titan-hwm
+titan-hwm-source/test_thm_suite
+titan-hwm
+titan_hw_manager
+
+# ─── CMake build artifacts (all subsystems) ─────────────────────────────────
+subsystems/titan-media-hud/build/

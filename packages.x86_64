@@ -1,7 +1,6 @@
 alsa-utils
 amd-ucode
 base
-broadcom-wl
 btrfs-progs
 cryptsetup
 dhcpcd
@@ -15,6 +14,7 @@ ethtool
 exfatprogs
 f2fs-tools
 fatresize
+haveged
 grub
 hyperv
 intel-ucode
@@ -63,7 +63,7 @@ xfsprogs
 hyprland
 waybar
 kitty
-chromium
+qt6-webengine
 rofi-wayland
 rofi-emoji
 inter-font
@@ -75,7 +75,7 @@ neovim
 cmake
 clang
 gdb
-android-tools
+# android-tools -> moved to netinstall chooser
 bluez
 bluez-utils
 networkmanager
@@ -93,10 +93,6 @@ fish
 code
 nodejs
 npm
-go
-rustup
-docker
-docker-compose
 github-cli
 btop
 zellij
@@ -111,10 +107,12 @@ wl-clipboard
 xdg-desktop-portal-hyprland
 xorg-server
 xorg-xwayland
+xorg-xhost
+gptfdisk
+hwinfo
 qt5-wayland
 qt6-wayland
 python
-python-pip
 pipewire
 pipewire-pulse
 pipewire-alsa
@@ -129,10 +127,8 @@ unzip
 zip
 ripgrep
 fd
-lazygit
 tree
 jq
-httpie
 strace
 libseccomp
 libcap

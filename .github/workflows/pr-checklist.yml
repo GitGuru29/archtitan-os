@@ -1,0 +1,31 @@
+name: "PR Checklist Enforcer"
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  enforce-checklist:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify mandatory checklist
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          echo "Checking Pull Request description..."
+          
+          # Extract everything from "Safety & Quality Checklist" to the end of the PR
+          CHECKLIST_SECTION=$(echo "$PR_BODY" | awk '/Safety.*Checklist/{flag=1} flag')
+          
+          if [[ -z "$CHECKLIST_SECTION" ]]; then
+            echo "::error::Mandatory Safety & Quality Checklist section is missing! Please use the PR template."
+            exit 1
+          fi
+
+          # Check if there are any unchecked boxes in the mandatory section
+          if echo "$CHECKLIST_SECTION" | grep -q -- "- \[ \]"; then
+            echo "::error::You have unchecked boxes in the Safety & Quality Checklist. Please edit your PR description and replace '- [ ]' with '- [x]' for all mandatory items."
+            exit 1
+          else
+            echo "✅ All mandatory checkboxes are checked. Good job!"
+          fi

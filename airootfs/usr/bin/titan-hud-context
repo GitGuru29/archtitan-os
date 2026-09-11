@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# titan-hud-context — ArchTitan Contextual Workspace Identity Provider
+# Outputs live JSON for Waybar mapping active Hyprland workspace to Titan context.
+
+get_context_json() {
+    local ws_id=""
+    local context_name=""
+    local css_class=""
+    
+    # 1. Query Hyprland active workspace ID
+    if command -v hyprctl >/dev/null 2>&1; then
+        ws_id=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // empty' 2>/dev/null)
+    fi
+
+    # 2. Fallback to THM state if available
+    local thm_profile=""
+    if [[ -f "/tmp/titan_hwm_state" ]]; then
+        thm_profile=$(grep "^profile=" "/tmp/titan_hwm_state" 2>/dev/null | cut -d= -f2)
+    fi
+
+    # 3. Context Mapping:
+    # 1 -> SYSTEM DEV
+    # 2 -> WEB DEV
+    # 3 -> ANDROID DEV
+    # 4 -> CASUAL
+    # 5 -> NEUTRAL
+    case "${ws_id:-1}" in
+        1)
+            context_name="SYSTEM DEV"
+            css_class="system-dev"
+            ;;
+        2)
+            context_name="WEB DEV"
+            css_class="web-dev"
+            ;;
+        3)
+            context_name="ANDROID DEV"
+            css_class="android-dev"
+            ;;
+        4)
+            context_name="CASUAL"
+            css_class="casual"
+            ;;
+        5)
+            context_name="NEUTRAL"
+            css_class="neutral"
+            ;;
+        *)
+            if [[ -n "$thm_profile" ]]; then
+                context_name="${thm_profile^^}"
+                css_class="$(echo "$thm_profile" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')"
+            else
+                context_name="WORKSPACE $ws_id"
+                css_class="custom-ws"
+            fi
+            ;;
+    esac
+
+    local tooltip="Active Context: $context_name (Workspace ${ws_id:-1})"
+    if [[ -n "$thm_profile" ]]; then
+        tooltip="$tooltip\\nTHM Profile: $thm_profile"
+    fi
+
+    printf '{"text":"%s","class":"%s","tooltip":"%s"}\n' \
+        "$context_name" "$css_class" "$tooltip"
+}
+
+# If --continuous flag is passed, listen to Hyprland socket2 for real-time zero-lag updates
+if [[ "$1" == "--continuous" ]] && [[ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]]; then
+    socket_path="/tmp/hypr/${HYPRLAND_INSTANCE_SIGNATURE}/.socket2.sock"
+    if [[ -S "$socket_path" ]] && command -v socat >/dev/null 2>&1; then
+        get_context_json
+        socat -u "UNIX-CONNECT:${socket_path}" - 2>/dev/null | while IFS= read -r line; do
+            if [[ "$line" =~ ^(workspace|focusedmon|activewindow)\>\> ]]; then
+                get_context_json
+            fi
+        done
+        exit 0
+    fi
+fi
+
+get_context_json
