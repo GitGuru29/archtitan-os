@@ -323,7 +323,7 @@ Examples:
 
 ---
 
-## 📚 Documentation & Resources
+##  Documentation & Resources
 
 Comprehensive guides and technical documentation are available on the [ArchTitan OS Wiki](https://github.com/GitGuru29/archtitan-os/wiki):
 
