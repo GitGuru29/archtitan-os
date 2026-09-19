@@ -216,6 +216,20 @@ window#waybar.hidden {
     padding: 0 10px 0 8px;
 }
 
+/* ── Notification Bell (SwayNC) ───────────────────────────── */
+#custom-notification {
+    color: #89B4FA;
+    font-size: 13px;
+    padding: 0 8px;
+    border-radius: 4px;
+}
+
+#custom-notification:hover {
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.15);
+    text-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+}
+
 /* ── System Tray ──────────────────────────────────────────── */
 #tray {
     padding: 0 4px;
