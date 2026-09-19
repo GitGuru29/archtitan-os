@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/msfvenom/custom-os-build/titan-hwm-v3/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

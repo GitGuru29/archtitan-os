@@ -1,0 +1,6 @@
+elapsed_sec,tick_count,tick_ms_avg,tick_ms_p99,pipeline_ms_avg,pipeline_ms_p99,workloads_active,processes_spawned_total,processes_killed_total,decisions_total,keep_full,keep_bg,throttle,freeze,reclaim,rss_kb,total_pids,mem_used_pct,psi_some,pressure_level,governor_hint,reclaim_aborts
+10,35,21.01,89.19,11.79,58.61,52,70,18,824,347,227,0,235,15,4836,373,41.1,0.0,HIGH,SCHEDUL,0
+20,69,46.42,164.13,25.69,140.34,86,130,44,3121,1367,805,0,911,38,4864,410,41.1,0.0,HIGH,SCHEDUL,0
+30,101,70.04,211.00,33.25,147.22,128,200,72,6629,2894,1755,0,1920,60,4896,462,41.2,0.0,HIGH,PERFORMANCE,0
+40,133,103.69,450.81,47.94,335.93,165,260,95,11392,4972,3049,0,3291,80,4920,499,41.1,0.0,HIGH,PERFORMANCE,0
+50,162,132.82,524.05,60.98,357.83,197,317,120,16718,7296,4524,0,4796,102,4940,533,41.2,0.0,HIGH,PERFORMANCE,0
