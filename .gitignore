@@ -74,3 +74,6 @@ titan_hw_manager
 
 # ─── CMake build artifacts (all subsystems) ─────────────────────────────────
 subsystems/titan-media-hud/build/
+titan-hwm-v3/build/
+titan-browser-source/compile_commands.json
+test-swaync.sh
