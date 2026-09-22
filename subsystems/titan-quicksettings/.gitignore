@@ -1,0 +1,8 @@
+build/
+CMakeLists.txt.user
+*.o
+*.a
+*.so
+.moc/
+.rcc/
+.uic/
