@@ -2,5 +2,13 @@
 <RCC version="1.0">
     <qresource prefix="/">
         <file>qml/QuickSettingsWindow.qml</file>
+        <file>qml/style/TitanTheme.qml</file>
+        <file>qml/components/HeaderBar.qml</file>
+        <file>qml/components/LargeToggleTile.qml</file>
+        <file>qml/components/QuickToggleGrid.qml</file>
+        <file>qml/components/NotificationCard.qml</file>
+        <file>qml/components/NotificationList.qml</file>
+        <file>qml/components/NotificationFooter.qml</file>
+        <file>qml/components/CalendarFooter.qml</file>
     </qresource>
 </RCC>
