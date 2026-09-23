@@ -1,0 +1,10 @@
+/home/msfvenom/custom-os-build/titan-hwm-v3/build/CMakeFiles/thm_core.dir
+/home/msfvenom/custom-os-build/titan-hwm-v3/build/CMakeFiles/titan-hwm-daemon.dir
+/home/msfvenom/custom-os-build/titan-hwm-v3/build/CMakeFiles/thm_test_runner.dir
+/home/msfvenom/custom-os-build/titan-hwm-v3/build/CMakeFiles/test.dir
+/home/msfvenom/custom-os-build/titan-hwm-v3/build/CMakeFiles/edit_cache.dir
+/home/msfvenom/custom-os-build/titan-hwm-v3/build/CMakeFiles/rebuild_cache.dir
+/home/msfvenom/custom-os-build/titan-hwm-v3/build/CMakeFiles/list_install_components.dir
+/home/msfvenom/custom-os-build/titan-hwm-v3/build/CMakeFiles/install.dir
+/home/msfvenom/custom-os-build/titan-hwm-v3/build/CMakeFiles/install/local.dir
+/home/msfvenom/custom-os-build/titan-hwm-v3/build/CMakeFiles/install/strip.dir

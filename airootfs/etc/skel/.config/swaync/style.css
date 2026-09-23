@@ -1,0 +1,290 @@
+/* ==============================================================================
+ * ArchTitan OS - SwayNC Control Center & Notification Theme
+ * Obsidian Glassmorphic Catppuccin / Cyan Aesthetic matching ArchTitan UI
+ * ============================================================================== */
+
+@define-color base            rgba(15, 20, 30, 0.94);
+@define-color surface         rgba(26, 33, 48, 0.88);
+@define-color surface-alt     rgba(35, 45, 66, 0.92);
+@define-color surface-hover   rgba(45, 57, 82, 0.95);
+@define-color border-color    rgba(255, 255, 255, 0.08);
+@define-color border-highlight rgba(56, 189, 248, 0.35);
+
+@define-color cyan-active     #38bdf8;
+@define-color cyan-glow       rgba(56, 189, 248, 0.45);
+@define-color on-cyan         #0b1329;
+
+@define-color text-main       #f1f5f9;
+@define-color text-muted      #94a3b8;
+@define-color text-sub        #64748b;
+@define-color danger          #f43f5e;
+
+/* --- Global Reset & Typography --- */
+* {
+    font-family: "Inter", "JetBrainsMono Nerd Font", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 200ms cubic-bezier(0.05, 0.9, 0.1, 1.05);
+}
+
+/* --- Control Center Container --- */
+.control-center {
+    background-color: @base;
+    border: 1px solid @border-highlight;
+    border-radius: 22px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75), 0 0 20px rgba(56, 189, 248, 0.12);
+    padding: 16px;
+    margin: 8px;
+}
+
+/* --- Notification Popups Window --- */
+.notification-window {
+    background: transparent;
+    margin: 8px;
+}
+
+/* --- Header Button Grid (.header) --- */
+.header {
+    background: transparent;
+    margin-bottom: 12px;
+    padding: 0;
+}
+
+.header button {
+    background: @surface;
+    color: @text-main;
+    border: 1px solid @border-color;
+    border-radius: 12px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.header button:first-child {
+    background: rgba(56, 189, 248, 0.15);
+    color: @cyan-active;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    font-weight: 700;
+}
+
+.header button:hover {
+    background: @surface-hover;
+    border-color: @border-highlight;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+}
+
+/* --- Primary Quick Settings Pills (.row1, .row2) --- */
+.row1, .row2 {
+    margin-bottom: 8px;
+    padding: 0;
+}
+
+.row1 button, .row2 button {
+    background-color: @surface;
+    color: @text-main;
+    border: 1px solid @border-color;
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.row1 button:hover, .row2 button:hover {
+    background-color: @surface-hover;
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Active Toggle State */
+.row1 button.active, .row2 button.active {
+    background-color: @cyan-active;
+    color: @on-cyan;
+    border: 1px solid @cyan-active;
+    font-weight: 700;
+    box-shadow: 0 0 14px @cyan-glow;
+}
+
+.row1 button.active:hover, .row2 button.active:hover {
+    background-color: #7dd3fc;
+    border-color: #7dd3fc;
+    box-shadow: 0 0 18px rgba(56, 189, 248, 0.6);
+}
+
+/* --- Squircle Grid Buttons (.squircles) --- */
+.squircles {
+    margin-bottom: 14px;
+    padding: 0;
+}
+
+.squircles button {
+    background-color: @surface;
+    color: @text-muted;
+    border: 1px solid @border-color;
+    border-radius: 14px;
+    padding: 10px;
+    font-size: 16px;
+}
+
+.squircles button:hover {
+    background-color: @surface-hover;
+    color: @text-main;
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.squircles button.active {
+    background-color: @cyan-active;
+    color: @on-cyan;
+    border: 1px solid @cyan-active;
+    box-shadow: 0 0 12px @cyan-glow;
+}
+
+.squircles button.active:hover {
+    background-color: #7dd3fc;
+    border-color: #7dd3fc;
+}
+
+/* --- Title Widget (Notifications Header & Clear All) --- */
+.widget-title {
+    margin: 8px 0 10px 0;
+    padding: 4px 6px;
+}
+
+.widget-title > label {
+    font-size: 15px;
+    font-weight: 700;
+    color: @text-main;
+}
+
+.widget-title > button {
+    background: rgba(255, 255, 255, 0.07);
+    color: @text-muted;
+    border: 1px solid @border-color;
+    border-radius: 10px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.widget-title > button:hover {
+    background: rgba(244, 63, 94, 0.2);
+    color: @danger;
+    border-color: rgba(244, 63, 94, 0.4);
+}
+
+/* --- Notifications List & Cards --- */
+.notification-group {
+    margin-bottom: 8px;
+}
+
+.notification-group-header {
+    margin: 6px 0;
+    font-weight: 700;
+    color: @cyan-active;
+    font-size: 12px;
+}
+
+.notification {
+    background: @surface;
+    border: 1px solid @border-color;
+    border-radius: 14px;
+    padding: 12px;
+    margin: 5px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.notification:hover {
+    background: @surface-alt;
+    border-color: @border-highlight;
+}
+
+.notification-content {
+    margin: 4px;
+}
+
+.summary {
+    font-size: 13px;
+    font-weight: 700;
+    color: @text-main;
+}
+
+.time {
+    font-size: 11px;
+    color: @text-sub;
+    margin-right: 6px;
+}
+
+.body {
+    font-size: 12px;
+    color: @text-muted;
+    margin-top: 3px;
+}
+
+.close-button {
+    background: transparent;
+    color: @text-sub;
+    border-radius: 8px;
+    padding: 2px 6px;
+}
+
+.close-button:hover {
+    background: rgba(244, 63, 94, 0.2);
+    color: @danger;
+}
+
+.notification-action {
+    background: @surface-alt;
+    color: @text-main;
+    border: 1px solid @border-color;
+    border-radius: 8px;
+    margin: 4px 2px;
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+.notification-action:hover {
+    background: @surface-hover;
+    border-color: @cyan-active;
+}
+
+/* --- Do Not Disturb Widget --- */
+.widget-dnd {
+    background: @surface;
+    border: 1px solid @border-color;
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin: 8px 0;
+}
+
+.widget-dnd > switch {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+}
+
+.widget-dnd > switch:checked {
+    background: @cyan-active;
+}
+
+/* --- Calendar Widget --- */
+.widget-calendar {
+    background: @surface;
+    border: 1px solid @border-color;
+    border-radius: 14px;
+    padding: 10px;
+    margin-top: 8px;
+}
+
+.widget-calendar calendar {
+    background: transparent;
+    color: @text-main;
+}
+
+.widget-calendar calendar:selected {
+    background-color: @cyan-active;
+    color: @on-cyan;
+    border-radius: 8px;
+    font-weight: 700;
+}
+
+.widget-calendar header {
+    color: @cyan-active;
+    font-weight: 700;
+}
