@@ -10,7 +10,6 @@ Rectangle {
 
     required property var modelData
     required property int cardIndex
-    required property var notifServer
 
     property bool expanded: modelData ? (modelData.expanded || false) : false
 
@@ -96,7 +95,7 @@ Rectangle {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: if (cardRoot.notifServer) cardRoot.notifServer.toggleExpanded(cardRoot.cardIndex)
+                        onClicked: if (typeof notifServer !== "undefined" && notifServer) notifServer.toggleExpanded(cardRoot.cardIndex)
                     }
                 }
             }
@@ -135,7 +134,7 @@ Rectangle {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: if (cardRoot.notifServer) cardRoot.notifServer.dismissAt(cardRoot.cardIndex)
+                onClicked: if (typeof notifServer !== "undefined" && notifServer) notifServer.dismissAt(cardRoot.cardIndex)
             }
         }
     }
@@ -145,6 +144,6 @@ Rectangle {
         anchors.fill: parent
         hoverEnabled: true
         propagateComposedEvents: true
-        onClicked: if (cardRoot.notifServer) cardRoot.notifServer.toggleExpanded(cardRoot.cardIndex)
+        onClicked: if (typeof notifServer !== "undefined" && notifServer) notifServer.toggleExpanded(cardRoot.cardIndex)
     }
 }

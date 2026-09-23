@@ -7,19 +7,16 @@ Item {
     Layout.fillWidth: true
     Layout.fillHeight: true
 
-    required property var notifServer
-
     ListView {
         id: notifListView
         anchors.fill: parent
         spacing: 8
         clip: true
-        model: notifListRoot.notifServer ? notifListRoot.notifServer.notifications : []
+        model: (typeof notifServer !== "undefined" && notifServer) ? notifServer.notifications : []
 
         delegate: NotificationCard {
             modelData: modelData
             cardIndex: index
-            notifServer: notifListRoot.notifServer
         }
 
         // Empty State if all notifications cleared
