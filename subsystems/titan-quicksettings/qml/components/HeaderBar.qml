@@ -8,11 +8,6 @@ RowLayout {
     Layout.preferredHeight: 38
     spacing: 8
 
-    required property var systemCtrl
-    required property var networkCtrl
-    required property var bluetoothCtrl
-    required property var audioCtrl
-
     // ArchTitan Logo + Uptime Badge
     Rectangle {
         Layout.preferredHeight: 34
@@ -47,7 +42,7 @@ RowLayout {
             }
 
             Text {
-                text: headerRoot.systemCtrl ? headerRoot.systemCtrl.uptime : "Up 25m"
+                text: (typeof systemCtrl !== "undefined" && systemCtrl) ? systemCtrl.uptime : "Up 25m"
                 font.family: "Outfit, Inter, sans-serif"
                 font.pixelSize: 13
                 font.weight: Font.DemiBold
@@ -81,10 +76,10 @@ RowLayout {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {
-                    if (headerRoot.systemCtrl) headerRoot.systemCtrl.refresh();
-                    if (headerRoot.networkCtrl) headerRoot.networkCtrl.refresh();
-                    if (headerRoot.bluetoothCtrl) headerRoot.bluetoothCtrl.refresh();
-                    if (headerRoot.audioCtrl) headerRoot.audioCtrl.refresh();
+                    if (typeof systemCtrl !== "undefined" && systemCtrl) systemCtrl.refresh();
+                    if (typeof networkCtrl !== "undefined" && networkCtrl) networkCtrl.refresh();
+                    if (typeof bluetoothCtrl !== "undefined" && bluetoothCtrl) bluetoothCtrl.refresh();
+                    if (typeof audioCtrl !== "undefined" && audioCtrl) audioCtrl.refresh();
                 }
             }
         }
@@ -99,7 +94,7 @@ RowLayout {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: if (headerRoot.systemCtrl) headerRoot.systemCtrl.openSettings()
+                onClicked: if (typeof systemCtrl !== "undefined" && systemCtrl) systemCtrl.openSettings()
             }
         }
 
@@ -113,7 +108,7 @@ RowLayout {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: if (headerRoot.systemCtrl) headerRoot.systemCtrl.openPowerMenu()
+                onClicked: if (typeof systemCtrl !== "undefined" && systemCtrl) systemCtrl.openPowerMenu()
             }
         }
     }

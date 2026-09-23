@@ -11,8 +11,6 @@ Rectangle {
     border.color: "#14FFFFFF"
     border.width: 1
 
-    required property var systemCtrl
-
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: 14
@@ -26,7 +24,7 @@ Rectangle {
         }
 
         Text {
-            text: calFooterRoot.systemCtrl ? calFooterRoot.systemCtrl.currentDateString : "Thursday, September 17 • 0 tasks"
+            text: (typeof systemCtrl !== "undefined" && systemCtrl) ? systemCtrl.currentDateString : "Thursday, September 17 • 0 tasks"
             font.family: "Outfit, Inter, sans-serif"
             font.pixelSize: 12
             font.weight: Font.DemiBold

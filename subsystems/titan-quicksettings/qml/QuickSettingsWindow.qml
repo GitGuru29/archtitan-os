@@ -95,37 +95,19 @@ Window {
             spacing: 10
 
             // 1. TOP HEADER BAR
-            HeaderBar {
-                systemCtrl: typeof systemCtrl !== "undefined" ? systemCtrl : null
-                networkCtrl: typeof networkCtrl !== "undefined" ? networkCtrl : null
-                bluetoothCtrl: typeof bluetoothCtrl !== "undefined" ? bluetoothCtrl : null
-                audioCtrl: typeof audioCtrl !== "undefined" ? audioCtrl : null
-            }
+            HeaderBar {}
 
             // 2. QUICK SETTINGS CONTROLS GRID
-            QuickToggleGrid {
-                systemCtrl: typeof systemCtrl !== "undefined" ? systemCtrl : null
-                networkCtrl: typeof networkCtrl !== "undefined" ? networkCtrl : null
-                bluetoothCtrl: typeof bluetoothCtrl !== "undefined" ? bluetoothCtrl : null
-                audioCtrl: typeof audioCtrl !== "undefined" ? audioCtrl : null
-                nightLightCtrl: typeof nightLightCtrl !== "undefined" ? nightLightCtrl : null
-                notifServer: typeof notifServer !== "undefined" ? notifServer : null
-            }
+            QuickToggleGrid {}
 
             // 3. GROUPED NOTIFICATIONS LIST
-            NotificationList {
-                notifServer: typeof notifServer !== "undefined" ? notifServer : null
-            }
+            NotificationList {}
 
             // 4. NOTIFICATION FOOTER
-            NotificationFooter {
-                notifServer: typeof notifServer !== "undefined" ? notifServer : null
-            }
+            NotificationFooter {}
 
             // 5. BOTTOM CALENDAR & TASK BAR
-            CalendarFooter {
-                systemCtrl: typeof systemCtrl !== "undefined" ? systemCtrl : null
-            }
+            CalendarFooter {}
         }
     }
 }
