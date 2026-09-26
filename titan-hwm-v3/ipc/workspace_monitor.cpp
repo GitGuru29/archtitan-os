@@ -207,10 +207,17 @@ void WorkspaceMonitor::refresh_visibility() {
 //   - ANY workload in ACTIVE + latency_sensitive         → PERFORMANCE
 //   - ALL idle + NORMAL pressure                         → POWERSAVE
 //   - Otherwise                                          → SCHEDUTIL
+//
+// Pressure is authoritative over demand: at HIGH or CRITICAL the hint is capped
+// at SCHEDUTIL, because PressureLevel::CRITICAL is documented (types.hpp) as
+// "drop governor". Hysteresis is asymmetric — climbing to PERFORMANCE requires
+// pressure below HIGH, holding it tolerates MODERATE — so a build running while
+// pressure oscillates on the HIGH boundary cannot flap the governor every tick.
 // ─────────────────────────────────────────────────────────────────────────────
 GovernorHint WorkspaceMonitor::compute_governor(
         const std::unordered_map<uint32_t, Workload>& workloads,
-        PressureLevel pressure) {
+        PressureLevel pressure,
+        GovernorHint current) {
 
     bool any_building   = false;
     bool any_latency    = false;
@@ -227,7 +234,15 @@ GovernorHint WorkspaceMonitor::compute_governor(
             any_latency = true;
     }
 
-    if (any_building || any_latency)  return GovernorHint::PERFORMANCE;
+    if (any_building || any_latency) {
+        const bool may_hold_performance =
+            (current == GovernorHint::PERFORMANCE)
+                ? (pressure <= PressureLevel::MODERATE)
+                : (pressure <  PressureLevel::HIGH);
+        if (may_hold_performance) return GovernorHint::PERFORMANCE;
+        return GovernorHint::SCHEDUTIL;
+    }
+
     if (all_idle && pressure == PressureLevel::NORMAL) return GovernorHint::POWERSAVE;
     return GovernorHint::SCHEDUTIL;
 }

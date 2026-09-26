@@ -234,6 +234,9 @@ int main(int argc, char* argv[]) {
     // ── Previous child sets for execution detection ─────────────────────────
     std::unordered_map<pid_t, std::vector<pid_t>> prev_children;
 
+    // Governor hint currently applied — feeds compute_governor's hysteresis band
+    thm::GovernorHint current_gov = thm::GovernorHint::SCHEDUTIL;
+
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // MAIN TICK LOOP
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -401,7 +404,9 @@ int main(int argc, char* argv[]) {
         // Prune reclaimed/exited worklets so the registry stays bounded to live
         // processes (unbounded registry retention is a slow memory leak).
         workload_mgr.prune_dead();
-        auto gov = thm::WorkspaceMonitor::compute_governor(all_workloads, pressure);
+        auto gov = thm::WorkspaceMonitor::compute_governor(all_workloads, pressure,
+                                                           current_gov);
+        current_gov = gov;
         if (!dry_run) {
             thm::WorkspaceMonitor::apply_governor(gov);
         }
@@ -417,16 +422,36 @@ int main(int argc, char* argv[]) {
             prev_children.erase(pid);
         }
 
+        // Drop exited members from each workload's pid list so it reflects the
+        // current process set rather than every PID seen since discovery.
+        std::unordered_set<pid_t> live_pids;
+        live_pids.reserve(proc_graph.size());
+        for (const auto& [pid, node] : proc_graph) {
+            if (node.proc_state != 'Z') live_pids.insert(pid);
+        }
+        for (uint32_t wl_id : workload_mgr.all_ids()) {
+            workload_mgr.prune_dead_pids(wl_id, live_pids);
+        }
+
         // Evict worklets whose member processes have all exited (or were
         // reclaimed this tick) so the workload registry never outlives its
-        // processes. ::kill(pid, 0) == 0 means the pid still exists.
+        // processes. ::kill(pid, 0) == 0 means the pid still exists — but a
+        // zombie also answers 0, so consult the tick's proc_graph and treat
+        // state 'Z' as exited. Without this a workload whose root is an
+        // unreaped zombie is never evicted.
         std::vector<uint32_t> expired;
         for (uint32_t wl_id : workload_mgr.all_ids()) {
             auto* wl = workload_mgr.get(wl_id);
             if (!wl) continue;
             bool any_live = false;
             for (pid_t p : wl->pids) {
-                if (p > 1 && ::kill(p, 0) == 0) { any_live = true; break; }
+                if (p <= 1) continue;
+                if (::kill(p, 0) != 0) continue;
+                auto node = proc_graph.find(p);
+                if (node != proc_graph.end() && node->second.proc_state == 'Z')
+                    continue;
+                any_live = true;
+                break;
             }
             if (!any_live) expired.push_back(wl_id);
         }
