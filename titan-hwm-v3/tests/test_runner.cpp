@@ -13,6 +13,8 @@
 //   TC-8:  Elimination of Static Workspace Profiles
 //   TC-9:  9-Step Reclaim Engine Safety Sequence
 //   TC-10: Demand-Based Dynamic Governor Transitions
+//   TC-11: Governor Pressure Authority & Hysteresis (regression, ISSUE-05)
+//   TC-12: Protected-PID Guard on SIGKILL Escalation (regression, ISSUE-13)
 // =============================================================================
 
 #include "../core/types.hpp"
@@ -962,6 +964,151 @@ void test_tc10_governor_transitions() {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
+// TC-11: Governor Pressure Authority & Hysteresis  (regression, ISSUE-05)
+// ═════════════════════════════════════════════════════════════════════════════
+void test_tc11_governor_pressure_authority() {
+    auto t0 = std::chrono::steady_clock::now();
+    log_test_header(11, "Governor Pressure Authority & Hysteresis",
+                    "System pressure caps the governor; demand alone must not pin it at PERFORMANCE");
+
+    std::unordered_map<uint32_t, thm::Workload> building;
+    thm::Workload wl;
+    wl.id = 501;
+    wl.is_building = true;
+    wl.state = thm::WorkloadState::BACKGROUND_EXECUTING;
+    building[501] = wl;
+
+    std::unordered_map<uint32_t, thm::Workload> idle;
+    thm::Workload wl_i;
+    wl_i.id = 502;
+    wl_i.state = thm::WorkloadState::IDLE;
+    idle[502] = wl_i;
+
+    const auto G = thm::WorkspaceMonitor::compute_governor;
+    using H = thm::GovernorHint;
+    using P = thm::PressureLevel;
+
+    // Demand alone still earns PERFORMANCE when the system is calm.
+    const bool calm_climbs = (G(building, P::NORMAL, H::SCHEDUTIL) == H::PERFORMANCE);
+
+    // The regression: a build must NOT pin the governor at PERFORMANCE once the
+    // system is under pressure. Before the fix this returned PERFORMANCE
+    // regardless of pressure.
+    const bool high_caps    = (G(building, P::HIGH,     H::SCHEDUTIL) == H::SCHEDUTIL);
+    const bool crit_caps    = (G(building, P::CRITICAL, H::SCHEDUTIL) == H::SCHEDUTIL);
+    const bool held_caps    = (G(building, P::HIGH,     H::PERFORMANCE) == H::SCHEDUTIL);
+
+    // Hysteresis edges. Climbing to PERFORMANCE requires pressure below HIGH, so
+    // MODERATE is allowed to climb *and* allowed to hold. The asymmetric band is
+    // what stops HIGH from flapping, not a bar on MODERATE.
+    const bool mod_holds    = (G(building, P::MODERATE, H::PERFORMANCE) == H::PERFORMANCE);
+    const bool mod_climbs   = (G(building, P::MODERATE, H::SCHEDUTIL)  == H::PERFORMANCE);
+
+    // Idle path still reaches POWERSAVE only when pressure allows it.
+    const bool idle_saves   = (G(idle, P::NORMAL, H::SCHEDUTIL) == H::POWERSAVE);
+    const bool idle_no_save = (G(idle, P::HIGH,     H::SCHEDUTIL) == H::SCHEDUTIL);
+
+    std::cout << "[Governor] build+NORMAL   -> " << (G(building, P::NORMAL,   H::SCHEDUTIL) == H::PERFORMANCE ? "PERFORMANCE" : "capped") << "\n";
+    std::cout << "[Governor] build+HIGH     -> " << (high_caps ? "SCHEDUTIL (capped)" : "NOT CAPPED") << "\n";
+    std::cout << "[Governor] build+CRITICAL -> " << (crit_caps ? "SCHEDUTIL (capped)" : "NOT CAPPED") << "\n";
+    std::cout << "[Governor] build+HIGH from PERFORMANCE -> " << (held_caps ? "SCHEDUTIL (de-escalated)" : "NOT DE-ESCALATED") << "\n";
+    std::cout << "[Governor] idle+NORMAL    -> " << (idle_saves ? "POWERSAVE" : "no") << "\n";
+    std::cout << "[Governor] idle+HIGH      -> " << (idle_no_save ? "SCHEDUTIL (no powersave)" : "POWERSAVE (wrong)") << "\n";
+    std::cout << "[Governor] build+MODERATE from PERFORMANCE -> " << (mod_holds ? "PERFORMANCE (held)" : "dropped") << "\n";
+    std::cout << "[Governor] build+MODERATE from SCHEDUTIL  -> " << (mod_climbs ? "PERFORMANCE (climbed)" : "no climb") << "\n";
+
+    const bool passed = calm_climbs && high_caps && crit_caps && held_caps &&
+                        mod_holds && mod_climbs && idle_saves && idle_no_save;
+
+    auto t1 = std::chrono::steady_clock::now();
+    long ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+    g_results.push_back({"TC-11: Governor Pressure Authority",
+                        "Pressure caps the governor hint; hysteresis prevents flapping at MODERATE",
+                        passed,
+                        "HIGH/CRITICAL cap to SCHEDUTIL even with a build running",
+                        ms});
+
+    std::cout << (passed ? ">>> PASS: Pressure authority verified.\n" : ">>> FAIL!\n");
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// TC-12: Protected-PID Guard on SIGKILL Escalation  (regression, ISSUE-13)
+// ═════════════════════════════════════════════════════════════════════════════
+void test_tc12_protected_sigkill_guard() {
+    auto t0 = std::chrono::steady_clock::now();
+    log_test_header(12, "Protected-PID Guard on SIGKILL Escalation",
+                    "The SIGKILL stage must honour the protected registry exactly as SIGTERM does");
+
+    // A real process that must survive both signal stages.
+    pid_t victim = fork_cpu_burner("systemd-journald");
+    if (victim <= 0) {
+        g_results.push_back({"TC-12: Protected SIGKILL Guard",
+                            "SIGKILL escalation must skip protected PIDs", false,
+                            "could not fork test process", 0});
+        return;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    thm::ProtectedRegistry registry;
+    registry.register_pid(victim, "TC-12 protected victim");
+
+    thm::ExecutionDetector detector;
+    thm::ReclaimConfig cfg;
+    cfg.grace_period_ms  = 0;
+    cfg.sigterm_grace_ms = 0;
+    cfg.notify_enabled   = false;   // keep the test silent and fast
+    thm::ReclaimEngine engine(registry, detector, cfg);
+
+    // Stage 1: SIGTERM must be refused.
+    engine.kill_tree({victim}, SIGTERM, "TC-12/SIGTERM");
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    const bool alive_after_term = (::kill(victim, 0) == 0) &&
+                                  (read_proc_state(victim) != 'Z');
+
+    // Stage 2: SIGKILL must ALSO be refused. This is the regression: the
+    // pre-fix step 9 called ::kill() directly and would have killed the process.
+    engine.kill_tree({victim}, SIGKILL, "TC-12/SIGKILL");
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    const bool alive_after_kill = (::kill(victim, 0) == 0) &&
+                                  (read_proc_state(victim) != 'Z');
+
+    // Control: an UNPROTECTED pid in the same call must still be signalled,
+    // proving the guard filters rather than swallowing every signal.
+    pid_t ordinary = fork_cpu_burner("ordinary-worker");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    engine.kill_tree({victim, ordinary}, SIGKILL, "TC-12/MIXED");
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    const bool ordinary_died = (read_proc_state(ordinary) == 'Z') ||
+                               (::kill(ordinary, 0) != 0);
+    const bool victim_still_alive = (::kill(victim, 0) == 0) &&
+                                    (read_proc_state(victim) != 'Z');
+
+    std::cout << "[Reclaim] protected PID " << victim
+              << " after SIGTERM: " << (alive_after_term ? "ALIVE (correct)" : "KILLED (wrong)") << "\n";
+    std::cout << "[Reclaim] protected PID " << victim
+              << " after SIGKILL: " << (alive_after_kill ? "ALIVE (correct)" : "KILLED (wrong)") << "\n";
+    std::cout << "[Reclaim] mixed call — ordinary PID " << ordinary
+              << " signalled: " << (ordinary_died ? "yes (correct)" : "no (over-blocked)") << "\n";
+
+    if (!ordinary_died && ordinary > 0) ::kill(ordinary, SIGKILL);
+    safe_reap(victim);
+    if (ordinary > 0) safe_reap(ordinary);
+
+    const bool passed = alive_after_term && alive_after_kill &&
+                        ordinary_died && victim_still_alive;
+
+    auto t1 = std::chrono::steady_clock::now();
+    long ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+    g_results.push_back({"TC-12: Protected SIGKILL Guard",
+                        "SIGKILL escalation must skip protected PIDs, and only those",
+                        passed,
+                        "Protected PID survived both stages; unprotected PID in the same call was killed",
+                        ms});
+
+    std::cout << (passed ? ">>> PASS: Protected SIGKILL guard verified.\n" : ">>> FAIL!\n");
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
 // Main Test Harness Entry Point
 // ═════════════════════════════════════════════════════════════════════════════
 int main() {
@@ -980,6 +1127,8 @@ int main() {
     test_tc8_elimination_of_workspace_profiles();
     test_tc9_reclaim_engine_safety();
     test_tc10_governor_transitions();
+    test_tc11_governor_pressure_authority();
+    test_tc12_protected_sigkill_guard();
 
     // Summary Table
     std::cout << "\n════════════════════════════════════════════════════════════════════════════════\n";
