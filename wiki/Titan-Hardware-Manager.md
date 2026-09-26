@@ -129,9 +129,21 @@ THM solves this by coupling **cgroup PSI monitoring** with **compositor focus se
 
 ---
 
-## THM v3.1 Hardcore Resilience Matrix (11 Architectural Fixes)
+## THM v3.1 Hardcore Resilience Matrix & 10h Stress-Test Remediations
 
-THM v3.1 incorporates empirical architectural solutions developed to resolve 11 critical edge cases discovered during real-world stress testing:
+THM v3.1 incorporates empirical architectural solutions developed to resolve 11 critical edge cases discovered during real-world stress testing, along with 7 major system-level remediations validated over 10-hour continuous stress runs:
+
+| Category | Component | Failure Condition / Hazard | Architectural Remediation |
+| :--- | :--- | :--- | :--- |
+| **Safety** | `reclaim_engine` | SIGKILL escalation directly invoked `::kill()`, bypassing protected process guards during PID reuse. | Routed SIGKILL escalation strictly through protected-aware `kill_tree()`. Replaced `/proc` existence check with atomic `pidfd_open()` / `pidfd_send_signal()` to pin targeted processes. |
+| **Performance** | `reclaim_engine` | `std::system()` invoked `/bin/sh` for process reclaims, spawning over 5,180 unnecessary shell forks. | Replaced `std::system()` with direct `posix_spawn()` execution from explicit `argv` arrays. |
+| **Authority** | `workspace_monitor` | Build activities pinned CPU governor at max frequency indefinitely regardless of memory pressure. | Made system pressure authoritative over demand in `workspace_monitor` with asymmetric hysteresis. |
+| **Cleanliness** | `workload_manager` | Zombie processes (`state == 'Z'`) passed `kill(p, 0) == 0` and un-reaped PIDs accumulated indefinitely. | Added `prune_dead_pids()` and zombie state eviction in `daemon.cpp`. |
+| **Memory** | `fusion_classifier` | Unbounded static `s3_warned_cwds_` cache grew continuously over long daemon uptime. | Bounded cache to a maximum of 256 entries protected by mutex synchronization. |
+| **Enforcement** | `cgroup_controller` | Subtree `cpu` controller missing in `archtitan.slice`, causing `cpu.weight` writes to silently fail. | Delegated `cpu` controller into `archtitan.slice` and added post-flush `f.good()` checks for write verification. |
+| **Policy** | `policy_engine` | Latency-sensitive browser renderers overloaded `FREEZE` instead of reporting cgroup throttle state. | Implemented explicit `THROTTLE` policy return for latency-sensitive browser roots at `HIGH`. |
+
+### Hardcore Edge-Case Failure Matrix (HC-01 through HC-11)
 
 | Issue ID | Subsystem Component | Empirical Failure Condition | v3.1 Architectural Solution |
 | :--- | :--- | :--- | :--- |

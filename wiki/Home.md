@@ -23,6 +23,7 @@ The project was originally developed as **TitanArch**, a Final Year Project focu
 | Install to disk or VM | [Installation Guide](Installation-Guide) |
 | Resource orchestration daemon | [Titan Hardware Manager](Titan-Hardware-Manager) |
 | Per-app sandboxing | [Titan Sandbox](Titan-Sandbox) |
+| Peer-to-peer file transfer | [Titan Share](Titan-Share) |
 | System info CLI/GUI | [TitanFetch](TitanFetch) |
 | First-party WebEngine browser | [Titan Browser](Titan-Browser) |
 | System control center | [ArchTitan Settings](ArchTitan-Settings) |
@@ -38,7 +39,7 @@ The project was originally developed as **TitanArch**, a Final Year Project focu
 
 1. **Wayland native** — Hyprland compositor, no X11 session by default.
 2. **Resource aware** — Titan Hardware Manager (THM) uses cgroups v2, PSI, and workload classification to keep the active session responsive.
-3. **First-party desktop stack** — Lightweight Qt6 native browser (TitanBrowser), system control center (ArchTitan Settings), and Dynamic Island media overlay (Titan Media HUD).
+3. **First-party desktop stack** — Lightweight Qt6 native browser (TitanBrowser), system control center (ArchTitan Settings), Dynamic Island media overlay (Titan Media HUD), and local P2P file sharing (TitanShare).
 4. **Aesthetic cohesion** — Catppuccin Mocha theming across terminal, bar, launcher, apps, and Plymouth boot splash.
 5. **Developer ready** — Fish + Starship shell, VS Code, Docker, Rust/Go/Node toolchains, and Android tooling hooks out of the box.
 
@@ -65,6 +66,7 @@ graph TB
     subgraph ArchTitan["ArchTitan System Services"]
         THM[Titan Hardware Manager]
         TS[Titan Sandbox]
+        TSS[TitanShare P2P Daemon]
     end
 
     subgraph Kernel["Kernel & Subsystems"]

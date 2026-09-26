@@ -77,7 +77,7 @@ subsystems/<subsystem-name>/
 | **Auto GPU Switcher** | @GitGuru29 (Lead) | Lead Subsystem | `subsystems/auto-gpu-switcher/` |
 | **TITAN AI** | Teammate | Group Subsystem | `subsystems/titan-ai/` |
 | **TITAN Task Manager** | Teammate | Group Subsystem | `subsystems/titan-task-manager/` |
-| **TITAN Share** | Teammate | Group Subsystem | `subsystems/titan-share/` |
+| **TITAN Share** | Teammate | Group Subsystem | `subsystems/titan-share/` (See [Titan Share](Titan-Share)) |
 | **TITAN Mirror** | Teammate | Group Subsystem | `subsystems/titan-mirror/` |
 
 ---

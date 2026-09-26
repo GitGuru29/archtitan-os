@@ -12,6 +12,7 @@ This guide provides solutions for common issues encountered during **ISO buildin
 - [Hyprland & Wayland Issues](#hyprland--wayland-issues)
 - [Live ISO Boot & Immutability Guard Issues](#live-iso-boot--immutability-guard-issues)
 - [Titan Hardware Manager (`titan-hwm`) Issues](#titan-hardware-manager-issues)
+- [TitanShare Issues](#titanshare-issues)
 - [Titan Sandbox Issues](#titan-sandbox-issues)
 
 ---
@@ -184,26 +185,70 @@ titan-hwm: daemon socket not found at /tmp/titan_hwm.sock
    sudo systemctl restart titan-hwm
    ```
 
-### 2. cgroup Sub-Slice Delegation Failure (`EACCES` on cgroup.procs)
+### 2. cgroup Sub-Slice Delegation Failure (`EACCES` on cgroup.procs or missing `cpu.weight`)
 
-**Symptom**: Journal logs show `failed to write pid to /sys/fs/cgroup/archtitan.slice/...: Permission denied`.
+**Symptom**: Journal logs show `failed to write pid to /sys/fs/cgroup/archtitan.slice/...: Permission denied` or CPU throttling rules fail to affect background workloads.
 
-**Cause**: `archtitan.slice` is missing `Delegate=yes` or is not loaded.
+**Cause**: `archtitan.slice` is missing `Delegate=yes`, `Slice=archtitan.slice` is absent from `titan-hwm.service`, or `cpu` controller is not delegated.
 
 **Solution**:
-1. Verify `archtitan.slice` unit exists:
-   ```bash
-   systemctl status archtitan.slice
-   ```
-2. Verify delegation is active:
+1. Verify `archtitan.slice` unit exists and contains `Delegate=yes`:
    ```bash
    systemctl show -p Delegate archtitan.slice
-   # Should output: Delegate=yes
+   # Output must be: Delegate=yes
    ```
-3. Reload systemd and restart THM:
+2. Verify `titan-hwm.service` executes inside the slice (`Slice=archtitan.slice`) with `ProtectKernelTunables=false`.
+3. Check cgroup controller delegation:
+   ```bash
+   cat /sys/fs/cgroup/archtitan.slice/cgroup.subtree_control
+   # Should list: cpu memory pids
+   ```
+4. Reload systemd and restart THM:
    ```bash
    sudo systemctl daemon-reload
    sudo systemctl restart titan-hwm
+   ```
+
+---
+
+## TitanShare Issues
+
+### 1. Pairing PIN File Missing or Unreadable (`/run/titanshare/titanshare-pin.json`)
+
+**Symptom**: ArchTitan Settings GUI (`archtitan-settings`) shows TitanShare as disconnected or fails to present the pairing PIN prompt.
+
+**Cause**: `titanshare-daemon.service` is missing `RuntimeDirectory=titanshare` or is not running.
+
+**Solution**:
+1. Check `titanshare-daemon.service` status:
+   ```bash
+   systemctl status titanshare-daemon
+   ```
+2. Check runtime directory permissions at `/run/titanshare/`:
+   ```bash
+   ls -ld /run/titanshare/
+   cat /run/titanshare/titanshare-pin.json
+   ```
+3. Restart the daemon to regenerate the pairing file:
+   ```bash
+   sudo systemctl restart titanshare-daemon
+   ```
+
+### 2. Storage Directory Write Errors (`Permission Denied` under `/var/lib/titanshare`)
+
+**Symptom**: Incoming files fail to save or log `Failed to write file to storage`.
+
+**Cause**: Custom `/etc/titanshare/titanshare.conf` path misconfigured or `StateDirectory=titanshare` permissions invalid.
+
+**Solution**:
+1. Verify daemon config at `/etc/titanshare/titanshare.conf`:
+   ```ini
+   [daemon]
+   received_dir = /var/lib/titanshare/received_files
+   ```
+2. Ensure systemd `ReadWritePaths=/var/lib/titanshare` is enabled and permissions are `0755`:
+   ```bash
+   sudo ls -ld /var/lib/titanshare/received_files
    ```
 
 ---

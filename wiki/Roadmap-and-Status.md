@@ -22,7 +22,7 @@ This page tracks the current implementation state of **ArchTitan OS** components
 | **Auto GPU Switcher** | @GitGuru29 (Lead) | Performance | 🟡 **In Development** | Dynamic iGPU/dGPU offloading with THM thermal integration (`subsystems/auto-gpu-switcher/`) |
 | **TITAN AI** | Teammate | Intelligence | 🟡 **In Development** | Repository introspection & developer AI assistant subsystem (`subsystems/titan-ai/`) |
 | **TITAN Task Manager** | Teammate | Process Control | 🟡 **In Development** | Advanced task & process scheduling manager (`subsystems/titan-task-manager/`) |
-| **TITAN Share** | Teammate | Cross-Device | 🟡 **In Development** | Peer-to-peer file sharing daemon & Android client (`subsystems/titan-share/`) |
+| **TITAN Share** | Teammate | Cross-Device | 🟡 **In Development** | P2P daemon (C++) & Android app (Compose). Storage paths (`/var/lib/titanshare`), systemd sandbox, pairing PIN IPC (`/run/titanshare/titanshare-pin.json`), and THM protected status ([Titan Share](Titan-Share)) |
 | **TITAN Mirror** | Teammate | Cross-Device | 🟡 **In Development** | Wayland-native screen mirroring subsystem (`subsystems/titan-mirror/`) |
 
 ---

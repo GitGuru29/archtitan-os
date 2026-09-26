@@ -191,11 +191,21 @@ Policies define filesystem allowlists, network access, device nodes, and syscall
 
 ---
 
+## TitanShare Architecture & Storage Path Resolution
+
+TitanShare operates as a native C++ daemon coupled with an Android Jetpack Compose application:
+* **Base Storage Resolution**: Root execution defaults to `/var/lib/titanshare`, normal user to `$HOME/.local/share/titanshare`, and fallback to `/tmp/titanshare`.
+* **Sanitized File Layout**: Received files are saved in `<DATA_DIR>/received_files` with strict path traversal sanitization; outgoing files are staged in `<DATA_DIR>/send_to_android`.
+* **Systemd Sandboxing & IPC**: Runs under systemd with `ProtectSystem=strict`, `StateDirectory=titanshare`, and `RuntimeDirectory=titanshare`. Generates runtime pairing PINs at `/run/titanshare/titanshare-pin.json` monitored by ArchTitan Settings GUI (`QFileSystemWatcher`).
+* **Protected Status**: Registered in THM v3.1 `ProtectedRegistry` to prevent freeze or OOM reclaim during high-volume LAN transfers. See [Titan Share](Titan-Share) for full specs.
+
+---
+
 ## Planned Architecture (Under Active Development)
 
 These components appear in project documentation and FYP materials and are organized in `subsystems/`:
 
-- **TitanShare** — mDNS P2P file transfer (Linux daemon + Android app)
+- **TitanShare** — mDNS P2P file transfer daemon & Android app ([Titan Share](Titan-Share))
 - **TitanMirror** — Wayland-native Android screen mirroring
 - **Auto GPU Switcher** — automated iGPU/dGPU PRIME routing
 - **TITAN AI** — OS-level project introspection and developer AI assistant
