@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
     if (layerWindow) {
         layerWindow->setAnchors(LayerShellQt::Window::Anchors(LayerShellQt::Window::AnchorTop | LayerShellQt::Window::AnchorRight | LayerShellQt::Window::AnchorBottom));
         layerWindow->setLayer(LayerShellQt::Window::LayerOverlay);
-        layerWindow->setMargins(QMargins(0, 36, 6, 6)); // Top offset for Waybar height (36px), 6px right/bottom margin
+        layerWindow->setMargins(QMargins(0, 40, 8, 8)); // Top offset right below Waybar (40px), 8px right/bottom margin
         layerWindow->setExclusiveZone(0);
         layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
         layerWindow->setScope("titan-quicksettings");
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
     context->setContextProperty("notifServer", &notifServer);
 
     view.setSource(QUrl(QStringLiteral("qrc:/qml/QuickSettingsWindow.qml")));
-    view.setResizeMode(QQuickView::SizeViewToRootObject);
+    view.setResizeMode(QQuickView::SizeRootObjectToView);
 
     QObject *rootObj = view.rootObject();
     if (rootObj) {
