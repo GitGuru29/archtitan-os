@@ -103,13 +103,13 @@ int main(int argc, char *argv[])
         // Configure LayerShell on root window
         auto *layerWindow = LayerShellQt::Window::get(window);
         if (layerWindow) {
-            // Anchor only to Top+Right — no AnchorBottom so the window
-            // uses its natural QML height instead of being stretched full-screen.
-            // Quickshell bar occupies y=0..73 (73px). Add 4px breathing = 77px total.
+            // Anchor only to Top+Right — no AnchorBottom so the window uses
+            // its natural QML height. The Quickshell bar has an exclusive zone
+            // of 73px; LayerShell already respects that, so top margin = 0.
             layerWindow->setAnchors(LayerShellQt::Window::Anchors(LayerShellQt::Window::AnchorTop | LayerShellQt::Window::AnchorRight));
             layerWindow->setLayer(LayerShellQt::Window::LayerOverlay);
-            layerWindow->setMargins(QMargins(0, 77, 6, 0)); // 77px = 73px bar + 4px gap
-            layerWindow->setExclusiveZone(0);
+            layerWindow->setMargins(QMargins(0, 0, 6, 0)); // exclusive zone handles top offset
+            layerWindow->setExclusiveZone(-1); // -1 = respect other layers' exclusive zones
             layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
             layerWindow->setScope("titan-quicksettings");
         }
