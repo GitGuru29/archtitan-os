@@ -5,7 +5,7 @@ import QtQuick.Controls
 Rectangle {
     id: gridContainer
     Layout.fillWidth: true
-    Layout.preferredHeight: 270
+    Layout.preferredHeight: 250
     radius: 18
     color: "#141722"
     border.color: "#18FFFFFF"
