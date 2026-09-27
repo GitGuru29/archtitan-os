@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
     context->setContextProperty("notifServer", &notifServer);
 
     view.setSource(QUrl(QStringLiteral("qrc:/qml/QuickSettingsWindow.qml")));
-    view.setResizeMode(QQuickView::SizeRootObjectToView);
+    view.setResizeMode(QQuickView::SizeViewToRootObject);
 
     QObject *rootObj = view.rootObject();
     if (rootObj) {

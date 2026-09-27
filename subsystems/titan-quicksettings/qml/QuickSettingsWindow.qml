@@ -9,7 +9,7 @@ import "style"
 Item {
     id: rootItem
     width: 420
-    height: Screen.desktopAvailableHeight > 0 ? Math.min(Screen.desktopAvailableHeight - 24, 980) : 920
+    height: parent ? parent.height : (Screen.desktopAvailableHeight > 0 ? Screen.desktopAvailableHeight - 20 : 1000)
 
     property bool drawerOpen: false
 
