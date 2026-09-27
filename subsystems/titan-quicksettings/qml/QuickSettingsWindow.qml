@@ -9,7 +9,6 @@ import "style"
 Item {
     id: rootItem
     width: 420
-    height: Screen.desktopAvailableHeight > 0 ? Math.min(Screen.desktopAvailableHeight - 24, 980) : 920
 
     property bool drawerOpen: false
 
@@ -38,8 +37,7 @@ Item {
     // Main Drawer Card Container with Slide Animation
     Rectangle {
         id: card
-        width: parent.width
-        height: parent.height
+        anchors.fill: parent
         radius: 22
         color: "#F011141D" // 94% opacity deep obsidian
         border.color: "#2E38BDF8" // Subtle 1px cyan border
@@ -56,15 +54,6 @@ Item {
             }
         }
 
-        // Top Glass Highlight Line
-        Rectangle {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            height: 1
-            color: "#25FFFFFF"
-            radius: 22
-        }
 
         ColumnLayout {
             anchors.fill: parent
