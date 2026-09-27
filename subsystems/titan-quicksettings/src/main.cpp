@@ -1,7 +1,7 @@
 #include <QGuiApplication>
-#include <QQuickView>
+#include <QQmlApplicationEngine>
 #include <QQmlContext>
-#include <QQuickItem>
+#include <QQuickWindow>
 #include <QCommandLineParser>
 #include <csignal>
 #include <iostream>
@@ -80,21 +80,8 @@ int main(int argc, char *argv[])
     NightLightController nightCtrl;
     NotificationServer notifServer;
 
-    QQuickView view;
-    view.setColor(QColor(Qt::transparent));
-
-    // Configure LayerShell BEFORE setSource creates platform surface
-    auto *layerWindow = LayerShellQt::Window::get(&view);
-    if (layerWindow) {
-        layerWindow->setAnchors(LayerShellQt::Window::Anchors(LayerShellQt::Window::AnchorTop | LayerShellQt::Window::AnchorRight | LayerShellQt::Window::AnchorBottom));
-        layerWindow->setLayer(LayerShellQt::Window::LayerOverlay);
-        layerWindow->setMargins(QMargins(0, 40, 8, 8)); // Top offset right below Waybar (40px), 8px right/bottom margin
-        layerWindow->setExclusiveZone(0);
-        layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
-        layerWindow->setScope("titan-quicksettings");
-    }
-
-    auto *context = view.rootContext();
+    QQmlApplicationEngine engine;
+    auto *context = engine.rootContext();
     context->setContextProperty("systemCtrl", &systemCtrl);
     context->setContextProperty("networkCtrl", &netCtrl);
     context->setContextProperty("bluetoothCtrl", &btCtrl);
@@ -102,27 +89,47 @@ int main(int argc, char *argv[])
     context->setContextProperty("nightLightCtrl", &nightCtrl);
     context->setContextProperty("notifServer", &notifServer);
 
-    view.setSource(QUrl(QStringLiteral("qrc:/qml/QuickSettingsWindow.qml")));
-    view.setResizeMode(QQuickView::SizeRootObjectToView);
+    const QUrl url(QStringLiteral("qrc:/qml/QuickSettingsWindow.qml"));
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [url, &ipc, startHidden](QObject *obj, const QUrl &objUrl) {
+        if (!obj && url == objUrl) {
+            QCoreApplication::exit(-1);
+            return;
+        }
 
-    QObject *rootObj = view.rootObject();
-    if (rootObj) {
-        QObject::connect(&ipc, &IpcServer::toggleRequested, rootObj, [rootObj]() {
-            QMetaObject::invokeMethod(rootObj, "toggleDrawer");
+        QQuickWindow *window = qobject_cast<QQuickWindow *>(obj);
+        if (!window) return;
+
+        // Configure LayerShell on root window
+        auto *layerWindow = LayerShellQt::Window::get(window);
+        if (layerWindow) {
+            // Anchor only to Top+Right — no AnchorBottom so the window
+            // uses its natural QML height instead of being stretched full-screen.
+            // Quickshell bar occupies y=0..73 (73px). Add 4px breathing = 77px total.
+            layerWindow->setAnchors(LayerShellQt::Window::Anchors(LayerShellQt::Window::AnchorTop | LayerShellQt::Window::AnchorRight));
+            layerWindow->setLayer(LayerShellQt::Window::LayerOverlay);
+            layerWindow->setMargins(QMargins(0, 77, 6, 0)); // 77px = 73px bar + 4px gap
+            layerWindow->setExclusiveZone(0);
+            layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
+            layerWindow->setScope("titan-quicksettings");
+        }
+
+        QObject::connect(&ipc, &IpcServer::toggleRequested, window, [window]() {
+            QMetaObject::invokeMethod(window, "toggleDrawer");
         });
-        QObject::connect(&ipc, &IpcServer::showRequested, rootObj, [rootObj]() {
-            QMetaObject::invokeMethod(rootObj, "openDrawer");
+        QObject::connect(&ipc, &IpcServer::showRequested, window, [window]() {
+            QMetaObject::invokeMethod(window, "openDrawer");
         });
-        QObject::connect(&ipc, &IpcServer::hideRequested, rootObj, [rootObj]() {
-            QMetaObject::invokeMethod(rootObj, "closeDrawer");
+        QObject::connect(&ipc, &IpcServer::hideRequested, window, [window]() {
+            QMetaObject::invokeMethod(window, "closeDrawer");
         });
 
         if (!startHidden) {
-            QMetaObject::invokeMethod(rootObj, "openDrawer");
+            QMetaObject::invokeMethod(window, "openDrawer");
         }
-    }
+    }, Qt::QueuedConnection);
 
-    view.show();
+    engine.load(url);
 
     return app.exec();
 }
