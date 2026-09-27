@@ -56,15 +56,6 @@ Item {
             }
         }
 
-        // Top Glass Highlight Line
-        Rectangle {
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            height: 1
-            color: "#25FFFFFF"
-            radius: 22
-        }
 
         ColumnLayout {
             anchors.fill: parent
