@@ -105,10 +105,10 @@ int main(int argc, char *argv[])
         if (layerWindow) {
             // Anchor only to Top+Right — no AnchorBottom so the window
             // uses its natural QML height instead of being stretched full-screen.
-            // Waybar: margin-top(6) + height(38) = 44px; add 4px breathing room = 48px.
+            // Quickshell bar occupies y=0..73 (73px). Add 4px breathing = 77px total.
             layerWindow->setAnchors(LayerShellQt::Window::Anchors(LayerShellQt::Window::AnchorTop | LayerShellQt::Window::AnchorRight));
             layerWindow->setLayer(LayerShellQt::Window::LayerOverlay);
-            layerWindow->setMargins(QMargins(0, 48, 6, 0)); // 48px top = 44px bar + 4px gap
+            layerWindow->setMargins(QMargins(0, 77, 6, 0)); // 77px = 73px bar + 4px gap
             layerWindow->setExclusiveZone(0);
             layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
             layerWindow->setScope("titan-quicksettings");
