@@ -10,7 +10,9 @@ Window {
     id: rootWindow
     title: "titan-quicksettings"
     width: 420
-    height: Screen.height > 0 ? Screen.height : 1080
+    // Fixed height — LayerShell is anchored Top+Right only (no Bottom),
+    // so the window occupies exactly this height starting from the margin below Waybar.
+    height: 860
 
     flags: Qt.FramelessWindowHint
     color: "transparent"
@@ -63,7 +65,7 @@ Window {
         border.width: 1
         clip: true
 
-        // Slide animation using overshot easing
+        // Slide animation — card slides in from the right
         x: drawerOpen ? 0 : width + 30
         Behavior on x {
             NumberAnimation {

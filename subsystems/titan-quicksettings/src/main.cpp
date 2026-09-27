@@ -103,9 +103,12 @@ int main(int argc, char *argv[])
         // Configure LayerShell on root window
         auto *layerWindow = LayerShellQt::Window::get(window);
         if (layerWindow) {
-            layerWindow->setAnchors(LayerShellQt::Window::Anchors(LayerShellQt::Window::AnchorTop | LayerShellQt::Window::AnchorRight | LayerShellQt::Window::AnchorBottom));
+            // Anchor only to Top+Right — no AnchorBottom so the window
+            // uses its natural QML height instead of being stretched full-screen.
+            // Waybar: margin-top(6) + height(38) = 44px; add 4px breathing room = 48px.
+            layerWindow->setAnchors(LayerShellQt::Window::Anchors(LayerShellQt::Window::AnchorTop | LayerShellQt::Window::AnchorRight));
             layerWindow->setLayer(LayerShellQt::Window::LayerOverlay);
-            layerWindow->setMargins(QMargins(0, 36, 6, 6)); // 36px top margin for Waybar, 6px right/bottom margin
+            layerWindow->setMargins(QMargins(0, 48, 6, 0)); // 48px top = 44px bar + 4px gap
             layerWindow->setExclusiveZone(0);
             layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
             layerWindow->setScope("titan-quicksettings");
