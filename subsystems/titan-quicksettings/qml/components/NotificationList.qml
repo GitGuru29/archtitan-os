@@ -15,7 +15,8 @@ Item {
         model: (typeof notifServer !== "undefined" && notifServer) ? notifServer.notifications : []
 
         delegate: NotificationCard {
-            modelData: modelData
+            width: notifListView.width
+            modelItem: modelData
             cardIndex: index
         }
 

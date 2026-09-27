@@ -1,10 +1,12 @@
 #include <QGuiApplication>
-#include <QQmlApplicationEngine>
+#include <QQuickView>
 #include <QQmlContext>
-#include <QQuickWindow>
+#include <QQuickItem>
 #include <QCommandLineParser>
 #include <csignal>
 #include <iostream>
+
+#include <LayerShellQt/window.h>
 
 #include "ipcserver.h"
 #include "systemcontroller.h"
@@ -78,8 +80,21 @@ int main(int argc, char *argv[])
     NightLightController nightCtrl;
     NotificationServer notifServer;
 
-    QQmlApplicationEngine engine;
-    auto *context = engine.rootContext();
+    QQuickView view;
+    view.setColor(QColor(Qt::transparent));
+
+    // Configure LayerShell BEFORE setSource creates platform surface
+    auto *layerWindow = LayerShellQt::Window::get(&view);
+    if (layerWindow) {
+        layerWindow->setAnchors(LayerShellQt::Window::Anchors(LayerShellQt::Window::AnchorTop | LayerShellQt::Window::AnchorRight | LayerShellQt::Window::AnchorBottom));
+        layerWindow->setLayer(LayerShellQt::Window::LayerOverlay);
+        layerWindow->setMargins(QMargins(0, 36, 6, 6)); // Top offset for Waybar height (36px), 6px right/bottom margin
+        layerWindow->setExclusiveZone(0);
+        layerWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityOnDemand);
+        layerWindow->setScope("titan-quicksettings");
+    }
+
+    auto *context = view.rootContext();
     context->setContextProperty("systemCtrl", &systemCtrl);
     context->setContextProperty("networkCtrl", &netCtrl);
     context->setContextProperty("bluetoothCtrl", &btCtrl);
@@ -87,35 +102,27 @@ int main(int argc, char *argv[])
     context->setContextProperty("nightLightCtrl", &nightCtrl);
     context->setContextProperty("notifServer", &notifServer);
 
-    const QUrl url(QStringLiteral("qrc:/qml/QuickSettingsWindow.qml"));
-    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [url](QObject *obj, const QUrl &objUrl) {
-        if (!obj && url == objUrl) {
-            QCoreApplication::exit(-1);
-        }
-    }, Qt::QueuedConnection);
+    view.setSource(QUrl(QStringLiteral("qrc:/qml/QuickSettingsWindow.qml")));
+    view.setResizeMode(QQuickView::SizeRootObjectToView);
 
-    engine.load(url);
+    QObject *rootObj = view.rootObject();
+    if (rootObj) {
+        QObject::connect(&ipc, &IpcServer::toggleRequested, rootObj, [rootObj]() {
+            QMetaObject::invokeMethod(rootObj, "toggleDrawer");
+        });
+        QObject::connect(&ipc, &IpcServer::showRequested, rootObj, [rootObj]() {
+            QMetaObject::invokeMethod(rootObj, "openDrawer");
+        });
+        QObject::connect(&ipc, &IpcServer::hideRequested, rootObj, [rootObj]() {
+            QMetaObject::invokeMethod(rootObj, "closeDrawer");
+        });
 
-    auto rootObjects = engine.rootObjects();
-    if (!rootObjects.isEmpty()) {
-        QObject *rootWin = rootObjects.first();
-        if (rootWin) {
-            QObject::connect(&ipc, &IpcServer::toggleRequested, rootWin, [rootWin]() {
-                QMetaObject::invokeMethod(rootWin, "toggleDrawer");
-            });
-            QObject::connect(&ipc, &IpcServer::showRequested, rootWin, [rootWin]() {
-                QMetaObject::invokeMethod(rootWin, "openDrawer");
-            });
-            QObject::connect(&ipc, &IpcServer::hideRequested, rootWin, [rootWin]() {
-                QMetaObject::invokeMethod(rootWin, "closeDrawer");
-            });
-
-            if (!startHidden) {
-                QMetaObject::invokeMethod(rootWin, "openDrawer");
-            }
+        if (!startHidden) {
+            QMetaObject::invokeMethod(rootObj, "openDrawer");
         }
     }
+
+    view.show();
 
     return app.exec();
 }

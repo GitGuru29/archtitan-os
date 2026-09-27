@@ -22,39 +22,39 @@ void NotificationServer::initDefaultNotifications()
 {
     m_notifications.clear();
 
-    // 1. Network Management
+    // 1. Antigravity IDE
     QVariantMap n1;
     n1["id"] = 1;
-    n1["appName"] = "Network Management";
-    n1["dateStr"] = "September 12";
-    n1["count"] = 21;
-    n1["primaryText"] = "No Network Connection";
-    n1["secondaryText"] = "You are no longer connected to the network.";
-    n1["iconType"] = "wifi";
+    n1["appName"] = "Antigravity IDE";
+    n1["dateStr"] = "Now";
+    n1["count"] = 755;
+    n1["primaryText"] = "Antigravity IDE Project Status Inquiry";
+    n1["secondaryText"] = "Requesting your permission in Terminal: Comm...";
+    n1["iconType"] = "antigravity";
     n1["expanded"] = false;
     m_notifications.append(n1);
 
-    // 2. Antigravity IDE
+    // 2. notify-send
     QVariantMap n2;
     n2["id"] = 2;
-    n2["appName"] = "Antigravity IDE";
-    n2["dateStr"] = "September 11";
-    n2["count"] = 441;
-    n2["primaryText"] = "Antigravity IDE";
-    n2["secondaryText"] = "Host System Troubleshooting Assistant\nRequesting your permission in Terminal: Command...";
-    n2["iconType"] = "antigravity";
+    n2["appName"] = "notify-send";
+    n2["dateStr"] = "Yesterday";
+    n2["count"] = 13712;
+    n2["primaryText"] = "THM: Reclaiming idle workload \"210707\" is idle an...";
+    n2["secondaryText"] = "THM: Reclaiming idle workload \"210627\" is idle an...";
+    n2["iconType"] = "message";
     n2["expanded"] = false;
     m_notifications.append(n2);
 
-    // 3. notify-send
+    // 3. Network Management
     QVariantMap n3;
     n3["id"] = 3;
-    n3["appName"] = "notify-send";
-    n3["dateStr"] = "September 10";
-    n3["count"] = 8503;
-    n3["primaryText"] = "THM: Reclaiming idle workload";
-    n3["secondaryText"] = "\"1387655\" is idle ...\nTHM: Reclaiming idle workload \"1387637\" is idle ...";
-    n3["iconType"] = "message";
+    n3["appName"] = "Network Management";
+    n3["dateStr"] = "Yesterday";
+    n3["count"] = 25;
+    n3["primaryText"] = "moto g24 power Connection 'moto g24 power' a...";
+    n3["secondaryText"] = "Limited Connectivity This device appears to be ...";
+    n3["iconType"] = "wifi";
     n3["expanded"] = false;
     m_notifications.append(n3);
 
@@ -64,8 +64,8 @@ void NotificationServer::initDefaultNotifications()
     n4["appName"] = "Hyprland";
     n4["dateStr"] = "September 08";
     n4["count"] = 2;
-    n4["primaryText"] = "Exited Virtual Machine submap";
-    n4["secondaryText"] = "Keybinds re-enabled.\nEntered Virtual Machine submap Keybinds disabled.";
+    n4["primaryText"] = "Exited Virtual Machine submap Keybinds re-ena...";
+    n4["secondaryText"] = "Entered Virtual Machine submap Keybinds disab...";
     n4["iconType"] = "terminal";
     n4["expanded"] = false;
     m_notifications.append(n4);

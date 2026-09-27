@@ -6,32 +6,19 @@ import QtQuick.Layouts
 import "components"
 import "style"
 
-Window {
-    id: rootWindow
-    title: "titan-quicksettings"
+Item {
+    id: rootItem
     width: 420
     height: Screen.desktopAvailableHeight > 0 ? Math.min(Screen.desktopAvailableHeight - 24, 980) : 920
 
-    flags: Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint | Qt.BypassWindowManagerHint | Qt.Tool
-    color: "transparent"
-
-    x: Screen.width > 0 ? Screen.width - width - 12 : 1480
-    y: 12
-
     property bool drawerOpen: false
-    property bool drawerVisible: false
-
-    visible: drawerVisible
 
     function openDrawer() {
-        drawerVisible = true;
         drawerOpen = true;
-        rootWindow.requestActivate();
     }
 
     function closeDrawer() {
         drawerOpen = false;
-        closeTimer.start();
     }
 
     function toggleDrawer() {
@@ -39,16 +26,6 @@ Window {
             closeDrawer();
         } else {
             openDrawer();
-        }
-    }
-
-    Timer {
-        id: closeTimer
-        interval: 280
-        onTriggered: {
-            if (!drawerOpen) {
-                drawerVisible = false;
-            }
         }
     }
 

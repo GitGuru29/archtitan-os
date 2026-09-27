@@ -7,6 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick Qml DBus Network Widgets)
+find_package(LayerShellQt REQUIRED)
 
 set(SOURCES
     src/main.cpp
@@ -47,6 +48,7 @@ target_link_libraries(titan-quicksettings PRIVATE
     Qt6::DBus
     Qt6::Network
     Qt6::Widgets
+    LayerShellQt::Interface
 )
 
 install(TARGETS titan-quicksettings DESTINATION /usr/local/bin)

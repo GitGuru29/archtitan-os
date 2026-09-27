@@ -5,13 +5,19 @@ import QtQuick.Controls
 Rectangle {
     id: cardRoot
     width: parent ? parent.width : 390
-    height: expanded ? 120 : 66
+    height: expanded ? 116 : 68
     radius: 14
 
-    required property var modelData
-    required property int cardIndex
+    property var modelItem: (typeof modelData !== "undefined") ? modelData : null
+    property int cardIndex: (typeof index !== "undefined") ? index : 0
 
-    property bool expanded: modelData ? (modelData.expanded || false) : false
+    readonly property string appNameStr: (modelItem && modelItem.appName) ? modelItem.appName : "Notification"
+    readonly property string dateStrVal: (modelItem && modelItem.dateStr) ? modelItem.dateStr : ""
+    readonly property int countVal: (modelItem && modelItem.count) ? modelItem.count : 1
+    readonly property string primaryTextStr: (modelItem && modelItem.primaryText) ? modelItem.primaryText : ""
+    readonly property string secondaryTextStr: (modelItem && modelItem.secondaryText) ? modelItem.secondaryText : ""
+    readonly property string iconTypeStr: (modelItem && modelItem.iconType) ? modelItem.iconType : ""
+    property bool expanded: modelItem ? (modelItem.expanded || false) : false
 
     color: cardMa.containsMouse ? "#1E2230" : "#171A24"
     border.color: cardMa.containsMouse ? "#3038BDF8" : "#14FFFFFF"
@@ -29,20 +35,21 @@ Rectangle {
         // Circular App Icon Badge
         Rectangle {
             width: 36; height: 36; radius: 18
-            color: (cardRoot.modelData.iconType === "antigravity") ? "#111420" : "#0284C7"
-            border.color: (cardRoot.modelData.iconType === "antigravity") ? "#38BDF8" : "transparent"
+            color: (cardRoot.iconTypeStr === "antigravity") ? "#111420" :
+                   (cardRoot.iconTypeStr === "wifi") ? "#0C2433" : "#0E2234"
+            border.color: (cardRoot.iconTypeStr === "antigravity") ? "#38BDF8" : "#20FFFFFF"
             border.width: 1
 
             Text {
                 anchors.centerIn: parent
                 text: {
-                    if (cardRoot.modelData.iconType === "wifi") return "📶";
-                    if (cardRoot.modelData.iconType === "antigravity") return "▲";
-                    if (cardRoot.modelData.iconType === "terminal") return "💻";
+                    if (cardRoot.iconTypeStr === "wifi") return "📶";
+                    if (cardRoot.iconTypeStr === "antigravity") return "▲";
+                    if (cardRoot.iconTypeStr === "terminal") return "💻";
                     return "💬";
                 }
                 font.pixelSize: 14
-                color: (cardRoot.modelData.iconType === "antigravity") ? "#38BDF8" : "#FFFFFF"
+                color: "#38BDF8"
                 font.bold: true
             }
         }
@@ -55,33 +62,37 @@ Rectangle {
             // Header row: App Name, Date, Count Badge
             RowLayout {
                 Layout.fillWidth: true
+                spacing: 6
+
                 Text {
-                    text: cardRoot.modelData.appName
+                    text: cardRoot.appNameStr
                     font.family: "Outfit, Inter, sans-serif"
-                    font.pixelSize: 12
+                    font.pixelSize: 11
                     font.weight: Font.DemiBold
                     color: "#CBD5E1"
                 }
+
                 Item { Layout.fillWidth: true }
+
                 Text {
-                    text: cardRoot.modelData.dateStr
+                    text: cardRoot.dateStrVal
                     font.family: "Outfit, Inter, sans-serif"
-                    font.pixelSize: 11
+                    font.pixelSize: 10
                     color: "#64748B"
                 }
 
                 // Expandable Count Badge
                 Rectangle {
                     height: 18
-                    width: countText.contentWidth + 14
+                    width: countText.contentWidth + 16
                     radius: 9
                     color: "#242838"
                     RowLayout {
                         anchors.centerIn: parent
-                        spacing: 2
+                        spacing: 3
                         Text {
                             id: countText
-                            text: cardRoot.modelData.count + ""
+                            text: cardRoot.countVal + ""
                             font.pixelSize: 10
                             font.weight: Font.Bold
                             color: "#94A3B8"
@@ -102,7 +113,7 @@ Rectangle {
 
             // Primary Text
             Text {
-                text: cardRoot.modelData.primaryText
+                text: cardRoot.primaryTextStr
                 font.family: "Outfit, Inter, sans-serif"
                 font.pixelSize: 12
                 font.weight: Font.Bold
@@ -113,7 +124,7 @@ Rectangle {
 
             // Secondary Text
             Text {
-                text: cardRoot.modelData.secondaryText
+                text: cardRoot.secondaryTextStr
                 font.family: "Outfit, Inter, sans-serif"
                 font.pixelSize: 11
                 color: "#94A3B8"
