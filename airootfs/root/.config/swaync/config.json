@@ -1,0 +1,203 @@
+{
+  "$schema": "/etc/xdg/swaync/configSchema.json",
+  "positionX": "right",
+  "positionY": "top",
+  "layer": "overlay",
+  "layer-shell": true,
+  "layer-shell-cover-screen": true,
+  "cssPriority": "user",
+
+  "control-center-width": 380,
+  "control-center-height": 840,
+  "control-center-margin-top": 8,
+  "control-center-margin-bottom": 8,
+  "control-center-margin-right": 8,
+  "control-center-margin-left": 0,
+
+  "notification-window-width": 380,
+  "notification-2fa-action": true,
+  "notification-inline-replies": false,
+
+  "timeout": 5,
+  "timeout-low": 3,
+  "timeout-critical": 0,
+
+  "fit-to-screen": false,
+  "keyboard-shortcuts": true,
+  "image-visibility": "when-available",
+  "transition-time": 250,
+  "hide-on-clear": false,
+  "hide-on-action": true,
+  "script-fail-notify": true,
+
+  "widgets": [
+    "buttons-grid#header",
+    "buttons-grid#row1",
+    "buttons-grid#row2",
+    "buttons-grid#squircles",
+    "title",
+    "notifications",
+    "dnd",
+    "calendar"
+  ],
+
+  "widget-config": {
+    "title": {
+      "text": "Notifications",
+      "clear-all-button": true,
+      "button-text": "󰆴 Clear All"
+    },
+    "dnd": {
+      "text": "Do Not Disturb"
+    },
+    "calendar": {
+      "show-day-label": true,
+      "show-date-label": true,
+      "show-heading": true,
+      "show-day-names": true
+    },
+    "buttons-grid#header": {
+      "buttons-per-row": 5,
+      "actions": [
+        {
+          "label": "󰣇 ArchTitan",
+          "command": "archtitan-settings"
+        },
+        {
+          "label": "󰏫",
+          "command": "kitty -e nano ~/.config/swaync/config.json"
+        },
+        {
+          "label": "󰑐",
+          "command": "titan-quicksettings-toggle reload"
+        },
+        {
+          "label": "󰒓",
+          "command": "archtitan-settings"
+        },
+        {
+          "label": "󰐥",
+          "command": "titan-powermenu"
+        }
+      ]
+    },
+    "buttons-grid#row1": {
+      "buttons-per-row": 3,
+      "actions": [
+        {
+          "label": "  Internet",
+          "type": "toggle",
+          "active": true,
+          "command": "sh -c '[[ $SWAYNC_TOGGLE_STATE == true ]] && nmcli radio wifi on || nmcli radio wifi off'",
+          "update-command": "sh -c '[[ $(nmcli r wifi 2>/dev/null) == \"enabled\" ]] && echo true || echo false'"
+        },
+        {
+          "label": "󰂯  Bluetooth",
+          "type": "toggle",
+          "active": false,
+          "command": "sh -c '[[ $SWAYNC_TOGGLE_STATE == true ]] && rfkill unblock bluetooth || rfkill block bluetooth'",
+          "update-command": "sh -c 'rfkill list bluetooth 2>/dev/null | grep -q \"Soft blocked: yes\" && echo false || echo true'"
+        },
+        {
+          "label": "󰅶",
+          "type": "toggle",
+          "active": false,
+          "command": "titan-quicksettings-toggle caffeine",
+          "update-command": "titan-quicksettings-toggle caffeine-status"
+        }
+      ]
+    },
+    "buttons-grid#row2": {
+      "buttons-per-row": 3,
+      "actions": [
+        {
+          "label": "󰍬  Mic",
+          "type": "toggle",
+          "active": true,
+          "command": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
+          "update-command": "sh -c 'wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null | grep -q MUTED && echo false || echo true'"
+        },
+        {
+          "label": "󰕾  Audio",
+          "type": "toggle",
+          "active": true,
+          "command": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+          "update-command": "sh -c 'wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null | grep -q MUTED && echo false || echo true'"
+        },
+        {
+          "label": "󰖔  Night Light",
+          "type": "toggle",
+          "active": false,
+          "command": "titan-quicksettings-toggle nightlight",
+          "update-command": "titan-quicksettings-toggle nightlight-status"
+        }
+      ]
+    },
+    "buttons-grid#squircles": {
+      "buttons-per-row": 5,
+      "actions": [
+        {
+          "label": "󰔎",
+          "type": "toggle",
+          "active": true,
+          "command": "notify-send 'Theme' 'Catppuccin Mocha Active'"
+        },
+        {
+          "label": "󰎆",
+          "type": "toggle",
+          "active": true,
+          "command": "which easyeffects >/dev/null 2>&1 && easyeffects || notify-send 'Audio' 'PipeWire Audio Active'"
+        },
+        {
+          "label": "󰖌",
+          "type": "toggle",
+          "active": false,
+          "command": "notify-send 'Display' 'Anti-glare active'"
+        },
+        {
+          "label": "󰒄",
+          "type": "toggle",
+          "active": false,
+          "command": "which warp-cli >/dev/null 2>&1 && warp-cli connect || notify-send 'Network' 'VPN Profile'"
+        },
+        {
+          "label": "󰊴",
+          "type": "toggle",
+          "active": false,
+          "command": "titan-quicksettings-toggle gamemode",
+          "update-command": "titan-quicksettings-toggle gamemode-status"
+        },
+        {
+          "label": "󰹑",
+          "command": "titan-quicksettings-toggle screensnip"
+        },
+        {
+          "label": "󰈊",
+          "command": "titan-quicksettings-toggle colorpicker"
+        },
+        {
+          "label": "󰌌",
+          "command": "which wvkbd >/dev/null 2>&1 && pkill -x wvkbd-mobintl || wvkbd-mobintl &"
+        },
+        {
+          "label": "󰂚",
+          "type": "toggle",
+          "active": false,
+          "command": "swaync-client -d -sw",
+          "update-command": "swaync-client -D"
+        },
+        {
+          "label": "󰝚",
+          "command": "playerctl play-pause 2>/dev/null || true"
+        },
+        {
+          "label": "󰍭",
+          "type": "toggle",
+          "active": false,
+          "command": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
+          "update-command": "sh -c 'wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null | grep -q MUTED && echo true || echo false'"
+        }
+      ]
+    }
+  }
+}

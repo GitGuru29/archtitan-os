@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wall -Wextra -Werror=return-type -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/thm_stress_test.dir/link.d CMakeFiles/thm_stress_test.dir/tests/stress_test.cpp.o -o thm_stress_test  libthm_core.a -lpthread

@@ -536,4 +536,4 @@ gcc/g++               # Compiler
 - DRM PRIME: https://www.kernel.org/doc/html/latest/gpu/drm-uapi.html
 - PCI Power Management: https://www.kernel.org/doc/Documentation/power/pci.txt
 - Hyprland IPC: https://wiki.hyprland.org/IPC/
-- THM source: `titan-hwm-source/titan_hw_manager.cpp` (reference for IPC, config, inotify patterns)
+- THM source: `titan-hwm-v3/` — use `ipc/workspace_monitor.cpp` for the Hyprland socket/event patterns to follow. (The v1/v2 `titan-hwm-source/titan_hw_manager.cpp` this originally pointed at was removed; recover with `git show 9c7184e:titan-hwm-source/titan_hw_manager.cpp`.)

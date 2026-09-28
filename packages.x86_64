@@ -14,6 +14,7 @@ ethtool
 exfatprogs
 f2fs-tools
 fatresize
+haveged
 grub
 hyperv
 intel-ucode
@@ -99,13 +100,18 @@ ttf-jetbrains-mono-nerd
 noto-fonts
 noto-fonts-emoji
 plymouth
-mako
+swaync
+hyprsunset
+hyprpicker
 grim
 slurp
 wl-clipboard
 xdg-desktop-portal-hyprland
 xorg-server
 xorg-xwayland
+xorg-xhost
+gptfdisk
+hwinfo
 qt5-wayland
 qt6-wayland
 python
@@ -133,3 +139,5 @@ sddm-kcm
 qt6-5compat
 playerctl
 brightnessctl
+cliphist
+wlopm

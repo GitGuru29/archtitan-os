@@ -1,6 +1,6 @@
 # Desktop Environment
 
-ArchTitan OS delivers a Wayland-native desktop built around the **Hyprland** dynamic tiling window manager, unified visually with the **Catppuccin Mocha** dark palette.
+ArchTitan OS delivers a Wayland-native desktop built around the **Hyprland** dynamic tiling window manager, unified visually with the **Catppuccin Mocha** dark palette and enhanced by first-party Qt6 desktop applications.
 
 ---
 
@@ -11,6 +11,13 @@ graph TD
     subgraph Core["Session & Compositor"]
         HYPR[Hyprland Compositor]
         SDDM[SDDM Display Manager]
+    end
+
+    subgraph Applications["First-Party Apps"]
+        TB[TitanBrowser]
+        TS_GUI[ArchTitan Settings]
+        HUD[Titan Media HUD]
+        TF[TitanFetch]
     end
 
     subgraph Interface["UI Components"]
@@ -32,6 +39,9 @@ graph TD
     end
 
     HYPR --- WAY
+    HYPR --- HUD
+    HYPR --- TB
+    HYPR --- TS_GUI
     HYPR --- ROFI
     HYPR --- DUNST
     HYPR --- KITTY
@@ -45,8 +55,11 @@ graph TD
 
 | Component | Function | Configuration File Location |
 | :--- | :--- | :--- |
-| **Hyprland** | Wayland Tiling Compositor | `~/.config/hypr/hyprland.conf` |
-| **Waybar** | Top status panel with active THM profile badge | `~/.config/waybar/config` & `style.css` |
+| **Hyprland** | Wayland Tiling Compositor (v0.53+/v0.56+ block syntax) | `~/.config/hypr/hyprland.conf` |
+| **Waybar** | Top dark-pill status panel with center media capsule & THM badge | `~/.config/waybar/config` & `style.css` |
+| **Titan Media HUD** | Dynamic Island overlay & power menu | `subsystems/titan-media-hud/` |
+| **TitanBrowser** | First-party Qt6 WebEngine browser | `titan-browser-source/` |
+| **ArchTitan Settings** | System configuration GUI | `archtitan-settings/` |
 | **Rofi (Wayland)** | Application launcher, window switcher, power menu | `~/.config/rofi/config.rasi` |
 | **Kitty** | GPU-accelerated terminal emulator | `~/.config/kitty/kitty.conf` |
 | **Fish Shell** | Interactive shell with auto-suggestions & syntax highlighting | `~/.config/fish/config.fish` |
@@ -65,12 +78,12 @@ All keybindings use the **Super** key (Windows/Cmd key) as the main modifier:
 | :--- | :--- |
 | <kbd>Super</kbd> + <kbd>Return</kbd> | Open Kitty Terminal |
 | <kbd>Super</kbd> / <kbd>Super</kbd> + <kbd>Space</kbd> | Open Rofi App Launcher |
-| <kbd>Super</kbd> + <kbd>W</kbd> | Launch Default Web Browser (Chromium / Firefox) |
+| <kbd>Super</kbd> + <kbd>W</kbd> | Launch Default Web Browser (**TitanBrowser**) |
 | <kbd>Super</kbd> + <kbd>E</kbd> | Launch Ranger File Manager |
-| <kbd>Super</kbd> + <kbd>I</kbd> | Launch Calamares Graphical Installer |
+| <kbd>Super</kbd> + <kbd>I</kbd> | Launch Calamares Graphical Installer (via `launch-installer`) |
 | <kbd>Super</kbd> + <kbd>V</kbd> | Open Rofi Clipboard History Manager |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Take Region Screenshot (via `grim` + `slurp`) |
-| <kbd>Super</kbd> + <kbd>Escape</kbd> | Open Rofi Power Menu (Lock, Exit, Reboot, Shutdown) |
+| <kbd>Super</kbd> + <kbd>Escape</kbd> | Open Titan Power Menu / Rofi Power Menu |
 
 ### Window Management
 
@@ -91,6 +104,36 @@ All keybindings use the **Super** key (Windows/Cmd key) as the main modifier:
 | <kbd>Super</kbd> + <kbd>1</kbd> .. <kbd>9</kbd> | Switch to Workspace 1 .. 9 |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>1</kbd> .. <kbd>9</kbd> | Move active window to Workspace 1 .. 9 |
 | <kbd>Super</kbd> + <kbd>Mouse Scroll</kbd> | Cycle through active workspaces |
+
+---
+
+## Modern Hyprland Window Rules Syntax (v0.53+)
+
+ArchTitan OS uses Hyprland v0.53+/v0.56+ named block syntax for window rules:
+
+```ini
+# Calamares installer window rule block
+windowrule {
+    name = calamares-rule
+    match {
+        class = ^(calamares)$
+    }
+    float = true
+    center = true
+}
+```
+
+### VM Rendering Flags (Aquamarine Backend)
+
+For QEMU, VirtualBox, and virtualized GPU environments running Hyprland 0.56+:
+
+```ini
+env = AQ_NO_MODIFIERS,1
+
+cursor {
+    no_hardware_cursors = true
+}
+```
 
 ---
 
@@ -124,10 +167,11 @@ Green     : #a6e3a1  (Success / active state)
 
 ---
 
-## Custom Waybar Integration
+## Redesigned Waybar & Dynamic Island Integration
 
-Waybar includes a dedicated module that polls THM's state file `/tmp/titan_hwm_state`:
+Waybar features a dark pill design language matching the technical Linux aesthetic:
 
-- **THM Badge**: Displays current workload profile (`[SYS]`, `[WEB]`, `[AND]`, `[CAS]`) in vibrant accent colors.
+- **Blue Active Workspace Pill**: Highlighted capsule indicating the active Hyprland workspace.
+- **Center Media Capsule Trigger**: Interactive central module that displays current media/audio track and triggers the **Titan Media HUD** Dynamic Island overlay when clicked.
+- **THM Workload Badge**: Displays current workload profile (`[SYS]`, `[WEB]`, `[AND]`, `[CAS]`) in vibrant accent colors.
 - **Hardware Telemetry**: Displays live CPU usage %, RAM consumption %, CPU temperature, and active PipeWire volume level.
-- **Click Actions**: Clicking the THM module opens the `titan-hwm metrics` dashboard in Kitty.

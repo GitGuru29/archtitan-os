@@ -1,0 +1,134 @@
+/* ArchTitan Wallpaper Picker — Catppuccin Mocha palette */
+* {
+    /* Mocha base palette */
+    crust:        #11111b;
+    mantle:       #181825;
+    base:         #1e1e2ecc;       /* translucent surface */
+    surface0:     #313244cc;
+    surface1:     #45475a;
+    overlay0:     #6c7086;
+    text:         #cdd6f4;
+    subtext0:     #a6adc8;
+    lavender:     #b4befe;
+    blue:         #89b4fa;
+    mauve:        #cba6f7;
+    peach:        #fab387;
+
+    background-color: transparent;
+    text-color:       @text;
+    font:             "JetBrainsMono Nerd Font 13";
+}
+
+window {
+    width:            820px;
+    border-radius:    18px;
+    border:           2px solid;
+    border-color:     @surface1;
+    background-color: @base;
+    padding:          20px;
+    location:         center;
+    anchor:           center;
+}
+
+mainbox {
+    background-color: transparent;
+    spacing:          14px;
+    children:         [ inputbar, message, listview ];
+}
+
+/* ── Header / search bar ───────────────────────────────── */
+inputbar {
+    background-color: @surface0;
+    border-radius:    12px;
+    padding:          10px 16px;
+    spacing:          10px;
+    children:         [ prompt, entry ];
+}
+
+prompt {
+    background-color: transparent;
+    text-color:       @blue;
+    font:             "JetBrainsMono Nerd Font Bold 13";
+    vertical-align:   0.5;
+}
+
+entry {
+    background-color: transparent;
+    text-color:       @text;
+    placeholder:      "Search wallpapers…";
+    placeholder-color: @overlay0;
+    vertical-align:   0.5;
+}
+
+/* ── Optional message row ──────────────────────────────── */
+message {
+    background-color: transparent;
+}
+textbox {
+    background-color: transparent;
+    text-color:       @subtext0;
+    font:             "JetBrainsMono Nerd Font 11";
+    horizontal-align: 0.5;
+}
+
+/* ── Wallpaper grid ────────────────────────────────────── */
+listview {
+    background-color: transparent;
+    layout:           vertical;
+    scrollbar:        false;
+    lines:            5;
+    columns:          1;
+    spacing:          6px;
+    fixed-height:     true;
+}
+
+element {
+    background-color: transparent;
+    border-radius:    10px;
+    padding:          8px 12px;
+    spacing:          12px;
+    orientation:      horizontal;
+    cursor:           pointer;
+    children:         [ element-icon, element-text ];
+}
+
+element-icon {
+    size:             56px;
+    border-radius:    8px;
+    background-color: @surface0;
+    cursor:           inherit;
+}
+
+element-text {
+    background-color: transparent;
+    text-color:       @subtext0;
+    vertical-align:   0.5;
+    font:             "JetBrainsMono Nerd Font 12";
+    cursor:           inherit;
+}
+
+element normal.normal {
+    background-color: transparent;
+}
+
+element selected.normal {
+    background-color: @surface0;
+    border:           1px solid;
+    border-color:     @blue;
+}
+
+element selected.normal element-text {
+    text-color: @lavender;
+}
+
+element alternate.normal {
+    background-color: transparent;
+}
+
+/* ── Scrollbar (hidden but defined cleanly) ────────────── */
+scrollbar {
+    background-color: @surface1;
+    handle-color:     @overlay0;
+    handle-width:     4px;
+    border-radius:    4px;
+}

@@ -8,12 +8,9 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ISO="$SCRIPT_DIR/out/archtitan-2026.06.20-x86_64.iso"
 DISK="$SCRIPT_DIR/archtitan-drive.qcow2"
-OVMF_CODE="/usr/share/OVMF/OVMF_CODE.fd"
 OVMF_VARS="$SCRIPT_DIR/OVMF_VARS.fd"
-
-# Fallback OVMF paths for different Arch packages
+OVMF_CODE="/usr/share/OVMF/OVMF_CODE.fd"
 for f in \
     "/usr/share/OVMF/OVMF_CODE.fd" \
     "/usr/share/ovmf/OVMF.fd" \
@@ -21,31 +18,58 @@ for f in \
     [ -f "$f" ] && OVMF_CODE="$f" && break
 done
 
-# ── Flags ────────────────────────────────────────────────────────────────────
 BOOT_ISO=true
+CUSTOM_ISO=""
 
-case "${1:-}" in
-    --disk)
-        BOOT_ISO=false
-        echo "[run-vm] Booting from installed disk: $DISK"
-        ;;
-    --fresh)
-        echo "[run-vm] Wiping disk and starting fresh install..."
-        qemu-img create -f qcow2 "$DISK" 60G
-        echo "[run-vm] Created fresh 60G qcow2 at $DISK"
-        BOOT_ISO=true
-        ;;
-    "")
-        echo "[run-vm] Booting ISO for installation: $ISO"
-        ;;
-    *)
-        echo "Usage: $0 [--disk|--fresh]"
-        echo "  (no args)  Boot from ISO"
-        echo "  --disk     Boot from installed qcow2 disk"
-        echo "  --fresh    Wipe disk + boot ISO (clean reinstall)"
-        exit 1
-        ;;
-esac
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --disk)
+            BOOT_ISO=false
+            shift
+            ;;
+        --fresh)
+            echo "[run-vm] Wiping disk and starting fresh install..."
+            qemu-img create -f qcow2 "$DISK" 60G
+            echo "[run-vm] Created fresh 60G qcow2 at $DISK"
+            BOOT_ISO=true
+            shift
+            ;;
+        --iso)
+            CUSTOM_ISO="$2"
+            shift 2
+            ;;
+        *.iso)
+            CUSTOM_ISO="$1"
+            shift
+            ;;
+        *)
+            if [ -f "$1" ]; then
+                CUSTOM_ISO="$1"
+                shift
+            else
+                echo "Usage: $0 [--disk|--fresh] [--iso <path_to_iso> | <path_to_iso>]"
+                echo "  (no args)       Boot newest ISO from out/ or Downloads/"
+                echo "  --disk          Boot from installed qcow2 disk"
+                echo "  --fresh [ISO]   Wipe disk + boot ISO (clean reinstall)"
+                echo "  <path_to_iso>   Boot a specific ISO file"
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+if $BOOT_ISO; then
+    if [ -n "$CUSTOM_ISO" ] && [ -f "$CUSTOM_ISO" ]; then
+        ISO="$CUSTOM_ISO"
+    elif [ -d "$SCRIPT_DIR/out" ] && compgen -G "$SCRIPT_DIR/out/*.iso" > /dev/null; then
+        ISO="$(ls -t "$SCRIPT_DIR/out"/*.iso | head -n 1)"
+    elif compgen -G "$HOME/Downloads/archtitan*.iso" > /dev/null; then
+        ISO="$(ls -t "$HOME/Downloads"/archtitan*.iso | head -n 1)"
+    fi
+    echo "[run-vm] Selected ISO: $ISO"
+else
+    echo "[run-vm] Booting from installed disk: $DISK"
+fi
 
 # ── Sanity checks ────────────────────────────────────────────────────────────
 if [ ! -f "$OVMF_CODE" ]; then
@@ -79,8 +103,8 @@ fi
 # ── Build QEMU args ──────────────────────────────────────────────────────────
 QEMU_ARGS=(
     $KVM_FLAG
-    -m 4G
-    -smp 4
+    -m 5G
+    -smp 2
     -machine type=q35,smm=on
 
     # UEFI firmware
@@ -108,7 +132,7 @@ QEMU_ARGS=(
     -device usb-tablet
 
     # Better performance
-    -object memory-backend-memfd,id=mem,size=4G,share=on
+    -object memory-backend-memfd,id=mem,size=5G,share=on
     -numa node,memdev=mem
 )
 
@@ -124,7 +148,7 @@ fi
 echo ""
 echo "══════════════════════════════════════════════"
 echo "  ArchTitan VM Starting"
-echo "  RAM:  4GB  |  CPUs: 4  |  Disk: 60GB"
+echo "  RAM:  5GB  |  CPUs: 2  |  Disk: 60GB"
 echo "  UEFI: $OVMF_CODE"
 if $BOOT_ISO; then
 echo "  Boot: ISO → install with Calamares"

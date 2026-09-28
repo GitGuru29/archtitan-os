@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# titan-wallpaper-restore — Restore the user's last wallpaper at session start
+#
+# Called from hyprland.conf via exec-once.  Reads the two-line persistence file
+# written by titan-set-wallpaper:
+#   Line 1 — absolute path to image
+#   Line 2 — swaybg scale mode (fill|fit|stretch|tile|center|contain)
+#
+# If no persistence file exists (first boot / live ISO), falls back to the
+# ArchTitan default wallpaper via a plain swaybg call (no notification).
+
+set -euo pipefail
+
+PERSIST_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/archtitan/wallpaper"
+DEFAULT_WALLPAPER="/usr/share/backgrounds/archtitan/wallpaper.png"
+DEFAULT_MODE="fill"
+
+# ── Kill any stale swaybg from a previous session ───────────────────────────
+pkill -x swaybg 2>/dev/null || true
+sleep 0.1
+
+# ── Load persisted values ────────────────────────────────────────────────────
+if [[ -f "$PERSIST_FILE" ]]; then
+    WALLPAPER_PATH="$(sed -n '1p' "$PERSIST_FILE")"
+    SCALE_MODE="$(sed -n '2p' "$PERSIST_FILE")"
+
+    # Sanity checks — fall back if the file is stale/corrupt
+    [[ -f "$WALLPAPER_PATH" ]] || { WALLPAPER_PATH="$DEFAULT_WALLPAPER"; SCALE_MODE="$DEFAULT_MODE"; }
+    [[ -n "$SCALE_MODE" ]]     || SCALE_MODE="$DEFAULT_MODE"
+else
+    WALLPAPER_PATH="$DEFAULT_WALLPAPER"
+    SCALE_MODE="$DEFAULT_MODE"
+fi
+
+# ── Launch swaybg ────────────────────────────────────────────────────────────
+swaybg -i "$WALLPAPER_PATH" -m "$SCALE_MODE" &
+disown

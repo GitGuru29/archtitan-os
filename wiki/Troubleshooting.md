@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-This guide provides solutions for common issues encountered during **ISO building**, **Virtual Machine testing**, **Wayland session execution**, and **custom daemon operations**.
+This guide provides solutions for common issues encountered during **ISO building**, **Virtual Machine testing**, **Wayland session execution**, **Calamares installation**, and **custom daemon operations**.
 
 ---
 
@@ -8,8 +8,11 @@ This guide provides solutions for common issues encountered during **ISO buildin
 
 - [ISO Build Failures](#iso-build-failures)
 - [Virtual Machine Issues (VirtualBox & QEMU)](#virtual-machine-issues)
+- [Calamares Installer Issues](#calamares-installer-issues)
 - [Hyprland & Wayland Issues](#hyprland--wayland-issues)
+- [Live ISO Boot & Immutability Guard Issues](#live-iso-boot--immutability-guard-issues)
 - [Titan Hardware Manager (`titan-hwm`) Issues](#titan-hardware-manager-issues)
+- [TitanShare Issues](#titanshare-issues)
 - [Titan Sandbox Issues](#titan-sandbox-issues)
 
 ---
@@ -31,31 +34,28 @@ This guide provides solutions for common issues encountered during **ISO buildin
 
 ---
 
-### 2. Qt6 / CMake Build Failure During `airootfs` Overlay
+### 2. Qt6 / WebEngine Build Failure During `airootfs` Overlay
 
-**Symptom**: `mkarchiso` exits when building TitanFetch with error `Qt6::Widgets not found`.
+**Symptom**: `mkarchiso` exits when building TitanFetch, TitanBrowser, or ArchTitan Settings with error `Qt6::Widgets` or `Qt6::WebEngineCore not found`.
 
 **Cause**: Missing Qt6 development headers on host system.
 
 **Solution**:
-Install Qt6 base and CMake packages on the host machine:
+Install Qt6 base, Qt6 WebEngine, and CMake packages on the host machine:
 ```bash
-sudo pacman -S qt6-base cmake base-devel
+sudo pacman -S qt6-base qt6-webengine cmake base-devel
 ```
 
 ---
 
-### 3. Permission Denied or Stale Build Workspace
+### 3. SquashFS Memory Exhaustion (OOM During Compression)
 
-**Symptom**: Build fails with `Permission denied` when writing to `out/` or `tmp-work/`.
+**Symptom**: `mkarchiso` crashes during the SquashFS compression stage with `Out of memory` or `Killed`.
 
-**Cause**: Previous interrupted build left root-owned temporary files.
+**Cause**: `mksquashfs` attempting to use all available CPU cores and excessive thread memory on a system with limited RAM.
 
 **Solution**:
-Clean previous artifacts completely before starting a build:
-```bash
-sudo rm -rf tmp-work out
-```
+Ensure `profiledef.sh` restricts `-processors` option (e.g. `-processors 6` or lower depending on system RAM), or build with an active swap file.
 
 ---
 
@@ -90,24 +90,72 @@ sudo pacman -S edk2-ovmf qemu-desktop
 
 ---
 
-## Hyprland & Wayland Issues
+## Calamares Installer Issues
 
-### 1. NVIDIA GPU Screen Tear or Unresponsive Windows
+### 1. Calamares Fails to Launch on Live ISO (Display Permission Error)
 
-**Symptom**: Running ArchTitan on a physical NVIDIA GPU shows flickering or unresponsive windows.
+**Symptom**: Clicking **Install ArchTitan OS** or running `sudo calamares` emits `qt.qpa.xcb: could not connect to display` or `Could not connect to Wayland socket`.
 
-**Cause**: DRM mode-setting is disabled or missing Wayland environment flags.
+**Cause**: Calamares running as root cannot access the unprivileged live user's Wayland/XWayland display socket.
 
 **Solution**:
-1. Ensure `nvidia_drm.modeset=1` is passed in boot parameters.
-2. In `~/.config/hypr/hyprland.conf`, verify the following variables:
-   ```ini
-   env = LIBVA_DRIVER_NAME,nvidia
-   env = XDG_SESSION_TYPE,wayland
-   env = GBM_BACKEND,nvidia-drm
-   env = __GLX_VENDOR_LIBRARY_NAME,nvidia
-   env = NVD_BACKEND,direct
-   ```
+Launch Calamares using the built-in helper script, which handles display permissions automatically:
+```bash
+launch-installer
+```
+The helper exports `XDG_RUNTIME_DIR=/run/user/1000` and configures `xhost +local:root` automatically.
+
+---
+
+## Live ISO Boot & Immutability Guard Issues
+
+### 1. Live ISO Boot Delay (Hangs for 3–5 Minutes before Plymouth/Hyprland)
+
+**Symptom**: ISO boot hangs for up to 5 minutes on a black screen or early systemd targets after selecting an entry in GRUB before Plymouth or Hyprland starts.
+
+**Cause**:
+1. `systemd-time-wait-sync.service` was linked inside `sysinit.target.wants`, forcing early boot (`sysinit.target`) to pause until Network Time Protocol (NTP) synchronized over the network.
+2. `archtitan-immutable-guard.service` was placed in `sysinit.target.wants` and called `systemctl mask --now` before D-Bus (`dbus.service`) was running.
+3. GPG keyring initialization (`pacman-key --init`) stalled during live boot in virtual machines due to `/dev/random` entropy exhaustion.
+
+**Solution**:
+1. **Unlinked Time Wait Sync**: Removed `systemd-time-wait-sync.service` from `airootfs/etc/systemd/system/sysinit.target.wants/` so clock sync does not block early boot.
+2. **Deferred Immutability Guard**: Moved `archtitan-immutable-guard.service` to `multi-user.target` so it runs after D-Bus initialization without delaying early boot.
+3. **Entropy Daemon (`haveged`)**: Added `haveged` to `packages.x86_64` and enabled `haveged.service` in `multi-user.target.wants` to supply instant entropy for GPG initialization in VMs.
+
+---
+
+### 2. Custom GRUB Highlight Cyan Box or Text Formatting Issues
+
+**Symptom**: GRUB selection bar appears as an opaque cyan block (`black/cyan`) with graphical layout glitches.
+
+**Cause**: Experimental `gfxterm` color definitions (`set menu_color_highlight=black/cyan`) overriding default GRUB text console mode.
+
+**Solution**:
+Reverted `grub/grub.cfg` to clean standard default `archiso` GRUB configuration:
+- `terminal_output console`
+- `gfxmode="auto"`
+- Default GRUB menu styling without custom cyan overrides.
+
+---
+
+## Hyprland & Wayland Issues
+
+### 1. Hardware Cursor Invisible or Glitching in VMs
+
+**Symptom**: Mouse cursor is invisible or leaves artifacts in QEMU / VirtualBox under Hyprland 0.56+.
+
+**Cause**: Hardware cursor planes unsupported by virtualized display drivers (Aquamarine backend).
+
+**Solution**:
+Ensure the following settings are active in `~/.config/hypr/hyprland.conf`:
+```ini
+env = AQ_NO_MODIFIERS,1
+
+cursor {
+    no_hardware_cursors = true
+}
+```
 
 ---
 
@@ -118,39 +166,90 @@ sudo pacman -S edk2-ovmf qemu-desktop
 **Symptom**: Running `titan-hwm status` displays:
 ```
 titan-hwm: daemon socket not found at /tmp/titan_hwm.sock
-           Is titan_hw_manager running?
+           Is titan-hwm daemon running?
 ```
 
-**Cause**: The `titan_hw_manager.service` is stopped or failed to start.
+**Cause**: The `titan-hwm.service` is stopped or failed to start.
 
 **Solution**:
 1. Check the systemd service status:
    ```bash
-   systemctl status titan_hw_manager
+   systemctl status titan-hwm
    ```
 2. View detailed journal logs:
    ```bash
-   journalctl -u titan_hw_manager -b --no-pager -n 50
+   journalctl -u titan-hwm -b --no-pager -n 50
    ```
 3. Restart the service:
    ```bash
-   sudo systemctl restart titan_hw_manager
+   sudo systemctl restart titan-hwm
+   ```
+
+### 2. cgroup Sub-Slice Delegation Failure (`EACCES` on cgroup.procs or missing `cpu.weight`)
+
+**Symptom**: Journal logs show `failed to write pid to /sys/fs/cgroup/archtitan.slice/...: Permission denied` or CPU throttling rules fail to affect background workloads.
+
+**Cause**: `archtitan.slice` is missing `Delegate=yes`, `Slice=archtitan.slice` is absent from `titan-hwm.service`, or `cpu` controller is not delegated.
+
+**Solution**:
+1. Verify `archtitan.slice` unit exists and contains `Delegate=yes`:
+   ```bash
+   systemctl show -p Delegate archtitan.slice
+   # Output must be: Delegate=yes
+   ```
+2. Verify `titan-hwm.service` executes inside the slice (`Slice=archtitan.slice`) with `ProtectKernelTunables=false`.
+3. Check cgroup controller delegation:
+   ```bash
+   cat /sys/fs/cgroup/archtitan.slice/cgroup.subtree_control
+   # Should list: cpu memory pids
+   ```
+4. Reload systemd and restart THM:
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl restart titan-hwm
    ```
 
 ---
 
-### 2. cgroup v2 Controllers Missing
+## TitanShare Issues
 
-**Symptom**: `titan_hw_manager` logs error `cgroup v2 controllers unavailable`.
+### 1. Pairing PIN File Missing or Unreadable (`/run/titanshare/titanshare-pin.json`)
 
-**Cause**: System booted with legacy v1 cgroups or unified hierarchy is disabled in kernel command line.
+**Symptom**: ArchTitan Settings GUI (`archtitan-settings`) shows TitanShare as disconnected or fails to present the pairing PIN prompt.
+
+**Cause**: `titanshare-daemon.service` is missing `RuntimeDirectory=titanshare` or is not running.
 
 **Solution**:
-Verify that `/sys/fs/cgroup/cgroup.controllers` exists:
-```bash
-cat /sys/fs/cgroup/cgroup.controllers
-```
-If missing, ensure your bootloader does not pass `systemd.unified_cgroup_hierarchy=0`.
+1. Check `titanshare-daemon.service` status:
+   ```bash
+   systemctl status titanshare-daemon
+   ```
+2. Check runtime directory permissions at `/run/titanshare/`:
+   ```bash
+   ls -ld /run/titanshare/
+   cat /run/titanshare/titanshare-pin.json
+   ```
+3. Restart the daemon to regenerate the pairing file:
+   ```bash
+   sudo systemctl restart titanshare-daemon
+   ```
+
+### 2. Storage Directory Write Errors (`Permission Denied` under `/var/lib/titanshare`)
+
+**Symptom**: Incoming files fail to save or log `Failed to write file to storage`.
+
+**Cause**: Custom `/etc/titanshare/titanshare.conf` path misconfigured or `StateDirectory=titanshare` permissions invalid.
+
+**Solution**:
+1. Verify daemon config at `/etc/titanshare/titanshare.conf`:
+   ```ini
+   [daemon]
+   received_dir = /var/lib/titanshare/received_files
+   ```
+2. Ensure systemd `ReadWritePaths=/var/lib/titanshare` is enabled and permissions are `0755`:
+   ```bash
+   sudo ls -ld /var/lib/titanshare/received_files
+   ```
 
 ---
 

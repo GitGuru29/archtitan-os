@@ -1,0 +1,17 @@
+[Unit]
+Description=ArchTitan Workload Isolation Slice
+Documentation=https://github.com/GitGuru29/archtitan-os
+Before=basic.target
+
+[Slice]
+# Resource accounting — required for cgroup v2 controller delegation
+CPUAccounting=yes
+CPUWeight=100
+MemoryAccounting=yes
+TasksAccounting=yes
+IOAccounting=yes
+
+# Delegate=yes grants THM authority to create sub-cgroups inside this slice.
+# Without this, writes to cgroup.procs under archtitan.slice/ will fail with EACCES.
+# See systemd.resource-control(5) and cgroups(7).
+Delegate=yes

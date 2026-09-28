@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wall -Wextra -Werror=return-type -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/titan-hwm-v3.dir/link.d "CMakeFiles/titan-hwm-v3.dir/daemon/daemon.cpp.o" -o titan-hwm-v3  libthm_core.a -lpthread

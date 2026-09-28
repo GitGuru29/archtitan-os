@@ -26,6 +26,6 @@
 
 ## 🛡️ Safety & Quality Checklist
 - [ ] I only modified files inside my assigned subsystem directory (`subsystems/<my-subsystem>/`)
-- [ ] I did **NOT** touch `airootfs/`, `titan-hwm-source/`, `sandbox/`, or any core OS build files
+- [ ] I did **NOT** touch `airootfs/`, `titan-hwm-v3/`, `sandbox/`, or any core OS build files
 - [ ] My code compiles and builds without errors
 - [ ] I updated my subsystem `README.md` if needed

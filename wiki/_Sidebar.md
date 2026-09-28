@@ -12,6 +12,10 @@
 - [Titan Hardware Manager](Titan-Hardware-Manager)
 - [Titan Sandbox](Titan-Sandbox)
 - [TitanFetch](TitanFetch)
+- [Titan Browser](Titan-Browser)
+- [ArchTitan Settings](ArchTitan-Settings)
+- [Titan Media HUD](Titan-Media-HUD)
+- [Titan Share](Titan-Share)
 - [Desktop Environment](Desktop-Environment)
 
 **Project**

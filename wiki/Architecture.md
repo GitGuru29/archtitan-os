@@ -9,22 +9,25 @@ ArchTitan is organized into four layers. Each layer has a clear responsibility, 
 ```mermaid
 graph TD
     subgraph L4["Application Layer"]
-        Apps[Desktop Apps & Dev Tools]
+        TB[TitanBrowser]
+        TS_GUI[ArchTitan Settings]
         TF[TitanFetch]
         Cal[Calamares Installer]
+        Apps[Dev Tools & Compilers]
     end
 
-    subgraph L3["System Services Layer"]
+    subgraph L3["System Services & Overlays"]
         THM[Titan Hardware Manager]
         TS[Titan Sandbox]
-        Slices[titan-*.slice cgroups]
+        HUD[Titan Media HUD Dynamic Island]
+        Slices[archtitan.slice cgroups]
     end
 
     subgraph L2["Desktop Environment Layer"]
         H[Hyprland Compositor]
-        WB[Waybar]
-        R[Rofi / Power Menu]
-        SDDM[SDDM / Greetd Display Manager]
+        WB[Waybar Status Bar]
+        R[Rofi App Launcher]
+        SDDM[SDDM Display Manager]
     end
 
     subgraph L1["Base System Layer"]
@@ -43,8 +46,8 @@ graph TD
 | :--- | :--- | :--- |
 | **Base** | Bootable rootfs, kernel, firmware, networking | archiso, pacstrap, mkinitcpio, systemd |
 | **Desktop** | Wayland session, input, visuals, session management | Hyprland, Waybar, Rofi, SDDM, PipeWire |
-| **Services** | Workload-aware resource control, app isolation | C++17 daemons, cgroups v2, PSI, seccomp |
-| **Application** | User-facing tools and installer | TitanFetch (Qt6), Calamares, dev toolchain |
+| **Services & Overlays** | Workload-aware resource control, app isolation, media overlays | C++17 daemons, cgroups v2, PSI, seccomp, QML Dynamic Island |
+| **Application** | User-facing tools, browser, settings GUI, and installer | TitanBrowser (Qt6 WebEngine), ArchTitan Settings (Qt6), TitanFetch (Qt6), Calamares |
 
 ---
 
@@ -60,12 +63,12 @@ sequenceDiagram
     participant AI as airootfs overlay
     participant OUT as out/*.iso
 
-    Dev->>MK: mkarchiso -w tmp-work -o out ./
+    Dev->>MK: mkarchiso -v -w tmp-work -o out ./
     MK->>PS: Install packages.x86_64
     PS-->>MK: Bootstrap rootfs
     MK->>AI: Merge airootfs/ configs & binaries
-    AI->>AI: Compile THM, TitanFetch, sandbox tools
-    MK->>MK: SquashFS (zstd) + GRUB/EFI boot
+    AI->>AI: Compile THM, TitanFetch, TitanBrowser, Settings, Media HUD, sandbox tools
+    MK->>MK: SquashFS (zstd, 2 CPU limit) + GRUB/EFI boot
     MK->>OUT: archtitan-YYYY.MM.DD-x86_64.iso
 ```
 
@@ -73,68 +76,75 @@ sequenceDiagram
 
 | Path | Role |
 | :--- | :--- |
-| `profiledef.sh` | ISO name, boot modes, squashfs options, permission map |
+| `profiledef.sh` | ISO name, boot modes, squashfs options (zstd CPU limits), permission map |
 | `packages.x86_64` | Package list installed into live/install target |
 | `pacman.conf` | Mirror and repo configuration for the build |
 | `airootfs/` | Overlay copied onto the rootfs (configs, systemd units, binaries) |
-| `grub/` / `efiboot/` | Bootloader configuration |
-| `subsystems/` | Dedicated directories for all 9 group subsystems with standardized layouts |
-| `titan-hwm-source/` | Titan Hardware Manager C++ daemon source |
+| `grub/` / `efiboot/` | Bootloader configuration & unicode font resources |
+| `subsystems/` | Dedicated directories for all 9 group subsystems (THM v3.1, Sandbox, Media HUD, etc.) |
+| `titan-browser-source/` | First-party TitanBrowser Qt6 WebEngine source |
+| `archtitan-settings/` | ArchTitan Settings C++/Qt6 control center source |
+| `titan-hwm-v3/` | Titan Hardware Manager v3.1 C++20 autonomous resource orchestrator source |
 | `titanfetch-src/` | TitanFetch C++/Qt6 application source |
 | `sandbox/` | Titan Sandbox C++ daemon & policy loader source |
 | `.github/` | GitHub Actions CI workflows, CODEOWNERS, and PR template |
 
 ---
 
-## Titan Hardware Manager — Control Loop
+## Titan Hardware Manager (THM v3.1) — Autonomous Control Loop
 
-THM is the central intelligence service. It watches Hyprland workspace state, running processes, and memory pressure, then assigns processes to cgroup slices and applies escalation when PSI thresholds are crossed.
+THM v3.1 is the central resource intelligence service written in C++20. It continuously samples Hyprland workspace state, process trees, and kernel PSI metrics every 200ms, routing workloads across `archtitan.slice` sub-slices with zero foreground jitter.
 
 ```mermaid
 flowchart LR
     subgraph Inputs
-        WS[Hyprland workspaces]
-        PROC[Process tree / window titles]
+        WS[Hyprland Workspace & Focus]
+        PROC[Process Tree Walk & Cmdlines]
         PSI["/proc/pressure/memory"]
         TH["/sys/class/thermal"]
     end
 
-    subgraph THM["Titan Hardware Manager"]
-        CLS[Workload classifier]
-        POL[Policy engine]
-        ESC[PSI escalation ladder]
+    subgraph THM["THM v3.1 Autonomous Core"]
+        CLS[Multi-Signal Fusion Classifier]
+        DET[Execution & Service Detector]
+        POL[Policy Engine & Hysteresis]
+        ESC[PSI Escalation Ladder]
     end
 
-    subgraph Outputs
-        SL[titan-active.slice]
-        BG[titan-background.slice]
-        FR[titan-frozen.slice]
-        GOV[CPU governor hints]
+    subgraph Slices["archtitan.slice Hierarchy"]
+        ACT[archtitan-active.slice]
+        BG[archtitan-background.slice]
+        IDLE[archtitan-idle.slice]
+        REC[archtitan-reclaimable.slice]
     end
 
     WS --> CLS
     PROC --> CLS
+    PROC --> DET
     CLS --> POL
+    DET --> POL
     PSI --> ESC
-    POL --> SL
+    POL --> ACT
     POL --> BG
-    ESC --> FR
+    POL --> IDLE
+    ESC --> REC
     TH --> POL
 ```
 
-### Workload profiles
+### Workload Taxonomy & Invariant Protection
 
-THM classifies activity into five profiles:
+THM v3.1 evaluates processes using **multi-signal fusion** (process hierarchy, Hyprland window titles, CWD project signatures, and cmdline drift detection):
 
-| Profile | Typical triggers | Resource bias |
+| Workload Type | Identified Binaries & Workflows | Allocation & Invariant Protection |
 | :--- | :--- | :--- |
-| **Casual** | Browser, media, workspace 1 | Balanced; background apps deprioritized |
-| **Web Dev** | Node, Vite, webpack, workspace 2 | Higher CPU/memory for build daemons & LSPs |
-| **Android Dev** | adb, gradle, Android Studio, ws 3 | Protects emulator + build toolchain |
-| **System Dev** | clangd, cargo, cmake, IDE, ws 4–5 | Aggressive protection for compilers & LSPs |
-| **Neutral** | No strong signal | Default policy |
+| **`COMPILER`** | `gcc`, `clang`, `rustc`, `cargo`, `ninja`, `cmake` | High CPU priority; protected from freezing while compiling in background |
+| **`DEVELOPMENT_SERVICE`** | `vite`, `nodemon`, `webpack`, `tsc --watch`, `pytest`, `jest` | Watcher/runner awareness; remains EXECUTING during idle epoll pauses |
+| **`SERVICE`** | `dockerd`, `podman`, `redis-server`, `mysqld`, `postgres`, `mongod` | **Immunity invariant**: Strictly immune to freeze and memory reclaim |
+| **`VM`** | `qemu-system-*`, `libvirtd`, `firecracker`, Android Emulator | **Immunity invariant**: Strictly immune to freeze (prevents guest timer drift) |
+| **`BROWSER`** | `titanbrowser`, `chromium`, `firefox`, `zen-browser` | Latency-sensitive root protection; renderers freeze via cgroups only (no SIGSTOP) |
+| **`MEDIA`** | `pipewire`, `spotify`, `mpv`, `vlc` | **Audio whitelist**: Never frozen or deprioritized |
 
-Classification uses a **3-signal fusion** approach: process names, window titles, and working directories — not workspace number alone.
+For in-depth architectural details, see the dedicated [Titan Hardware Manager](Titan-Hardware-Manager) documentation.
 
 ---
 
@@ -146,8 +156,8 @@ Every user-initiated app launch from Hyprland keybindings goes through `titan-ex
 flowchart TD
     A[User keybind / rofi launch] --> H[titan-exec-hook]
     H --> M{Policy map lookup}
-    M -->|chromium| B[browser.toml]
-    M -->|code| D[system-dev.toml]
+    M -->|titanbrowser / chromium| B[browser.toml]
+    M -->|archtitan-settings / code| D[system-dev.toml]
     M -->|unknown| U[unknown.toml]
     B --> S[titan-sandboxd]
     D --> S
@@ -165,27 +175,40 @@ Policies define filesystem allowlists, network access, device nodes, and syscall
 | Path | Purpose |
 | :--- | :--- |
 | `/tmp/titan_hwm.sock` | THM UNIX socket — CLI commands (`titan-hwm switch`, etc.) |
-| `/tmp/titan_hwm_state` | Current profile and last action (read by CLI/Waybar) |
-| `/var/log/titan-sandbox/` | Sandbox launch and policy resolution logs |
+| `/tmp/titan_hwm_state` | Current profile and last action (read by CLI/Waybar/Media HUD) |
+| `/usr/local/bin/titan-hud-gpu` | Telemetry provider script for Titan Media HUD |
+| `/usr/local/bin/titan-hud-context` | Workspace focus & THM state reader for Titan Media HUD |
+| `/var/log/titan-sandbox/sandbox.log` | Sandbox launch and policy resolution logs |
 
 ---
 
 ## Security Model
 
-- **THM runs as root** — required for cgroup management, cross-user signals, and governor writes. It is scoped to graphical-session lifecycle via systemd.
+- **THM runs as root** — required for cgroup management, cross-user signals, and governor writes. It is managed via `titan-hwm.service` and scoped to `graphical-session.target` lifecycle with OOMScoreAdjust=-1000 immunity.
 - **Sandbox runs per-app** — reduces blast radius of compromised GUI apps; not a replacement for firejail/bubblewrap for untrusted code review.
-- **Live ISO** — screen lock is disabled (`Super+L` noop) to prevent lockout; Calamares runs with sudo for installation.
+- **Live ISO Immutability Guard** — `archtitan-immutable-guard.service` handles squashfs/overlayfs immutability with non-blocking error flags (`ExecStart=-`, `SuccessExitStatus=0 1 2 255`) ensuring live booting never hangs.
+- **Live ISO** — screen lock is disabled (`Super+L` noop) to prevent lockout; Calamares runs via `launch-installer` handling Wayland/XWayland root socket permissions.
 
 ---
 
-## Planned Architecture (Not Yet Shipped)
+## TitanShare Architecture & Storage Path Resolution
 
-These components appear in project documentation and FYP materials but are **not** in the current ISO:
+TitanShare operates as a native C++ daemon coupled with an Android Jetpack Compose application:
+* **Base Storage Resolution**: Root execution defaults to `/var/lib/titanshare`, normal user to `$HOME/.local/share/titanshare`, and fallback to `/tmp/titanshare`.
+* **Sanitized File Layout**: Received files are saved in `<DATA_DIR>/received_files` with strict path traversal sanitization; outgoing files are staged in `<DATA_DIR>/send_to_android`.
+* **Systemd Sandboxing & IPC**: Runs under systemd with `ProtectSystem=strict`, `StateDirectory=titanshare`, and `RuntimeDirectory=titanshare`. Generates runtime pairing PINs at `/run/titanshare/titanshare-pin.json` monitored by ArchTitan Settings GUI (`QFileSystemWatcher`).
+* **Protected Status**: Registered in THM v3.1 `ProtectedRegistry` to prevent freeze or OOM reclaim during high-volume LAN transfers. See [Titan Share](Titan-Share) for full specs.
 
-- **TitanShare** — mDNS P2P file transfer (Linux daemon + Android app)
+---
+
+## Planned Architecture (Under Active Development)
+
+These components appear in project documentation and FYP materials and are organized in `subsystems/`:
+
+- **TitanShare** — mDNS P2P file transfer daemon & Android app ([Titan Share](Titan-Share))
 - **TitanMirror** — Wayland-native Android screen mirroring
-- **Hybrid GPU switcher** — automated iGPU/dGPU PRIME routing
-- **AI Project Analyzer** — OS-level project introspection and env provisioning
-- **BTRFS snapshot rollback** — automated pre-update snapshots
+- **Auto GPU Switcher** — automated iGPU/dGPU PRIME routing
+- **TITAN AI** — OS-level project introspection and developer AI assistant
+- **TITAN Task Manager** — advanced process scheduling manager
 
-See [Roadmap & Status](Roadmap-and-Status) for the current implementation matrix.
+See [Roadmap & Status](Roadmap-and-Status) for the complete implementation matrix.

@@ -7,9 +7,9 @@
 #include <QFile>
 
 WallpaperManager::WallpaperManager(QObject *parent) : QObject(parent) {
-    // Try to read current wallpaper from swww or config file
+    // Try to read current wallpaper from archtitan config file or swww fallback
     QProcess p;
-    p.start("bash", {"-c", "cat ~/.config/swww/current 2>/dev/null || echo ''"});
+    p.start("bash", {"-c", "sed -n '1p' ~/.config/archtitan/wallpaper 2>/dev/null || cat ~/.config/swww/current 2>/dev/null || echo ''"});
     p.waitForFinished(500);
     m_currentWallpaper = p.readAllStandardOutput().trimmed();
     calculateBrightness();
@@ -21,10 +21,8 @@ void WallpaperManager::setCurrentWallpaper(const QString &path) {
     if (m_currentWallpaper == path) return;
     m_currentWallpaper = path;
     calculateBrightness();
-    // Apply with swww
-    QProcess::startDetached("bash", {"-c",
-        QString("swww img '%1' --transition-type wipe --transition-duration 1 2>/dev/null; "
-                "mkdir -p ~/.config/swww && echo '%1' > ~/.config/swww/current").arg(path)});
+    // Apply with titan-set-wallpaper helper script (swaybg + persistence)
+    QProcess::startDetached("titan-set-wallpaper", {path});
     emit currentWallpaperChanged();
     emit isDarkChanged();
 }
@@ -54,6 +52,7 @@ void WallpaperManager::scanWallpapers() {
     QStringList searchDirs = {
         "/usr/share/backgrounds/archtitan",
         "/usr/share/wallpapers",
+        QDir::homePath() + "/.local/share/backgrounds",
         QDir::homePath() + "/Pictures/Wallpapers",
         QDir::homePath() + "/Pictures"
     };

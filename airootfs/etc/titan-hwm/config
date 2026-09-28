@@ -1,4 +1,4 @@
-# Titan Hardware Manager Config v2 (System Root-Owned)
+# Titan Hardware Manager Config v3 (System Root-Owned)
 debounce_ms = 800
 ram_freeze_pct = 50
 ram_kill_pct = 25

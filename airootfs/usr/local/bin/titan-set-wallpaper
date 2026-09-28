@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# titan-set-wallpaper — Apply and persist a wallpaper via swaybg
+#
+# Usage: titan-set-wallpaper <path-to-image> [fill|fit|stretch|tile|center|contain]
+#
+# • Gracefully kills any running swaybg instance first (smooth transition).
+# • Launches new swaybg in background.
+# • Persists the selection so titan-wallpaper-restore can revive it on next login.
+# • Sends a brief notification confirming the change.
+#
+# Persistence file: ~/.config/archtitan/wallpaper
+# (Intentionally NOT inside ~/.config/hypr so hyprpaper doesn't interfere.)
+
+set -euo pipefail
+
+WALLPAPER_PATH="${1:-}"
+SCALE_MODE="${2:-fill}"
+
+PERSIST_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/archtitan"
+PERSIST_FILE="${PERSIST_DIR}/wallpaper"
+
+# ── Validate ────────────────────────────────────────────────────────────────
+if [[ -z "$WALLPAPER_PATH" ]]; then
+    echo "Usage: titan-set-wallpaper <path> [fill|fit|stretch|tile|center|contain]" >&2
+    exit 1
+fi
+
+if [[ ! -f "$WALLPAPER_PATH" ]]; then
+    echo "titan-set-wallpaper: file not found: $WALLPAPER_PATH" >&2
+    notify-send -u normal -i dialog-error \
+        "Wallpaper" "File not found: $(basename "$WALLPAPER_PATH")" 2>/dev/null || true
+    exit 1
+fi
+
+VALID_MODES="fill fit stretch tile center contain"
+if [[ ! " $VALID_MODES " == *" $SCALE_MODE "* ]]; then
+    echo "titan-set-wallpaper: invalid mode '$SCALE_MODE'. Valid: $VALID_MODES" >&2
+    exit 1
+fi
+
+# ── Kill existing swaybg ────────────────────────────────────────────────────
+# Use pkill -x for an exact match so we don't kill other sway processes.
+if pkill -x swaybg 2>/dev/null; then
+    sleep 0.15   # brief gap so the new instance doesn't race the old one
+fi
+
+# ── Launch new swaybg ───────────────────────────────────────────────────────
+# Disown immediately — we don't want it in our process group.
+swaybg -i "$WALLPAPER_PATH" -m "$SCALE_MODE" &
+disown
+
+# ── Persist ─────────────────────────────────────────────────────────────────
+mkdir -p "$PERSIST_DIR"
+printf '%s\n%s\n' "$WALLPAPER_PATH" "$SCALE_MODE" > "$PERSIST_FILE"
+
+# ── Notify ──────────────────────────────────────────────────────────────────
+NAME="$(basename "${WALLPAPER_PATH%.*}")"
+notify-send -u low -i preferences-desktop-wallpaper \
+    "Wallpaper applied" "$NAME" 2>/dev/null || true

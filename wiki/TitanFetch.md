@@ -1,6 +1,6 @@
 # TitanFetch
 
-**TitanFetch** is ArchTitan OS's native system information tool written in C++20 and Qt6. It replaces slow, subshell-heavy Bash scripts (like Neofetch) with a compiled, sub-millisecond sysfs/procfs reader that supports both an ASCII terminal CLI and a hardware GUI card.
+**TitanFetch** is ArchTitan OS's native system information tool written in C++20 and Qt6. It replaces slow, subshell-heavy Bash scripts (like Neofetch) with a compiled, sub-millisecond sysfs/procfs reader supporting both a terminal CLI and a **Glassmorphic Technical HUD**.
 
 ---
 
@@ -32,21 +32,20 @@ Executing `titanfetch` in Kitty or any terminal displays custom ArchTitan ASCII 
 
 ---
 
-### 2. Telemetry GUI Mode (`titanfetch --gui`)
+### 2. Glassmorphic Technical HUD Mode (`titanfetch --gui`)
 
-Running `titanfetch --gui` opens a standalone Qt6 telemetry window featuring:
+Running `titanfetch --gui` launches an ultra-modern, glassmorphic technical HUD featuring live hardware telemetry:
 
-- Real-time CPU core utilization progress bars.
-- Live RAM & Swap gauges with active vs cached memory breakdown.
-- GPU temperature, VRAM usage, and power draw metrics.
-- BTRFS filesystem capacity and disk I/O indicators.
-- Dark theme styled with ArchTitan's **Catppuccin Mocha** palette.
+- **Glassmorphic Styling**: Translucent dark frosted glass layout (`rgba(12, 14, 20, 0.94)`) with glowing Catppuccin Mocha borders (`#89b4fa`), custom window controls, and draggable header bar.
+- **Live Active THM Profile Badge**: Real-time integration with `/tmp/titan_hwm_state` displaying the active workload profile (`SYSTEM DEV`, `WEB DEV`, `ANDROID DEV`, `CASUAL`, `NEUTRAL`).
+- **Real CPU Per-Core Load Matrix**: Polling `/proc/stat` every 1 second to calculate and animate per-core CPU usage bars and temperature (°C).
+- **Live Memory & Swap Gauges**: Live RAM and Swap gauges with active vs cached memory breakdown.
+- **Developer Toolchain Status**: Card detecting local toolchains (GCC/Clang, Rust/Cargo, Go, Node.js, Python 3, Docker Engine).
+- **Interactive Action Bar**: Quick action buttons to launch **ArchTitan Settings** (`archtitan-settings`), **THM Telemetry Metrics** (`titan-hwm metrics`), and **Copy Specs** to system clipboard.
 
 ---
 
 ## Technical Architecture
-
-TitanFetch is engineered with a separation between raw data gathering (`sysinfo.cpp`) and presentation layers:
 
 ```mermaid
 flowchart LR
@@ -54,6 +53,7 @@ flowchart LR
         PROC["/proc/meminfo & /proc/cpuinfo"]
         SYS["/sys/class/thermal & /sys/class/drm"]
         STAT["/proc/stat & /proc/uptime"]
+        THM_ST["/tmp/titan_hwm_state"]
     end
 
     subgraph Core["TitanFetch Core Engine"]
@@ -63,12 +63,13 @@ flowchart LR
 
     subgraph Outputs["Presentation Layer"]
         CLI[cli.cpp - Terminal ANSI Output]
-        GUI[gui.cpp - Qt6 Hardware Dashboard]
+        GUI[gui.cpp - Glassmorphic Technical HUD]
     end
 
     PROC --> INF
     SYS --> INF
     STAT --> INF
+    THM_ST --> GUI
     INF --> DATA
     DATA --> CLI
     DATA --> GUI
@@ -85,8 +86,8 @@ Located in `titanfetch-src/` in the repository root:
 | `main.cpp` | Entry point; parses `--gui` flag to launch Qt Application or CLI stream |
 | `sysinfo.cpp` / `sysinfo.h` | Direct `/proc` and `/sys` parser with zero external subprocess calls |
 | `cli.cpp` / `cli.h` | Formatted terminal output renderer with UTF-8 border padding |
-| `gui.cpp` / `gui.h` | Qt6 QWidget-based telemetry card with custom progress bars |
-| `CMakeLists.txt` | CMake build definition targeting `Qt6::Widgets` |
+| `gui.cpp` / `gui.h` | Qt6 Glassmorphic Technical HUD with live `/proc/stat` per-core telemetry |
+| `CMakeLists.txt` | CMake build definition targeting `Qt6::Core`, `Qt6::Gui`, `Qt6::Widgets` |
 
 ---
 
@@ -114,5 +115,5 @@ sudo cp build/titanfetch /usr/bin/titanfetch
 | :--- | :--- | :--- | :--- |
 | **Execution Time** | ~280 ms | ~8 ms | **~4 ms (CLI mode)** |
 | **Forked Subprocesses** | 25+ (`grep`, `awk`, `sed`) | 0 | **0** |
-| **GUI Capability** | None | None | **Built-in (`--gui`)** |
-| **OS Integration** | Generic | Generic | **ArchTitan THM aware** |
+| **GUI Capability** | None | None | **Built-in Glassmorphic HUD (`--gui`)** |
+| **OS Integration** | Generic | Generic | **ArchTitan THM & Toolchain aware** |

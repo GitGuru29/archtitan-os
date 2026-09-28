@@ -28,6 +28,8 @@
         "network",
         "custom/separator",
         "battery",
+        "custom/separator",
+        "custom/notification",
         "tray"
     ],
 
@@ -68,8 +70,8 @@
     },
 
     "clock": {
-        "format"         : "󰸗  {:%a, %d %b · %H:%M}",
-        "format-alt"     : "󰸗  {:%A, %d %B %Y · %H:%M:%S}",
+        "format"         : "{:%H:%M}",
+        "format-alt"     : "{:%H:%M:%S}",
         "tooltip-format" : "<tt><big>{calendar}</big></tt>",
         "calendar": {
             "mode"      : "month",
@@ -118,7 +120,12 @@
         "format-full"     : "󰁹  100%",
         "format-not-found": "",
         "interval"        : 10,
-        "tooltip-format"  : "{timeTo} · {capacity}%\nPower: {power:.1f}W"
+        "tooltip-format"  : "{timeTo} · {capacity}%\nPower: {power:.1f}W",
+
+    "custom/notification": {
+        "tooltip": false,
+        "format": " 󱅫 ",
+        "on-click": "titan-quicksettings --toggle"
     },
 
     "tray": {

@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wall -Wextra -Werror=return-type -O3 -DNDEBUG -Wl,--dependency-file=CMakeFiles/thm_test_runner.dir/link.d CMakeFiles/thm_test_runner.dir/tests/test_runner.cpp.o -o thm_test_runner  libthm_core.a -lpthread

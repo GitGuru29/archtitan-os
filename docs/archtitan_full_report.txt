@@ -1,6 +1,12 @@
 ArchTitan OS — Full Development Report
 Project Type: Final Year Project (FYP) — Custom Linux Distribution
 Base: Arch Linux (archiso)
+
+[NOTE] This is a point-in-time snapshot. Paths naming titan-hwm-source/ or the
+titan_hw_manager binary describe the v1/v2 THM monolith, which has since been
+REMOVED as superseded. THM is now titan-hwm-v3/, shipping as the binary
+titan-hwm-daemon under the titan-hwm.service unit. Historical source:
+git show 9c7184e:titan-hwm-source/titan_hw_manager.cpp
 Repository: GitGuru29/archtitan-os · Branch: main
 Current HEAD: a7dea2b · Total Commits: 55
 Status: ✅ Base OS Complete — Ready for mkarchiso build

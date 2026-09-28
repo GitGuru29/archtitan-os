@@ -4,7 +4,7 @@
 
 ## Titan Settings is a Core Component
 
-Titan Settings has been **promoted from a subsystem to a core OS component**, alongside `titan-hwm-source`, `titanfetch-src`, and `sandbox/`.
+Titan Settings has been **promoted from a subsystem to a core OS component**, alongside `titan-hwm-v3`, `titanfetch-src`, and `sandbox/`.
 
 The full source now lives at the root of the repository:
 

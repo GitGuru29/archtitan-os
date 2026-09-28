@@ -1,0 +1,183 @@
+Start testing: Sep 09 23:17 +0530
+----------------------------------------------------------
+1/1 Testing: thm_os_tests
+1/1 Test: thm_os_tests
+Command: "/home/msfvenom/custom-os-build/titan-hwm-v3/build/thm_test_runner"
+Directory: /home/msfvenom/custom-os-build/titan-hwm-v3/build
+"thm_os_tests" start time: Sep 09 23:17 +0530
+Output:
+----------------------------------------------------------
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║        THM v3 Real OS-Level Architectural Test Suite                         ║
+║        Testing workload-centric invariants against Linux kernel primitives   ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+──────────────────────────────────────────────────────────────────────────────
+TEST 1: Gradle / Background Build Survival
+INVARIANT: "Background != idle; Background != kill; active builds must never be stopped"
+──────────────────────────────────────────────────────────────────────────────
+[OS] Spawned active build worker PID 991362
+[Detector] Real PID 991362 activity state: EXECUTING (proc_state=R)
+[Action] User switches workspace WS 2 -> WS 1 (WS 2 now background)
+[WorkloadManager] Workload state after switch: BACKGROUND_EXECUTING
+[PolicyEngine] Policy decision: KEEP_BACKGROUND
+[cgroup] Cannot write /sys/fs/cgroup/archtitan.slice/archtitan-background.slice/cgroup.procs
+[cgroup] Cannot write /sys/fs/cgroup/archtitan.slice/archtitan-background.slice/cpu.weight
+[OS] Child PID 991362 state in /proc/<pid>/stat: 'R'
+>>> PASS: Build continued executing in background.
+
+──────────────────────────────────────────────────────────────────────────────
+TEST 2: AI Agent Workload Survival & Execution Authority
+INVARIANT: "AI execution verified; ai_owned alone is not an infinite freeze shield if idle"
+──────────────────────────────────────────────────────────────────────────────
+[Part A] Active AI agent state: BACKGROUND_EXECUTING, Decision: KEEP_BACKGROUND
+[Part B] Testing invariant: Idle AI agent under HIGH pressure must freeze, not remain full
+[PolicyEngine] Idle AI agent decision under HIGH pressure: FREEZE
+[Policy] ai_owned workload 103 is RECLAIMABLE but downgraded to FREEZE.
+[PolicyEngine] Reclaimable AI agent decision: FREEZE (downgraded from RECLAIM)
+>>> PASS: AI execution authority verified.
+
+──────────────────────────────────────────────────────────────────────────────
+TEST 3: Idle IDE Aging, Throttling & Freeze under Pressure
+INVARIANT: "Idle IDE freezes via SIGSTOP under pressure, resumes via SIGCONT when refocused"
+──────────────────────────────────────────────────────────────────────────────
+[OS] Spawned mock idle IDE PID 991364
+[PolicyEngine] Decision for idle IDE under HIGH pressure: FREEZE
+[cgroup] Cannot write /sys/fs/cgroup/archtitan.slice/archtitan-frozen.slice/cgroup.procs
+[cgroup] Cannot write /sys/fs/cgroup/archtitan.slice/archtitan-frozen.slice/cgroup.freeze
+[Enforce] Froze workload 104 (1 PIDs)
+[OS] /proc/991364/stat state after FREEZE: 'T'
+[Action] User switches to WS 3 (focused again)
+[PolicyEngine] Decision on focus return: KEEP_FULL
+[cgroup] Cannot write /sys/fs/cgroup/archtitan.slice/archtitan-active.slice/cgroup.procs
+[cgroup] Cannot write /sys/fs/cgroup/archtitan.slice/archtitan-active.slice/cpu.weight
+[cgroup] Cannot write /sys/fs/cgroup/archtitan.slice/archtitan-frozen.slice/cgroup.freeze
+[OS] /proc/991364/stat state after unfreeze: 'S'
+>>> PASS: Real POSIX SIGSTOP/SIGCONT cycle verified.
+
+──────────────────────────────────────────────────────────────────────────────
+TEST 4: Protected Domain Absolute Immunity
+INVARIANT: "Protected ArchTitan ecosystem services never receive signals, even at CRITICAL pressure"
+──────────────────────────────────────────────────────────────────────────────
+[Protected] Registered PID 991361 (THM-self)
+[Protected] Bootstrapping protected PID registry from /proc...
+[Protected] Bootstrap: PID 594 (dbus-broker) — bootstrap:name=dbus-broker
+[Protected] Bootstrap: PID 596 (NetworkManager) — bootstrap:name=NetworkManager
+[Protected] Bootstrap: PID 599 (bluetoothd) — bootstrap:name=bluetoothd
+[Protected] Bootstrap: PID 606 (dhcpcd) — bootstrap:name=dhcpcd
+[Protected] Bootstrap: PID 607 (systemd-logind) — bootstrap:name=systemd-logind
+[Protected] Bootstrap: PID 609 (dhcpcd) — bootstrap:name=dhcpcd
+[Protected] Bootstrap: PID 611 (dhcpcd) — bootstrap:name=dhcpcd
+[Protected] Bootstrap: PID 612 (dhcpcd) — bootstrap:name=dhcpcd
+[Protected] Bootstrap: PID 684 (polkitd) — bootstrap:name=polkitd
+[Protected] Bootstrap: PID 702 (wpa_supplicant) — bootstrap:name=wpa_supplicant
+[Protected] Bootstrap: PID 714 (sddm) — bootstrap:name=sddm
+[Protected] Bootstrap: PID 2085 (systemd) — bootstrap:name=systemd
+[Protected] Bootstrap: PID 2119 (dbus-broker-lau) — bootstrap:exe
+[Protected] Bootstrap: PID 2120 (dbus-broker) — bootstrap:name=dbus-broker
+[Protected] Bootstrap: PID 2121 (pipewire) — bootstrap:name=pipewire
+[Protected] Bootstrap: PID 2122 (wireplumber) — bootstrap:name=wireplumber
+[Protected] Bootstrap: PID 2124 (pipewire) — bootstrap:name=pipewire
+[Protected] Bootstrap: PID 2189 (Hyprland) — bootstrap:name=Hyprland
+[Protected] Bootstrap: PID 2264 (hypridle) — bootstrap:name=hypridle
+[Protected] Bootstrap: PID 2339 (dbus-broker-lau) — bootstrap:exe
+[Protected] Bootstrap: PID 2340 (dbus-broker) — bootstrap:name=dbus-broker
+[Protected] Bootstrap: PID 10219 (pipewire-pulse) — bootstrap:name=pipewire-pulse
+[Protected] Bootstrap: PID 894315 (dhcpcd) — bootstrap:name=dhcpcd
+[Protected] Bootstrap complete: 23 protected process(es) registered.
+[Protected] Static ecosystem name set check: ALL 14 REGISTERED
+[Protected] Found live host system services: pipewire PID=2121, Hyprland PID=2189
+[Protected] Live pipewire protected (exe verified): YES
+[Protected] Live Hyprland protected (exe verified): YES
+[Protected] Registered PID 991365 (titan-share)
+[Protected] Explicitly registered titan-share protected: YES
+[PolicyEngine] Decision for protected service at CRITICAL pressure: KEEP_FULL
+[cgroup] Cannot write /sys/fs/cgroup/archtitan.slice/archtitan-active.slice/cgroup.procs
+[EnforcementPlane] Hard block fired: YES (returned false, signals blocked)
+[Reclaim] Abort: workload 200 is protected.
+[ReclaimEngine] Reclaim blocked on protected PID: YES (reclaim rejected)
+[OS] Protected PID 991365 state: 'R'
+>>> PASS: Absolute protection verified.
+
+──────────────────────────────────────────────────────────────────────────────
+TEST 5: Audio Whitelist & Binary Path Verification
+INVARIANT: "Audio streams uninterrupted; comm-spoofing rejected via exe path inspection"
+──────────────────────────────────────────────────────────────────────────────
+[Security] Verified legitimate audio prefixes exist: YES
+[PolicyEngine] Audio stream policy decision when in background: KEEP_FULL
+>>> PASS: Audio verification successful.
+
+──────────────────────────────────────────────────────────────────────────────
+TEST 6: Cold-Start Bootstrap & Ownership Resolution
+INVARIANT: "Orphan / reparented processes bootstrap correctly from /proc via CWD markers"
+──────────────────────────────────────────────────────────────────────────────
+[OwnershipGraph] Inferred /home/msfvenom/custom-os-build/build/test_markers/android_app -> ANDROID_DEV
+[OwnershipGraph] Inferred /home/msfvenom/custom-os-build/build/test_markers/system_app -> SYSTEM_DEV
+[OwnershipGraph] Inferred /home/msfvenom/custom-os-build/build/test_markers/web_app -> WEB_DEV
+[OS] Real PID 991367 /proc/<pid>/cwd: /home/msfvenom/custom-os-build/build/test_markers/android_app
+[FusionClassifier] Full fusion classify result: type=ANDROID_DEV confidence=0.7
+>>> PASS: Bootstrap classification verified.
+
+──────────────────────────────────────────────────────────────────────────────
+TEST 7: Multi-Workspace Concurrent Active Workloads
+INVARIANT: "Rapid switching between workspaces keeps both active workloads running"
+──────────────────────────────────────────────────────────────────────────────
+[Concurrency] 5 rapid switches completed. All decisions valid: YES
+>>> PASS: Multi-workspace concurrency verified.
+
+──────────────────────────────────────────────────────────────────────────────
+TEST 8: Elimination of Static Workspace Profiles
+INVARIANT: "Policy decisions are independent of workspace number; WS 1 is no longer Casual"
+──────────────────────────────────────────────────────────────────────────────
+[Architecture] Evaluated workspaces [1, 2, 3, 4, 5, 99]:
+  Executing background decisions identical: YES (all KEEP_BACKGROUND)
+  Idle background decisions identical:      YES (all FREEZE)
+>>> PASS: Workspace profile decoupling verified.
+
+──────────────────────────────────────────────────────────────────────────────
+TEST 9: 9-Step Reclaim Engine Safety Sequence
+INVARIANT: "Reclamation aborts immediately if activity resumes; zero false kills"
+──────────────────────────────────────────────────────────────────────────────
+[Reclaim] Abort: workload 109 is executing.
+[ReclaimEngine] Attempt to reclaim active process: ABORTED (safety check passed)
+[OS] Worker PID 991370 state in /proc/<pid>/stat: 'R'
+>>> PASS: Reclaim safety verified.
+
+──────────────────────────────────────────────────────────────────────────────
+TEST 10: Demand-Based Dynamic Governor Transitions
+INVARIANT: "Governor scales based on aggregate workload demand, not single workspace type"
+──────────────────────────────────────────────────────────────────────────────
+[Governor] Demand with background build: PERFORMANCE
+[Governor] Demand when all idle: POWERSAVE
+[Governor] Demand with interactive workload: SCHEDUTIL
+>>> PASS: Demand-based governor verified.
+
+════════════════════════════════════════════════════════════════════════════════
+                             FINAL TEST MATRIX REPORT                           
+════════════════════════════════════════════════════════════════════════════════
+Test Scenario                       Result    Time      Details
+────────────────────────────────────────────────────────────────────────────────
+TC-1: Gradle Background Survival    [PASS]    100ms     State=BACKGROUND_EXECUTING, Decision=KEEP_BACKGROUND, Signal=NONE, OS State=R
+TC-2: AI Agent Workload Survival    [PASS]    80ms      Active=BACKGROUND_EXECUTING, Idle(HighPressure)=FREEZE, Reclaimable(ai_owned)=FREEZE
+TC-3: Idle IDE Freeze & Thaw        [PASS]    101ms     Frozen State=T, Thawed State=S
+TC-4: Protected Domain Immunity     [PASS]    13ms      Policy=KEEP_FULL, EnforceHardBlock=FIRED, ReclaimBlock=FIRED, SignalsSent=0
+TC-5: Audio Whitelist & Anti-Spoof  [PASS]    0ms       LegitimatePrefixes=Verified, Decision=KEEP_FULL
+TC-6: Cold-Start Bootstrap & CWD Resolution[PASS]    51ms      Android=ANDROID_DEV, System=SYSTEM_DEV, Web=WEB_DEV, Fusion=ANDROID_DEV
+TC-7: Multi-Workspace Concurrency   [PASS]    80ms      5 switch cycles completed; active=KEEP_FULL, bg=KEEP_BACKGROUND
+TC-8: Elimination of Static WS Profiles[PASS]    0ms       Workspaces evaluated=[1,2,3,4,5,99], Decisions invariant across all
+TC-9: Reclaim Safety Sequence       [PASS]    80ms      ReclaimAborted=TRUE, ProcessUntouched=TRUE
+TC-10: Demand-Based Governor        [PASS]    0ms       Building=PERFORMANCE, Idle=POWERSAVE, Interactive=SCHEDUTIL
+────────────────────────────────────────────────────────────────────────────────
+TOTAL: 10/10 PASSED (100% SUCCESS)
+════════════════════════════════════════════════════════════════════════════════
+
+<end of output>
+Test time =   0.51 sec
+----------------------------------------------------------
+Test Passed.
+"thm_os_tests" end time: Sep 09 23:17 +0530
+"thm_os_tests" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Sep 09 23:17 +0530
