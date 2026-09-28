@@ -70,4 +70,6 @@ file_permissions=(
   ["/var/log/titan-sandbox"]="0:0:1777"
   ["/var/titan-sandbox"]="0:0:1777"
   ["/var/titan-sandbox/apps"]="0:0:1777"
+  # GRUB theme for the installed system (used by Calamares bootloader module)
+  ["/usr/share/grub/themes/archtitan"]="0:0:755"
 )
