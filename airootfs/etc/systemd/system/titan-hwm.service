@@ -1,9 +1,9 @@
 [Unit]
 Description=Titan Hardware Manager v3 (ArchTitan Workload Daemon)
 Documentation=https://github.com/GitGuru29/archtitan-os/wiki/Titan-Hardware-Manager
-After=graphical-session.target archtitan-immutable-guard.service
+After=graphical.target archtitan-immutable-guard.service
 Wants=archtitan-immutable-guard.service
-PartOf=graphical-session.target
+PartOf=graphical.target
 
 [Service]
 Type=simple
@@ -49,4 +49,4 @@ StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=graphical.target
