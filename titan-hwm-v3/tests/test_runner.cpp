@@ -15,6 +15,7 @@
 //   TC-10: Demand-Based Dynamic Governor Transitions
 //   TC-11: Governor Pressure Authority & Hysteresis (regression, ISSUE-05)
 //   TC-12: Protected-PID Guard on SIGKILL Escalation (regression, ISSUE-13)
+//   TC-13: Browser Collateral Guard vs. Hard-Block Separation
 // =============================================================================
 
 #include "../core/types.hpp"
@@ -45,6 +46,7 @@
 #include <algorithm>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/prctl.h>
 #include <unistd.h>
 
 namespace fs = std::filesystem;
@@ -108,6 +110,25 @@ static pid_t fork_cpu_burner(const std::string& simulated_cmdline) {
             for (int i = 0; i < 100000; ++i) {
                 counter += i * 3 + 7;
             }
+            std::this_thread::yield();
+        }
+        (void)counter;
+        _exit(0);
+    }
+    return pid;
+}
+
+// fork a child that renames ITSELF via prctl, then burns CPU.
+// fork_cpu_burner() above ignores its name argument, so it cannot be used to
+// produce a process with a chosen comm — which is exactly what the comm-based
+// registry checks read from /proc.
+static pid_t fork_named_cpu_burner(const std::string& comm) {
+    pid_t pid = fork();
+    if (pid == 0) {
+        prctl(PR_SET_NAME, comm.c_str(), 0, 0, 0);
+        volatile uint64_t counter = 0;
+        while (true) {
+            for (int i = 0; i < 100000; ++i) counter += i * 3 + 7;
             std::this_thread::yield();
         }
         (void)counter;
@@ -1109,6 +1130,127 @@ void test_tc12_protected_sigkill_guard() {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
+// TC-13: Browser Collateral Guard vs. Hard-Block Separation
+//
+// Browsers must be shielded from being swept up by ANOTHER process's tree walk
+// (node -> playwright -> chromium), but must NOT be granted blanket memory
+// immunity. A 2-4GB browser in the hard-protected set could never be reclaimed,
+// forcing the kernel OOM killer onto an innocent neighbour. These two
+// requirements are mutually exclusive, so the test pins both halves.
+// ═════════════════════════════════════════════════════════════════════════════
+void test_tc13_browser_collateral_tier() {
+    auto t0 = std::chrono::steady_clock::now();
+    log_test_header(13, "Browser Collateral Guard vs. Hard-Block Separation",
+                    "Browsers skip collateral kill_tree, but keep reclaimability");
+
+    thm::ProtectedRegistry registry;
+    std::vector<std::string> failures;
+
+    // ── 1. Anti-spoof: a browser comm with a non-browser exe must be DENIED ──
+    //    This is the property that stops any process claiming "chrome" in order
+    //    to dodge reclaim. The forked child's exe is the test runner itself.
+    pid_t imposter = fork_named_cpu_burner("chrome");
+    std::this_thread::sleep_for(std::chrono::milliseconds(120));
+    const bool imposter_blocked =
+        !registry.is_collateral_protected(imposter, "chrome");
+    std::cout << "[Collateral] 'chrome' impostor PID " << imposter
+              << " (exe is the test runner): "
+              << (imposter_blocked ? "DENIED (correct)" : "PROTECTED (spoof hole!)") << "\n";
+    if (!imposter_blocked) failures.push_back("comm-spoof was granted browser protection");
+    if (imposter > 0) ::kill(imposter, SIGKILL);
+
+    // ── 2. An ordinary worker must remain fully reclaimable ──
+    pid_t ordinary = fork_named_cpu_burner("ordinary-worker");
+    std::this_thread::sleep_for(std::chrono::milliseconds(120));
+    const bool ordinary_unprotected =
+        !registry.is_collateral_protected(ordinary, "ordinary-worker") &&
+        !registry.is_protected(ordinary, "ordinary-worker");
+    std::cout << "[Collateral] ordinary worker PID " << ordinary << ": "
+              << (ordinary_unprotected ? "reclaimable (correct)" : "wrongly protected") << "\n";
+    if (!ordinary_unprotected) failures.push_back("ordinary worker gained protection");
+
+    // ── 3. A REAL browser: collateral-protected, but NOT hard-protected ──
+    //    Scans /proc for a live browser rather than launching one, so the test
+    //    never spawns a GUI app and never mutates the user's session.
+    bool found_real = false;
+    std::string real_note = "no live browser on this host — positive path unverified";
+    try {
+        for (const auto& e : fs::directory_iterator("/proc")) {
+            if (!e.is_directory()) continue;
+            const std::string d = e.path().filename().string();
+            if (d.empty() || !std::isdigit(static_cast<unsigned char>(d[0]))) continue;
+            if (!std::all_of(d.begin(), d.end(), ::isdigit)) continue;
+            const pid_t pid = static_cast<pid_t>(std::stol(d));
+            if (pid <= 1) continue;
+
+            std::string comm;
+            {
+                std::ifstream f("/proc/" + d + "/stat");
+                std::string line;
+                if (!std::getline(f, line)) continue;
+                auto lp = line.find('('), rp = line.rfind(')');
+                if (lp == std::string::npos || rp == std::string::npos) continue;
+                comm = line.substr(lp + 1, rp - lp - 1);
+            }
+            if (!thm::browser_names().count(comm)) continue;
+
+            const bool collateral = registry.is_collateral_protected(pid, comm);
+            const bool hard       = registry.is_protected(pid, comm);
+            std::cout << "[Collateral] real browser PID " << pid << " comm='" << comm
+                      << "': collateral=" << (collateral ? "yes" : "no")
+                      << " hard=" << (hard ? "yes" : "no") << "\n";
+            if (!collateral) {
+                failures.push_back("real browser " + comm + " not collateral-protected");
+            }
+            if (hard) {
+                failures.push_back("real browser " + comm +
+                                   " was hard-protected — granted OOM immunity");
+            }
+            real_note = "real browser PID " + std::to_string(pid) + " (" + comm + ")";
+            found_real = true;
+            break;
+        }
+    } catch (const std::exception& ex) {
+        real_note = std::string("scan error: ") + ex.what();
+    }
+
+    // ── 4. kill_tree must still reclaim the ordinary process ──
+    //    Proves the new tier filters rather than swallowing every signal.
+    thm::ExecutionDetector detector;
+    thm::ReclaimConfig cfg;
+    cfg.grace_period_ms  = 0;
+    cfg.sigterm_grace_ms = 0;
+    cfg.notify_enabled   = false;
+    thm::ReclaimEngine engine(registry, detector, cfg);
+    engine.kill_tree({ordinary}, SIGKILL, "TC-13");
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    const bool ordinary_died = (read_proc_state(ordinary) == 'Z') ||
+                               (::kill(ordinary, 0) != 0);
+    std::cout << "[Collateral] kill_tree reclaimed ordinary PID " << ordinary << ": "
+              << (ordinary_died ? "yes (correct)" : "no (over-blocked)") << "\n";
+    if (!ordinary_died) failures.push_back("kill_tree over-blocked an ordinary process");
+    if (ordinary > 0) safe_reap(ordinary);
+
+    std::string detail = ordinary_died && imposter_blocked && ordinary_unprotected
+        ? ("comm-spoof denied; ordinary worker reclaimable; " + real_note)
+        : "see failure list above";
+    if (!found_real) detail += " [positive path not exercised on this host]";
+
+    const bool passed = failures.empty();
+    auto t1 = std::chrono::steady_clock::now();
+    long ms = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count();
+    g_results.push_back({"TC-13: Browser Collateral Guard",
+                        "Browsers skip collateral kill_tree but stay OOM-reclaimable",
+                        passed, detail, ms});
+
+    if (passed) {
+        std::cout << ">>> PASS: browser collateral tier verified.\n";
+    } else {
+        for (const auto& f : failures) std::cout << ">>> FAIL: " << f << "\n";
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
 // Main Test Harness Entry Point
 // ═════════════════════════════════════════════════════════════════════════════
 int main() {
@@ -1129,6 +1271,7 @@ int main() {
     test_tc10_governor_transitions();
     test_tc11_governor_pressure_authority();
     test_tc12_protected_sigkill_guard();
+    test_tc13_browser_collateral_tier();
 
     // Summary Table
     std::cout << "\n════════════════════════════════════════════════════════════════════════════════\n";
