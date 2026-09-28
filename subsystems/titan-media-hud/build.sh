@@ -12,7 +12,10 @@ make -j"$(nproc)"
 
 echo "=== Installing to airootfs ==="
 mkdir -p "${SCRIPT_DIR}/../../airootfs/usr/local/bin"
+mkdir -p "${SCRIPT_DIR}/../../airootfs/usr/bin"
 cp -f "${BUILD_DIR}/titan-media-hud" "${SCRIPT_DIR}/../../airootfs/usr/local/bin/titan-media-hud"
+cp -f "${BUILD_DIR}/titan-media-hud" "${SCRIPT_DIR}/../../airootfs/usr/bin/titan-media-hud"
 chmod +x "${SCRIPT_DIR}/../../airootfs/usr/local/bin/titan-media-hud"
+chmod +x "${SCRIPT_DIR}/../../airootfs/usr/bin/titan-media-hud"
 
 echo "✓ Titan Media HUD successfully built and installed to airootfs."
