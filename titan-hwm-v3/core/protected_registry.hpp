@@ -17,6 +17,59 @@
 
 namespace thm {
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Collateral-only tier
+//
+// A browser is a 2-4GB RSS consumer. Registering chrome/brave/firefox in
+// protected_names() would hand it permanent OOM immunity, so a runaway browser
+// could never be reclaimed and the kernel OOM killer would be forced to take out
+// some innocent neighbour instead. Browsers are therefore NOT hard-protected.
+//
+// They do need protection from one thing: a targeted dev-tool tree walk. Reclaim
+// decisions are made per-workload, so
+//     node -> playwright/puppeteer -> chromium      (headless test browsers)
+//     node -> electron                              (Electron dev shells)
+// makes a reclaim decision about the node tree sweep the browser with it, even
+// though the reclaim verdict was never about the browser's memory.
+//
+// This second tier closes that gap without granting memory immunity: it is
+// consulted only by the signal/kill path, never by the deprioritize or OOM paths.
+// ─────────────────────────────────────────────────────────────────────────────
+
+inline const std::unordered_set<std::string>& browser_names() {
+    static const std::unordered_set<std::string> names = {
+        "chrome",          "chromium",       "chromium_browser",
+        "headless_shell",  "chrome_crashpad_handler",
+        "google-chrome",   "google-chrome-stable", "google-chrome-beta",
+        "firefox",         "firefox-bin",    "gecko-main",
+        "isready",         "Web Content",    "Web Content Process",
+        "brave",           "brave-browser",  "brave_crashpad_handler",
+        "titan-browser",   "titanbrowser",
+        "microsoft-edge",  "msedge",         "opera",
+        "vivaldi",         "vivaldi-bin",    "vivaldi-bin-launcher",
+    };
+    return names;
+}
+
+inline const std::vector<std::string>& browser_exe_prefixes() {
+    static const std::vector<std::string> prefixes = {
+        "/usr/bin/chromium",     "/usr/lib/chromium",    "/usr/lib64/chromium",
+        "/opt/chromium",
+        "/usr/bin/google-chrome", "/opt/google/chrome",
+        "/usr/bin/firefox",       "/usr/lib/firefox",     "/opt/firefox",
+        "/usr/bin/brave",         "/usr/lib/brave",       "/opt/brave",
+        "/usr/bin/microsoft-edge","/opt/microsoft-edge",
+        "/usr/bin/vivaldi",       "/usr/lib/vivaldi",     "/usr/share/vivaldi",
+        "/usr/bin/opera",         "/opt/opera",
+        "/usr/local/bin/titan-browser", "/usr/bin/titanbrowser",
+        // Playwright/Puppeteer keep per-user browser builds outside the package
+        // manager, so the executable resolves under the invoking user's cache.
+        "/root/.cache/ms-playwright", "/opt/playwright",
+        "/usr/lib/brave", "/usr/lib/microsoft-edge",
+    };
+    return prefixes;
+}
+
 class ProtectedRegistry {
 public:
     // ─── Query ───────────────────────────────────────────────────────────────
@@ -27,6 +80,17 @@ public:
 
     // Convenience: returns true if ANY pid in the range is protected.
     bool is_protected_any(const std::vector<pid_t>& pids) const;
+
+    // ─── Collateral-only tier (see browser_names above) ─────────────────────
+    // Returns true if this pid/comm is a browser that must not be swept up by
+    // another process's tree operation. This is WEAKER than is_protected() on
+    // purpose: consult it from signal/kill paths only. Using it on a
+    // deprioritize or OOM path would grant a multi-gigabyte process permanent
+    // memory immunity, which is the opposite of the intent.
+    bool is_collateral_protected(pid_t pid, const std::string& comm) const;
+
+    // Convenience form, mirroring is_protected_any(). Used by kill_tree().
+    bool is_collateral_protected_any(const std::vector<pid_t>& pids) const;
 
     // ─── Registration ────────────────────────────────────────────────────────
 
@@ -48,6 +112,9 @@ private:
 
     // Resolve /proc/<pid>/exe and check against protected exe prefixes.
     bool exe_is_protected(pid_t pid) const;
+
+    // Resolve /proc/<pid>/exe and check against browser_exe_prefixes().
+    bool exe_is_browser(pid_t pid) const;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,10 +153,12 @@ inline const std::unordered_set<std::string>& protected_names() {
         "com.spotify.Client", "io.mpv.Mpv", "org.videolan.VLC",
 
         // ── Bluetooth ────────────────────────────────────────────────────────
-        // "bluetooth" is the kernel-supply stack comm; bluetoothd is the
-        // userspace routing daemon. SIGSTOPing bluetoothd drops BT audio for
-        // the whole session, not just the player.
-        "bluetoothd",      "bluetooth",    "blueman-applet", "blueman-manager",
+        // bluetoothd only. The kernel-side "bluetooth" comm is deliberately
+        // NOT listed: kernel threads have no /proc/<pid>/exe, so is_protected()
+        // could never satisfy its exe cross-check and would log a spoof warning
+        // on every tick. It is also unfreezable by definition. The userspace
+        // routing daemon is the process whose suspension actually drops BT audio.
+        "bluetoothd",      "blueman-applet", "blueman-manager",
 
         // ── Compositor and display infrastructure ────────────────────────────
         "Hyprland",        "hyprpaper",      "hypridle",   "hyprlock",

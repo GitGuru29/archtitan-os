@@ -194,6 +194,16 @@ void ReclaimEngine::kill_tree(const std::vector<pid_t>& pids, int sig,
                       << sig << " to protected PID " << pid << "\n";
             continue;
         }
+        // Collateral-only tier. Reclaim verdicts are per-workload, so a reclaim
+        // aimed at a dev-tool root (node -> playwright -> chromium) would sweep
+        // the browser with it even though nothing was wrong with the browser.
+        // Skip it here — on the signal path only — so it is never given blanket
+        // OOM/deprioritize immunity just for not being collateral.
+        if (registry_.is_collateral_protected_any({pid})) {
+            std::cerr << "[Reclaim] SKIPPED " << stage << ": PID " << pid
+                      << " is a browser, not the reclaim target — not signalled\n";
+            continue;
+        }
         switch (signal_pid(pid, sig)) {
             case SignalResult::Gone:
                 break;  // already exited — not an error, and nothing to log
