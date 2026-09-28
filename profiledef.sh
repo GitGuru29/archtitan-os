@@ -55,6 +55,9 @@ file_permissions=(
   ["/usr/bin/titanfetch"]="0:0:755"
   ["/usr/bin/titanbrowser"]="0:0:755"
   ["/usr/bin/archtitan-settings"]="0:0:755"
+  ["/usr/bin/titan-media-hud"]="0:0:755"
+  ["/usr/bin/titan-hud-context"]="0:0:755"
+  ["/usr/bin/titan-hud-gpu"]="0:0:755"
   ["/etc/systemd/system/titan-hwm.service"]="0:0:644"
   ["/etc/systemd/system/archtitan.slice"]="0:0:644"
   # Sandbox system
