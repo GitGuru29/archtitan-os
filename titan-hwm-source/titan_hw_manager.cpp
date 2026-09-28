@@ -800,7 +800,10 @@ static WorkspaceTier evaluate_tier(const WorkspaceState& ws, int active_id, cons
     // ws.has_protected_daemons is pre-set to true only for *active* daemons (see
     // rebalance_workspaces) so this check is now correctly conditioned.
     if (ws.has_protected_daemons) return WorkspaceTier::PROTECTED;
-    return WorkspaceTier::PROTECTED; // < 15 min, no daemons → still protected
+    // < hard-decay age, no active daemons → freezable. apply_age_decay() gates
+    // the actual SIGSTOP/renice on age thresholds, not on this label, so a
+    // FREEZEABLE tier here still only triggers soft decay until age_hard_decay.
+    return WorkspaceTier::FREEZEABLE;
 }
 
 // Query Hyprland IPC for visible workspaces on all monitors (P5)
@@ -1118,14 +1121,38 @@ public:
 class HyprlandIPC {
 public:
     static std::string find_sock(const std::string& name) {
-        for (const auto& base:{"/run/user/1000/hypr/","/tmp/hypr/"}) {
-            if (!fs::exists(base)) continue;
-            for (const auto& e:fs::directory_iterator(base)) {
-                if (!e.is_directory()) continue;
-                std::string p=e.path().string()+"/"+name;
+        // 1. In-session fast path — exact path is known when the daemon inherits
+        //    the Hyprland session environment (user autostart / manual launch).
+        if (const char* xdg = std::getenv("XDG_RUNTIME_DIR")) {
+            if (const char* sig = std::getenv("HYPRLAND_INSTANCE_SIGNATURE")) {
+                std::string p = std::string(xdg) + "/hypr/" + sig + "/" + name;
                 if (fs::exists(p)) return p;
             }
         }
+        // 2. Systemd root daemon: XDG_RUNTIME_DIR is unset and getuid() is 0,
+        //    but the compositor belongs to the logged-in user, so the socket
+        //    lives under /run/user/<their-uid>/hypr/<instance>/. Scan every
+        //    runtime dir instead of hardcoding one UID.
+        try {
+            for (const auto& ue : fs::directory_iterator("/run/user")) {
+                if (!ue.is_directory()) continue;
+                fs::path hypr = ue.path() / "hypr";
+                if (!fs::exists(hypr)) continue;
+                for (const auto& inst : fs::directory_iterator(hypr)) {
+                    if (!inst.is_directory()) continue;
+                    std::string p = (inst.path() / name).string();
+                    if (fs::exists(p)) return p;
+                }
+            }
+        } catch (...) { /* no /run/user — fall through to legacy path */ }
+        // 3. Legacy Hyprland layout.
+        try {
+            for (const auto& inst : fs::directory_iterator("/tmp/hypr")) {
+                if (!inst.is_directory()) continue;
+                std::string p = (inst.path() / name).string();
+                if (fs::exists(p)) return p;
+            }
+        } catch (...) { /* not present */ }
         return "";
     }
     static void send(const std::string& cmd) {
