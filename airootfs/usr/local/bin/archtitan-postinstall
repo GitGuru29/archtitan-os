@@ -218,4 +218,7 @@ echo " Log: $LOG_FILE"
 echo "================================================"
 
 sudo touch "$DONE_FILE"
-sudo systemctl disable archtitan-postinstall.service || true
+# Disable the correct instantiated unit — template is archtitan-postinstall@<user>.service
+# Disabling the bare name (no @) is a no-op and would leave the service active on next login.
+sudo systemctl disable "archtitan-postinstall@$(id -un).service" || true
+exit 0
