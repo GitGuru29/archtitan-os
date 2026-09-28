@@ -36,7 +36,13 @@ using time_point = std::chrono::time_point<ms_clock>;
 static const std::unordered_set<std::string> AUDIO_WHITELIST = {
     "spotify","spotifyd","mpd","mpdris2","mpv","vlc","rhythmbox",
     "strawberry","deadbeef","cmus","ncmpcpp","cantata","audacious",
-    "elisa","playerctld","pipewire","pipewire-pulse","wireplumber","pulseaudio"
+    "elisa","playerctld","pipewire","pipewire-pulse","wireplumber","pulseaudio",
+    // Flatpak / portal comm variants (dotted app-ids surface verbatim as comm)
+    "com.spotify.Client","io.mpv.Mpv","org.videolan.VLC",
+    // Bluetooth audio routing — the transport pipewire's bluez5 module talks to.
+    // SIGSTOPing bluetoothd drops the BT link and kills wireless headphone
+    // routing for the whole session, not just the player process.
+    "bluetoothd","bluetooth","blueman-applet","blueman-manager"
 };
 
 // ISSUE-06 FIX: Authoritative path prefixes for every name in AUDIO_WHITELIST.
@@ -60,6 +66,8 @@ static const std::vector<std::string> AUDIO_EXE_PREFIXES = {
     "/usr/bin/pulseaudio",
     // Flatpak sandbox paths
     "/app/bin/spotify", "/app/bin/vlc", "/app/bin/mpv",
+    // Bluetooth stack
+    "/usr/lib/bluetooth/bluetoothd", "/usr/bin/blueman",
 };
 
 // Returns true only when the process comm matches AUDIO_WHITELIST AND its
@@ -88,6 +96,69 @@ static bool verify_audio_whitelist_pid(pid_t pid, const std::string& comm) {
     std::cerr << "[Whitelist] SPOOFED comm='" << comm
               << "' exe='" << exe << "' — whitelist DENIED\n";
     return false;
+}
+
+// ==========================================
+// Browser roots — web-streaming collateral protection
+//
+// Distinct from AUDIO_WHITELIST on purpose: a browser is a 2-4 GB memory
+// consumer, so granting it blanket deprioritize/OOM immunity would starve
+// genuinely reclaimable memory under pressure. Browsers are instead protected
+// from being killed as COLLATERAL of another process's tree operation, which
+// is where they actually get caught in a developer workflow:
+//   node -> playwright/puppeteer -> chromium   (headless test browsers)
+//   node -> electron                           (Electron dev shells)
+//
+// Names include the child-process comms those browsers fork, because the
+// recursive family walk in emergency_kill() matches on comm. Their
+// /proc/<pid>/exe still resolves to the parent browser binary, so the
+// prefix cross-check below holds for them too.
+// ==========================================
+static const std::unordered_set<std::string> BROWSER_ROOTS = {
+    "chrome","chromium","chromium_browser","headless_shell","chrome_crashpad_handler",
+    "google-chrome","google-chrome-stable","google-chrome-beta",
+    "firefox","firefox-bin","gecko-main","isready","Web Content","Web Content Process",
+    "brave","brave-browser","brave_crashpad_handler",
+    "titan-browser","titanbrowser",
+    "microsoft-edge","msedge","opera","vivaldi","vivaldi-bin","vivaldi-bin-launcher"
+};
+
+static const std::vector<std::string> BROWSER_EXE_PREFIXES = {
+    "/usr/bin/chromium","/usr/lib/chromium","/usr/lib64/chromium","/opt/chromium",
+    "/usr/bin/google-chrome","/opt/google/chrome",
+    "/usr/bin/firefox","/usr/lib/firefox","/opt/firefox",
+    "/usr/bin/brave","/usr/lib/brave","/opt/brave",
+    "/usr/bin/microsoft-edge","/opt/microsoft-edge",
+    "/usr/bin/vivaldi","/usr/lib/vivaldi","/usr/share/vivaldi",
+    "/usr/bin/opera","/opt/opera",
+    "/usr/local/bin/titan-browser","/usr/bin/titanbrowser",
+    // Headless / automation bundles
+    "/root/.cache/ms-playwright","/home","/opt/playwright",
+};
+
+static bool verify_browser_root(pid_t pid, const std::string& comm) {
+    if (!BROWSER_ROOTS.count(comm)) return false;
+    char exe_buf[PATH_MAX];
+    std::string link = "/proc/" + std::to_string(pid) + "/exe";
+    ssize_t len = readlink(link.c_str(), exe_buf, sizeof(exe_buf) - 1);
+    if (len <= 0) return true; // exited — trust comm, never penalise
+    exe_buf[len] = '\0';
+    std::string exe(exe_buf);
+    static const std::string del_sfx = " (deleted)";
+    if (exe.size() > del_sfx.size() &&
+        exe.compare(exe.size() - del_sfx.size(), del_sfx.size(), del_sfx) == 0)
+        exe.erase(exe.size() - del_sfx.size());
+    for (const auto& prefix : BROWSER_EXE_PREFIXES)
+        if (exe.rfind(prefix, 0) == 0) return true;
+    std::cerr << "[Browser] SPOOFED comm='" << comm
+              << "' exe='" << exe << "' — browser protection DENIED\n";
+    return false;
+}
+
+// True when a process must never be touched: verified media/audio/BT pipeline,
+// or a verified browser. Used to keep these out of tree operations.
+static bool is_protected_media_or_browser(pid_t pid, const std::string& comm) {
+    return verify_audio_whitelist_pid(pid, comm) || verify_browser_root(pid, comm);
 }
 
 // ==========================================
@@ -1030,13 +1101,31 @@ public:
         long freed=0;
 
         for (auto* n : hits) {
-            // Collect all descendant PIDs for recursive kill
+            // Collect all descendant PIDs for recursive kill.
+            // HC-12: a targeted dev tool routinely OWNS media and browser children
+            // that must not die as collateral — node -> playwright/puppeteer ->
+            // chromium (headless test browsers), node -> electron, adb -> emulator.
+            // The whitelist above only vets the ROOT of the family, so descendants
+            // were previously SIGTERM'd/SIGKILL'd unconditionally, silently taking
+            // out test browsers, music players, and bluetooth routing. Descendants
+            // that verify as media/BT/browser are now skipped and not descended
+            // into. The root itself is deliberately NOT exempted: it matched
+            // `targets`, was vetted at the top of this function, and an explicit
+            // target under genuine RAM pressure should still be reclaimable.
             std::vector<pid_t> family = {n->pid};
             std::function<void(pid_t, int)> collect = [&](pid_t p, int depth) {
                 if (depth <= 0) return;
                 auto it = g.find(p);
                 if (it == g.end()) return;
                 for (pid_t child : it->second.children) {
+                    auto cit = g.find(child);
+                    if (cit != g.end() &&
+                        is_protected_media_or_browser(child, cit->second.name)) {
+                        std::cout << "[Pruner] Tree-kill skipped protected descendant "
+                                  << cit->second.name << " (PID " << child << ") under "
+                                  << n->name << "\n";
+                        continue; // do not recurse into a protected subtree
+                    }
                     family.push_back(child);
                     collect(child, depth - 1);
                 }
@@ -1313,7 +1402,11 @@ class TitanHardwareManager {
                 auto nit = graph.find(pid);
                 if (nit == graph.end()) continue;
                 const auto& n = nit->second;
-                if (verify_audio_whitelist_pid(pid, n.name)||lsp.count(n.name)||bd.count(n.name)) continue;
+                // HC-12: extend the media exemption from audio-only to media+browser.
+                // A `node` workspace idle for 15 min would otherwise SIGSTOP the
+                // headless chromium that Playwright/Puppeteer forked, killing an
+                // in-flight test run and dropping any web-streaming audio.
+                if (is_protected_media_or_browser(pid, n.name)||lsp.count(n.name)||bd.count(n.name)) continue;
 
                 if (age_min >= cfg.age_hard_decay_min) {
                     // §5.2.4 hard decay: SIGSTOP + cgroup freeze + frozen registry
