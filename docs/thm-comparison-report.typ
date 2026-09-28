@@ -111,8 +111,8 @@
       *Component:* THM v2
     ],
     text(size: 9pt, fill: white.lighten(30%))[
-      *Version:* titan_hw_manager.cpp \
-      *Lines:* 2121
+      *Version:* THM v3 (titan-hwm-v3/) \
+      *Lines:* 6131
     ],
     text(size: 9pt, fill: white.lighten(30%))[
       *Date:* September 8, 2026 \
@@ -525,7 +525,11 @@ This hybrid gives:
 #v(10pt)
 
 #callout(color: positive, icon: "✓")[
-  Total estimated implementation time: *2–4 hours*. All required infrastructure (FusionClassifier, `query_workspace_pids`, `j/clients` parsing) already exists in `titan_hw_manager.cpp`. This is a routing change, not a rewrite.
+  Total estimated implementation time: *2–4 hours*. All required infrastructure (FusionClassifier, `query_workspace_pids`, `j/clients` parsing) already exists in THM. This is a routing change, not a rewrite.
+]
+
+#callout(color: warning, icon: "!")[
+  *Superseded:* this report was written against the v1/v2 monolith `titan-hwm-source/titan_hw_manager.cpp`, which has since been **removed**. The equivalent components now live in `titan-hwm-v3/` — `FusionClassifier` in `classifier/`, workspace query in `ipc/workspace_monitor.cpp`. Treat the line/function references as pointing at v3 equivalents. Old source: `git show 9c7184e:titan-hwm-source/titan_hw_manager.cpp`.
 ]
 
 #section_rule()

@@ -124,7 +124,11 @@ private:
 inline const std::unordered_set<std::string>& protected_names() {
     static const std::unordered_set<std::string> names = {
         // ── THM itself ───────────────────────────────────────────────────────
-        "titan_hw_manager", "titan-hwm",
+        // "titan-hwm" is the v3 daemon (titan-hwm-daemon). "titan_hw_manager" is
+        // the removed v1/v2 monolith, kept listed deliberately: an instance
+        // installed outside the ISO predating its removal must not be reclaimed
+        // by the daemon replacing it.
+        "titan_hw_manager", "titan-hwm", "titan-hwm-daemon",
 
         // ── Titan OS ecosystem ───────────────────────────────────────────────
         "titan-ai",        "titanai",
