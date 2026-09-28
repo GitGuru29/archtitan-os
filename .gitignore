@@ -66,9 +66,8 @@ airootfs/var/
 !airootfs/var/**/.gitkeep
 
 # ─── Titan Hardware Manager (THM) compiled binaries ────────────────────────
-titan-hwm-source/titan_hw_manager
-titan-hwm-source/titan-hwm
-titan-hwm-source/test_thm_suite
+# The v1/v2 monolith (titan-hwm-source/) was removed; THM is now titan-hwm-v3/
+# and builds via CMake into build/. These only catch stray manual builds.
 titan-hwm
 titan_hw_manager
 

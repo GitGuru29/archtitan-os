@@ -97,7 +97,7 @@ archtitan-settings/
 
 ## Status
 
-> ⚡ **Active — Core Component.** This is a core OS component of ArchTitan, living at the repository root alongside `titan-hwm-source/`, `titanfetch-src/`, and `sandbox/`. Not a subsystem.
+> ⚡ **Active — Core Component.** This is a core OS component of ArchTitan, living at the repository root alongside `titan-hwm-v3/`, `titanfetch-src/`, and `sandbox/`. Not a subsystem.
 
 ---
 

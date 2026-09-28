@@ -358,14 +358,20 @@ ctest --verbose
 
 == Installing systemd Service & cgroup Slice
 ```bash
-# Copy binary and systemd slice
-sudo cp titan-hwm-v3 /usr/local/bin/titan_hw_manager
+# Build and install. The v1/v2 monolith (titan-hwm-source/, binary
+# titan_hw_manager) was removed — v3 is the only implementation and its binary
+# is titan-hwm-daemon, installed as the titan-hwm.service unit.
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+sudo cmake --install build
+
+# Copy the cgroup slice if it is not already in place
 sudo cp ../archtitan.slice /etc/systemd/system/archtitan.slice
 
 # Reload systemd and enable service
 sudo systemctl daemon-reload
 sudo systemctl enable --now archtitan.slice
-sudo systemctl restart titan_hw_manager
+sudo systemctl restart titan-hwm
 ```
 
 ---

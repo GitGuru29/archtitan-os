@@ -2,7 +2,7 @@
 
 This folder contains all subsystems of ArchTitan OS. Each subsystem has an **identical folder layout** so every team member works in a predictable, consistent structure.
 
-> **Note:** Titan Settings is a **core OS component**, not a subsystem. Its source lives at [`archtitan-settings/`](../archtitan-settings/) in the repository root — alongside `titan-hwm-source/`, `titanfetch-src/`, and `sandbox/`.
+> **Note:** Titan Settings is a **core OS component**, not a subsystem. Its source lives at [`archtitan-settings/`](../archtitan-settings/) in the repository root — alongside `titan-hwm-v3/`, `titanfetch-src/`, and `sandbox/`.
 
 ## Subsystem Index
 

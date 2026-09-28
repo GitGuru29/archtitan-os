@@ -39,7 +39,7 @@ custom-os-build/
 │   └── titan-task-manager/  # TITAN Task Manager (Team Subsystem)
 ├── titan-browser-source/    # First-party TitanBrowser Qt6 WebEngine source
 ├── titan-hwm-v3/            # Titan Hardware Manager v3 source tree (C++20)
-├── titan-hwm-source/        # Titan Hardware Manager legacy v2 source archive
+├── titan-hwm-v3/           # Titan Hardware Manager (current implementation)
 ├── titanfetch-src/          # TitanFetch C++/Qt6 source code
 ├── wiki/                    # Project Wiki documentation (Markdown)
 ├── install.sh               # Local host installation script for THM daemon
