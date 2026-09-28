@@ -22,8 +22,8 @@ sudo chmod +x /usr/local/bin/titan-hwm-daemon \
               /usr/local/bin/titan-hwm-waybar
 
 echo "[*] Installing systemd slice and service..."
-sudo cp titan-hwm-v3/archtitan.slice /etc/systemd/system/archtitan.slice
-sudo cp titan-hwm-v3/titan-hwm.service /etc/systemd/system/titan-hwm.service
+sudo cp airootfs/etc/systemd/system/archtitan.slice /etc/systemd/system/archtitan.slice
+sudo cp airootfs/etc/systemd/system/titan-hwm.service /etc/systemd/system/titan-hwm.service
 
 echo "[*] Reloading systemd and enabling service..."
 sudo systemctl daemon-reload

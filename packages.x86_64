@@ -139,3 +139,5 @@ sddm-kcm
 qt6-5compat
 playerctl
 brightnessctl
+cliphist
+wlopm
