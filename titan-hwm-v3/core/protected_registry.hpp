@@ -68,12 +68,28 @@ inline const std::unordered_set<std::string>& protected_names() {
         "titan-bar",       "titan-bar-daemon",
         "titan-media-hud", "titan-task-manager",
 
-        // ── Audio stack (also covered by AUDIO_WHITELIST + exe verification) ─
+        // ── Audio server stack ────────────────────────────────────────────────
         "pipewire",        "pipewire-pulse",
         "wireplumber",     "pulseaudio",
 
+        // ── Media players ─────────────────────────────────────────────────────
+        // The audio server surviving is useless if the player that feeds it is
+        // reclaimed, so players are protected as first-class as pipewire.
+        "spotify",         "spotifyd",     "mpd",           "mpdris2",
+        "mpv",             "vlc",          "rhythmbox",     "strawberry",
+        "deadbeef",        "cmus",         "ncmpcpp",       "cantata",
+        "audacious",       "elisa",        "playerctld",
+
+        // Flatpak / portal comm variants. A sandboxed player reports the
+        // application ID as its comm, not the binary name, so without these
+        // the native names above never match for Flatpak installs.
+        "com.spotify.Client", "io.mpv.Mpv", "org.videolan.VLC",
+
         // ── Bluetooth ────────────────────────────────────────────────────────
-        "bluetoothd",      "blueman-applet", "blueman-manager",
+        // "bluetooth" is the kernel-supply stack comm; bluetoothd is the
+        // userspace routing daemon. SIGSTOPing bluetoothd drops BT audio for
+        // the whole session, not just the player.
+        "bluetoothd",      "bluetooth",    "blueman-applet", "blueman-manager",
 
         // ── Compositor and display infrastructure ────────────────────────────
         "Hyprland",        "hyprpaper",      "hypridle",   "hyprlock",
@@ -115,6 +131,16 @@ inline const std::vector<std::string>& protected_exe_prefixes() {
         "/usr/bin/Hyprland",
         "/usr/bin/hyprpaper",
         "/usr/bin/waybar",
+        // Media players
+        "/usr/bin/spotify",   "/usr/lib/spotify",  "/opt/spotify",
+        "/usr/bin/spotifyd",  "/usr/bin/mpd",      "/usr/bin/mpdris2",
+        "/usr/bin/mpv",       "/usr/lib/mpv",      "/usr/bin/vlc",
+        "/usr/lib/vlc",       "/usr/bin/rhythmbox","/usr/bin/strawberry",
+        "/usr/bin/deadbeef",  "/usr/bin/cmus",     "/usr/bin/ncmpcpp",
+        "/usr/bin/cantata",   "/usr/bin/audacious","/usr/bin/elisa",
+        "/usr/bin/playerctld",
+        // Flatpak sandbox mounts; comm is the app ID but exe resolves to these
+        "/app/bin/spotify",   "/app/bin/vlc",      "/app/bin/mpv",
         // Bluetooth
         "/usr/lib/bluetooth/bluetoothd",
         "/usr/bin/blueman",
