@@ -10,6 +10,10 @@
 
 set -euo pipefail
 
+# Ensure XDG_RUNTIME_DIR is set — PassEnvironment picks it up from the user
+# session when available; fall back to /run/user/<uid> if not inherited.
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+
 SELECTIONS_FILE="/etc/archtitan-postinstall/selections"
 LOG_FILE="$HOME/.local/share/archtitan/postinstall.log"
 DONE_FILE="/etc/archtitan-postinstall/.completed"

@@ -12,7 +12,9 @@ Type=oneshot
 # Run as the logged-in user, not root
 User=%i
 Environment=HOME=/home/%i
-Environment=XDG_RUNTIME_DIR=/run/user/%U
+# XDG_RUNTIME_DIR is resolved at runtime inside archtitan-postinstall
+# using $(id -u) — avoids %U expansion race before /run/user/<uid> is created.
+PassEnvironment=XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS
 # Give it 60 minutes max (large downloads like PyTorch/Android Studio)
 TimeoutStartSec=3600
 ExecStart=/usr/local/bin/archtitan-postinstall
