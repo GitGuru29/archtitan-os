@@ -33,6 +33,7 @@ file_permissions=(
   ["/usr/local/bin/archtitan-settings"]="0:0:755"
   ["/usr/local/bin/titan-settings"]="0:0:755"
   ["/usr/local/bin/titan-hwm-daemon"]="0:0:755"
+  ["/usr/bin/titan-hwm-daemon"]="0:0:755"
   ["/usr/local/bin/titan-hwm"]="0:0:755"
   ["/usr/local/bin/titan-hwm-waybar"]="0:0:755"
   ["/usr/local/bin/archtitan-session-guard"]="0:0:755"

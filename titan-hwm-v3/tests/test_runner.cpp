@@ -1157,7 +1157,7 @@ void test_tc13_browser_collateral_tier() {
               << " (exe is the test runner): "
               << (imposter_blocked ? "DENIED (correct)" : "PROTECTED (spoof hole!)") << "\n";
     if (!imposter_blocked) failures.push_back("comm-spoof was granted browser protection");
-    if (imposter > 0) ::kill(imposter, SIGKILL);
+    if (imposter > 0) { ::kill(imposter, SIGKILL); safe_reap(imposter); }
 
     // ── 2. An ordinary worker must remain fully reclaimable ──
     pid_t ordinary = fork_named_cpu_burner("ordinary-worker");
@@ -1181,9 +1181,10 @@ void test_tc13_browser_collateral_tier() {
             if (d.empty() || !std::isdigit(static_cast<unsigned char>(d[0]))) continue;
             if (!std::all_of(d.begin(), d.end(), ::isdigit)) continue;
             const pid_t pid = static_cast<pid_t>(std::stol(d));
-            if (pid <= 1) continue;
+            if (pid <= 1 || pid == imposter || pid == ordinary) continue;
 
             std::string comm;
+            char proc_state = '?';
             {
                 std::ifstream f("/proc/" + d + "/stat");
                 std::string line;
@@ -1191,7 +1192,10 @@ void test_tc13_browser_collateral_tier() {
                 auto lp = line.find('('), rp = line.rfind(')');
                 if (lp == std::string::npos || rp == std::string::npos) continue;
                 comm = line.substr(lp + 1, rp - lp - 1);
+                std::istringstream iss(line.substr(rp + 2));
+                iss >> proc_state;
             }
+            if (proc_state == 'Z') continue; // skip zombies
             if (!thm::browser_names().count(comm)) continue;
 
             const bool collateral = registry.is_collateral_protected(pid, comm);

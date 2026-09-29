@@ -10,7 +10,7 @@ Type=simple
 # Run the daemon inside the slice it manages so cgroup delegation (Delegate=yes)
 # applies — without it, writes to archtitan.slice child cgroups can fail (EACCES).
 Slice=archtitan.slice
-ExecStart=/usr/local/bin/titan-hwm-daemon --dry-run
+ExecStart=/usr/local/bin/titan-hwm-daemon
 
 # ---------------------------------------------------------------
 # ANTI-TAMPER: Restart immediately if killed. StartLimitInterval=0
