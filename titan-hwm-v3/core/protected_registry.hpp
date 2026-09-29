@@ -192,8 +192,23 @@ inline const std::vector<std::string>& protected_exe_prefixes() {
     static const std::vector<std::string> prefixes = {
         // Titan OS binaries
         "/usr/local/bin/titan",
+        "/usr/bin/titan",
+        "/usr/local/bin/archtitan",
+        "/usr/bin/archtitan",
         "/usr/lib/titan",
         "/opt/titan",
+        // Desktop notification & shell daemons
+        "/usr/bin/swaync",
+        "/usr/bin/dunst",
+        "/usr/bin/mako",
+        "/usr/bin/swaylock",
+        "/usr/lib/xdg-desktop-portal",
+        // Network daemons
+        "/usr/bin/NetworkManager",
+        "/usr/bin/wpa_supplicant",
+        "/usr/bin/iwd",
+        "/usr/bin/sddm",
+        "/usr/bin/greetd",
         // System audio stack
         "/usr/bin/pipewire",
         "/usr/lib/pipewire",
