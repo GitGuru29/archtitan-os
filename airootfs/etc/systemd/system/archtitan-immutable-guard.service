@@ -2,8 +2,8 @@
 Description=ArchTitan Immutable Guard — Lock OS enforcement files (chattr +i)
 # Runs once at sysinit, BEFORE sddm or any user session starts.
 # Non-fatal: chattr may not be supported on live ISO squashfs/overlayfs.
-DefaultDependencies=no
-After=local-fs.target systemd-remount-fs.service
+# DefaultDependencies=yes ensures it waits for sysinit/dbus to avoid dbus timeouts
+After=dbus.service
 Before=sddm.service titan-hwm.service
 
 [Service]
