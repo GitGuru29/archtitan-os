@@ -43,6 +43,8 @@ dmidecode
 
 # ── Networking & Bluetooth ────────────────────────────────────────────────────
 networkmanager
+network-manager-applet
+wpa_supplicant
 bluez
 bluez-utils
 iwd
