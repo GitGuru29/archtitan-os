@@ -85,13 +85,13 @@ graph TD
 - **Backdrop & Styling**:
   - Catppuccin Mocha / Obsidian dark surface (`#E611111B`, 90% opacity).
   - Subtle 1px cyan/electric blue accent border (`#2E89B4FA`).
-  - Native Hyprland blur rule: `layerrule = blur, titan-quicksettings` and `layerrule = ignorezero, titan-quicksettings`.
+  - Native Hyprland layer rule: `layerrule = blur on, match:namespace titan-quicksettings` and `ignore_alpha`.
 - **Motion & Slide-in Animation**:
   - Hyprland overshot bezier animation curve: slides in from `x = Screen.width` to `x = Screen.width - width - 12`.
   - Closing triggers reverse slide and unmaps or hides the layer surface.
 
 ### 2. IPC & Keybinding Handling (<kbd>Super</kbd> + <kbd>N</kbd>)
-- In `airootfs/etc/skel/.config/hypr/hyprland.conf`:
+- In `airootfs/etc/skel/.config/hypr/hyprland.lua`:
   ```ini
   # ArchTitan Quick Settings & Notification Center — SUPER+N toggle
   bind = $mainMod, N, exec, titan-quicksettings --toggle
@@ -163,7 +163,7 @@ subsystems/titan-quicksettings/
 
 ## Hyprland & Waybar Integration
 
-### 1. Hyprland Configuration (`airootfs/etc/skel/.config/hypr/hyprland.conf`)
+### 1. Hyprland Configuration (`airootfs/etc/skel/.config/hypr/hyprland.lua`)
 ```ini
 # Autostart daemon
 exec-once = titan-quicksettings --daemon
@@ -171,15 +171,13 @@ exec-once = titan-quicksettings --daemon
 # Keybinding: Super+N to toggle overlay
 bind = $mainMod, N, exec, titan-quicksettings --toggle
 
-# Window & Layer rules for glassmorphic blur and animations
-windowrule {
-    name = titan-quicksettings-rule
-    match:title = ^(titan-quicksettings)$
-    float = 1
-    noborder = 1
+# Layer rules for glassmorphic blur and animations
+layerrule {
+    name = titan-quicksettings-blur
+    match:namespace = ^(titan-quicksettings)$
+    blur = on
+    ignore_alpha = 0.2
 }
-layerrule = blur, titan-quicksettings
-layerrule = ignorezero, titan-quicksettings
 ```
 
 ### 2. Waybar Notification Bell Integration (`airootfs/etc/skel/.config/waybar/config`)
@@ -216,7 +214,7 @@ layerrule = ignorezero, titan-quicksettings
    - Configure overshot slide-in and slide-out animations.
 4. **OS Packaging & Keybinding**:
    - Install binary to `/usr/local/bin/titan-quicksettings`.
-   - Update `airootfs/etc/skel/.config/hypr/hyprland.conf` with `bind = $mainMod, N, exec, titan-quicksettings --toggle`.
+   - Update `airootfs/etc/skel/.config/hypr/hyprland.lua` with `bind = $mainMod, N, exec, titan-quicksettings --toggle`.
 5. **Testing & Verification**:
    - Build executable and run in VM/headless session.
    - Verify <kbd>Super</kbd> + <kbd>N</kbd> instant toggle, smooth slide-in, toggle clicks, and notification clearing.
