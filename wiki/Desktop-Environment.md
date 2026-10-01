@@ -55,7 +55,7 @@ graph TD
 
 | Component | Function | Configuration File Location |
 | :--- | :--- | :--- |
-| **Hyprland** | Wayland Tiling Compositor (v0.53+/v0.56+ block syntax) | `~/.config/hypr/hyprland.conf` |
+| **Hyprland** | Wayland Tiling Compositor (v0.53+/v0.56+ block syntax) | `~/.config/hypr/hyprland.lua` (falls back to `.conf` if absent) |
 | **Waybar** | Top dark-pill status panel with center media capsule & THM badge | `~/.config/waybar/config` & `style.css` |
 | **Titan Media HUD** | Dynamic Island overlay & power menu | `subsystems/titan-media-hud/` |
 | **TitanBrowser** | First-party Qt6 WebEngine browser | `titan-browser-source/` |
@@ -126,7 +126,7 @@ windowrule {
 Validate config changes before rebooting:
 
 ```bash
-Hyprland --verify-config -c ~/.config/hypr/hyprland.conf
+Hyprland --verify-config -c ~/.config/hypr/hyprland.lua
 ```
 
 ### VM Rendering Flags (Aquamarine Backend)

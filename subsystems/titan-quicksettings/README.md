@@ -91,7 +91,7 @@ graph TD
   - Closing triggers reverse slide and unmaps or hides the layer surface.
 
 ### 2. IPC & Keybinding Handling (<kbd>Super</kbd> + <kbd>N</kbd>)
-- In `airootfs/etc/skel/.config/hypr/hyprland.conf`:
+- In `airootfs/etc/skel/.config/hypr/hyprland.lua`:
   ```ini
   # ArchTitan Quick Settings & Notification Center — SUPER+N toggle
   bind = $mainMod, N, exec, titan-quicksettings --toggle
@@ -163,7 +163,7 @@ subsystems/titan-quicksettings/
 
 ## Hyprland & Waybar Integration
 
-### 1. Hyprland Configuration (`airootfs/etc/skel/.config/hypr/hyprland.conf`)
+### 1. Hyprland Configuration (`airootfs/etc/skel/.config/hypr/hyprland.lua`)
 ```ini
 # Autostart daemon
 exec-once = titan-quicksettings --daemon
@@ -214,7 +214,7 @@ layerrule {
    - Configure overshot slide-in and slide-out animations.
 4. **OS Packaging & Keybinding**:
    - Install binary to `/usr/local/bin/titan-quicksettings`.
-   - Update `airootfs/etc/skel/.config/hypr/hyprland.conf` with `bind = $mainMod, N, exec, titan-quicksettings --toggle`.
+   - Update `airootfs/etc/skel/.config/hypr/hyprland.lua` with `bind = $mainMod, N, exec, titan-quicksettings --toggle`.
 5. **Testing & Verification**:
    - Build executable and run in VM/headless session.
    - Verify <kbd>Super</kbd> + <kbd>N</kbd> instant toggle, smooth slide-in, toggle clicks, and notification clearing.
