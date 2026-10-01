@@ -109,18 +109,24 @@ All keybindings use the **Super** key (Windows/Cmd key) as the main modifier:
 
 ## Modern Hyprland Window Rules Syntax (v0.53+)
 
-ArchTitan OS uses Hyprland v0.53+/v0.56+ named block syntax for window rules:
+ArchTitan OS uses Hyprland v0.53+/v0.56+ named block syntax for window rules.
+The block **must** start with `name`, and match props use the `match:<prop>`
+form (a nested `match { ... }` block is not valid):
 
 ```ini
 # Calamares installer window rule block
 windowrule {
     name = calamares-rule
-    match {
-        class = ^(calamares)$
-    }
+    match:class = ^(calamares)$
     float = true
     center = true
 }
+```
+
+Validate config changes before rebooting:
+
+```bash
+Hyprland --verify-config -c ~/.config/hypr/hyprland.conf
 ```
 
 ### VM Rendering Flags (Aquamarine Backend)
