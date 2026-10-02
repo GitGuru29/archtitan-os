@@ -1,0 +1,79 @@
+#!/bin/bash
+# archtitan-firstboot-plymouth — ArchTitan OS First-Boot Plymouth Switcher
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MARKER_DIR="/var/lib/archtitan"
+MARKER_FILE="${MARKER_DIR}/firstboot_done"
+ATTEMPTS_FILE="${MARKER_DIR}/firstboot_attempts"
+PLYMOUTH_CONF="/etc/plymouth/plymouthd.conf"
+
+mkdir -p "${MARKER_DIR}"
+
+# Live ISO detection — do not trigger Rise, Titan. on live installer environment
+if [ -d /run/archiso ]; then
+    exit 0
+fi
+
+# Check if first boot is already completed
+if [ -f "${MARKER_FILE}" ]; then
+    # Ensure default theme is set to archtitan for normal daily boots
+    if [ -f "${PLYMOUTH_CONF}" ]; then
+        sed -i 's/^Theme=.*/Theme=archtitan/' "${PLYMOUTH_CONF}" 2>/dev/null || true
+    fi
+    exit 0
+fi
+
+# Retry cap safety check
+ATTEMPTS=0
+if [ -f "${ATTEMPTS_FILE}" ]; then
+    ATTEMPTS=$(cat "${ATTEMPTS_FILE}" 2>/dev/null || echo 0)
+fi
+
+ATTEMPTS=$((ATTEMPTS + 1))
+echo "${ATTEMPTS}" > "${ATTEMPTS_FILE}"
+
+if [ "${ATTEMPTS}" -gt 5 ]; then
+    # Exceeded attempt cap, permanently give up and mark done
+    touch "${MARKER_FILE}"
+    if [ -f "${PLYMOUTH_CONF}" ]; then
+        sed -i 's/^Theme=.*/Theme=archtitan/' "${PLYMOUTH_CONF}" 2>/dev/null || true
+    fi
+    exit 0
+fi
+
+# Configure Plymouth for first-boot Rise, Titan. ceremony
+mkdir -p /etc/plymouth
+cat <<'EOF' > "${PLYMOUTH_CONF}"
+[Daemon]
+Theme=archtitan-rise
+ShowDelay=0
+DeviceTimeout=8
+EOF
+
+# Background daemon: wait for session launch to finalize first-boot completion
+(
+    # Wait until display manager (SDDM) or graphical session is reached
+    for i in $(seq 1 60); do
+        if systemctl is-active --quiet sddm.service || systemctl is-active --quiet graphical.target; then
+            break
+        fi
+        sleep 2
+    done
+    
+    # Mark first boot completed permanently
+    touch "${MARKER_FILE}"
+    
+    # Revert Plymouth default theme to standard ArchTitan splash for future boots
+    cat <<'EOF' > "${PLYMOUTH_CONF}"
+[Daemon]
+Theme=archtitan
+ShowDelay=0
+DeviceTimeout=8
+EOF
+    
+    if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+        plymouth-set-default-theme archtitan 2>/dev/null || true
+    fi
+) &
+
+exit 0

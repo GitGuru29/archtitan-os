@@ -62,13 +62,17 @@ static LayoutConfig readConfig()
 #include "systemcontroller.h"
 #include "networkcontroller.h"
 #include "bluetoothcontroller.h"
+#include <malloc.h>
 #include "audiocontroller.h"
 #include "nightlightcontroller.h"
 #include "notificationserver.h"
 
 int main(int argc, char *argv[])
 {
-    // Enable Wayland native windowing & transparency
+    // Low-memory footprint configuration (~10-15 MB RSS)
+    qputenv("QSG_RENDER_LOOP", "basic");
+    qputenv("QT_QUICK_BACKEND", "software");
+    qputenv("QML_DISABLE_DISK_CACHE", "1");
     qputenv("QT_QPA_PLATFORM", "wayland;xcb");
     qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
 
@@ -220,6 +224,7 @@ int main(int argc, char *argv[])
     }, Qt::QueuedConnection);
 
     engine.load(url);
+    malloc_trim(0);
 
     return app.exec();
 }
