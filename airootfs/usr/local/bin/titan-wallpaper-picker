@@ -5,7 +5,7 @@
 # image files, presents them in Rofi as a large thumbnail grid, then calls
 # titan-set-wallpaper to apply and persist the selection.
 #
-# Dependencies: rofi, titan-set-wallpaper, notify-send (optional)
+# Dependencies: rofi (2.0+), titan-set-wallpaper, notify-send (optional)
 
 set -euo pipefail
 
@@ -28,13 +28,23 @@ if [[ ${#CANDIDATES[@]} -eq 0 ]]; then
 fi
 
 # ── Build Rofi display list ─────────────────────────────────────────────────
-# Format: "display-label\0icon\x1f/full/path"
-# We output the FULL PATH as the display label so rofi returns the path
-# directly on Enter — no label→path mapping needed, no lookup failures.
+# Format per entry: "label\0icon\x1f/absolute/path/to/image.png\n"
+# NOTE: Do NOT pass -icon-theme — that makes rofi resolve icon strings via the
+#       theme lookup chain and ignores absolute file paths. Without -icon-theme,
+#       rofi treats paths starting with / as direct image files and renders them
+#       as thumbnails.
 ROFI_LIST=""
+declare -A PATH_MAP   # label -> full path (for Enter resolution)
+
 for path in "${CANDIDATES[@]}"; do
     label="$(basename "${path%.*}")"
-    # Append: display label NUL icon SOH path NEWLINE
+    # Guard against duplicate basenames by appending parent dir suffix
+    if [[ -v "PATH_MAP[$label]" ]]; then
+        parent="$(basename "$(dirname "$path")")"
+        label="${parent}/${label}"
+    fi
+    PATH_MAP["$label"]="$path"
+    # NUL separates label from metadata; \x1f separates key=icon from value=path
     ROFI_LIST+="${label}"$'\0''icon'$'\x1f'"${path}"$'\n'
 done
 
@@ -46,34 +56,19 @@ CHOSEN=$(
         -p "  Wallpaper" \
         -theme /usr/share/rofi/themes/archtitan-wallpaper.rasi \
         -show-icons \
-        -icon-theme Papirus-Dark \
         2>/dev/null
 ) || true
 
 [[ -z "$CHOSEN" ]] && exit 0   # user cancelled / Esc
 
 # ── Resolve full path from chosen label ────────────────────────────────────
-# Rofi returns the display label text (before \0). Match it back to a path.
-WALLPAPER_PATH=""
-for path in "${CANDIDATES[@]}"; do
-    label="$(basename "${path%.*}")"
-    if [[ "$label" == "$CHOSEN" ]]; then
-        WALLPAPER_PATH="$path"
-        break
-    fi
-done
+WALLPAPER_PATH="${PATH_MAP[$CHOSEN]:-}"
 
-# Fallback: maybe rofi returned something with extra whitespace
+# Fallback: trim whitespace and retry
 if [[ -z "$WALLPAPER_PATH" ]]; then
-    CHOSEN_TRIM="${CHOSEN#"${CHOSEN%%[![:space:]]*}"}"  # ltrim
-    CHOSEN_TRIM="${CHOSEN_TRIM%"${CHOSEN_TRIM##*[![:space:]]}"}"  # rtrim
-    for path in "${CANDIDATES[@]}"; do
-        label="$(basename "${path%.*}")"
-        if [[ "$label" == "$CHOSEN_TRIM" ]]; then
-            WALLPAPER_PATH="$path"
-            break
-        fi
-    done
+    CHOSEN_TRIM="${CHOSEN#"${CHOSEN%%[![:space:]]*}"}"
+    CHOSEN_TRIM="${CHOSEN_TRIM%"${CHOSEN_TRIM##*[![:space:]]}"}"
+    WALLPAPER_PATH="${PATH_MAP[$CHOSEN_TRIM]:-}"
 fi
 
 WALLPAPER_PATH="${CANDIDATES[$CHOSEN_INDEX]}"
