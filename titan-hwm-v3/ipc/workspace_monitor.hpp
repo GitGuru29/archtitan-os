@@ -62,9 +62,12 @@ public:
 
     // ── Governor hint ────────────────────────────────────────────────────────
     // Compute from aggregate system demand. Called each tick.
+    // `current` is the hint currently applied; it selects the hysteresis band so
+    // the governor cannot flap when demand and pressure sit on a boundary.
     static GovernorHint compute_governor(
         const std::unordered_map<uint32_t, Workload>& workloads,
-        PressureLevel pressure);
+        PressureLevel pressure,
+        GovernorHint current = GovernorHint::SCHEDUTIL);
 
     // Apply governor hint to /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor
     static bool apply_governor(GovernorHint hint);

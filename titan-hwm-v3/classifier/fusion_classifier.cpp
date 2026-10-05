@@ -18,11 +18,22 @@
 
 namespace fs = std::filesystem;
 
-// Track CWD paths we've already warned about for container/namespace unreachability.
-// Prevents log spam — fires once per unique CWD per daemon lifetime.
-static std::unordered_set<std::string> s3_warned_cwds_;
-
 namespace thm {
+
+std::unordered_set<std::string> FusionClassifier::s_warned_cwds_;
+std::deque<std::string>        FusionClassifier::s_warned_cwd_order_;
+std::mutex                     FusionClassifier::s_warned_cwds_mutex_;
+
+bool FusionClassifier::remember_warned_cwd(const std::string& cwd) {
+    std::lock_guard<std::mutex> lock(s_warned_cwds_mutex_);
+    if (!s_warned_cwds_.insert(cwd).second) return false;
+    s_warned_cwd_order_.push_back(cwd);
+    while (s_warned_cwd_order_.size() > kMaxWarnedCwds) {
+        s_warned_cwds_.erase(s_warned_cwd_order_.front());
+        s_warned_cwd_order_.pop_front();
+    }
+    return true;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // read_cmdline — argv[0] from /proc/<pid>/cmdline (NUL-delimited)
@@ -255,7 +266,7 @@ std::optional<WorkloadType> FusionClassifier::from_cwd(pid_t pid) {
     std::error_code ec;
     if (!fs::exists(p, ec) || ec) {
         // Log once per unique CWD path, suppress duplicates across ticks
-        if (s3_warned_cwds_.insert(cwd).second) {
+        if (remember_warned_cwd(cwd)) {
             std::cout << "[S3] cwd " << cwd
                       << " unreachable from host ns (container/overlay?) — S3 skipped\n";
         }

@@ -33,6 +33,7 @@ file_permissions=(
   ["/usr/local/bin/archtitan-settings"]="0:0:755"
   ["/usr/local/bin/titan-settings"]="0:0:755"
   ["/usr/local/bin/titan-hwm-daemon"]="0:0:755"
+  ["/usr/bin/titan-hwm-daemon"]="0:0:755"
   ["/usr/local/bin/titan-hwm"]="0:0:755"
   ["/usr/local/bin/titan-hwm-waybar"]="0:0:755"
   ["/usr/local/bin/archtitan-session-guard"]="0:0:755"
@@ -49,11 +50,16 @@ file_permissions=(
   ["/usr/local/bin/titan-wallpaper-picker"]="0:0:755"
   ["/usr/local/bin/titan-set-wallpaper"]="0:0:755"
   ["/usr/local/bin/titan-wallpaper-restore"]="0:0:755"
+  ["/usr/local/bin/titan-quicksettings"]="0:0:755"
+  ["/usr/local/bin/titan-quicksettings-toggle"]="0:0:755"
   ["/usr/local/bin/dev-setup"]="0:0:755"
   ["/home/archtitan"]="1000:1000:700"
   ["/usr/bin/titanfetch"]="0:0:755"
   ["/usr/bin/titanbrowser"]="0:0:755"
   ["/usr/bin/archtitan-settings"]="0:0:755"
+  ["/usr/bin/titan-media-hud"]="0:0:755"
+  ["/usr/bin/titan-hud-context"]="0:0:755"
+  ["/usr/bin/titan-hud-gpu"]="0:0:755"
   ["/etc/systemd/system/titan-hwm.service"]="0:0:644"
   ["/etc/systemd/system/archtitan.slice"]="0:0:644"
   # Sandbox system
@@ -65,4 +71,6 @@ file_permissions=(
   ["/var/log/titan-sandbox"]="0:0:1777"
   ["/var/titan-sandbox"]="0:0:1777"
   ["/var/titan-sandbox/apps"]="0:0:1777"
+  # GRUB theme for the installed system (used by Calamares bootloader module)
+  ["/usr/share/grub/themes/archtitan"]="0:0:755"
 )

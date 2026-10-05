@@ -17,23 +17,68 @@ namespace fs = std::filesystem;
 namespace thm {
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Private: resolve /proc/<pid>/exe and check against protected prefixes
+// Private: parse the comm field out of /proc/<pid>/stat.
+//
+// Field 2 is the executable name in parentheses and may itself contain spaces
+// and parentheses, so it cannot be parsed by naive whitespace splitting — it is
+// delimited by the FIRST '(' and the LAST ')'. Returns an empty string if the
+// process is gone.
 // ─────────────────────────────────────────────────────────────────────────────
-bool ProtectedRegistry::exe_is_protected(pid_t pid) const {
+static std::string read_comm(pid_t pid) {
+    std::ifstream stat_f("/proc/" + std::to_string(pid) + "/stat");
+    std::string line;
+    if (!std::getline(stat_f, line)) return {};
+    auto lp = line.find('(');
+    auto rp = line.rfind(')');
+    if (lp == std::string::npos || rp == std::string::npos || rp <= lp) return {};
+    return line.substr(lp + 1, rp - lp - 1);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Private: shared /proc/<pid>/exe resolver
+//
+// Strips the " (deleted)" suffix the kernel appends when the backing file has
+// been replaced on disk — otherwise a binary upgraded out from under a running
+// process would silently stop matching its own protection prefix.
+// Returns false if the link cannot be read (process gone, or a kernel thread
+// which has no exe at all).
+// ─────────────────────────────────────────────────────────────────────────────
+static bool read_exe(pid_t pid, std::string& out) {
     char buf[PATH_MAX];
     std::string link = "/proc/" + std::to_string(pid) + "/exe";
     ssize_t len = readlink(link.c_str(), buf, sizeof(buf) - 1);
-    if (len <= 0) return false; // process gone or no permission
+    if (len <= 0) return false;
     buf[len] = '\0';
-    std::string exe(buf);
+    out = buf;
 
-    // Strip " (deleted)" suffix the kernel appends for replaced-on-disk binaries
     static const std::string del_sfx = " (deleted)";
-    if (exe.size() > del_sfx.size() &&
-        exe.compare(exe.size() - del_sfx.size(), del_sfx.size(), del_sfx) == 0)
-        exe.erase(exe.size() - del_sfx.size());
+    if (out.size() > del_sfx.size() &&
+        out.compare(out.size() - del_sfx.size(), del_sfx.size(), del_sfx) == 0)
+        out.erase(out.size() - del_sfx.size());
+    return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Private: resolve /proc/<pid>/exe and check against protected prefixes
+// ─────────────────────────────────────────────────────────────────────────────
+bool ProtectedRegistry::exe_is_protected(pid_t pid) const {
+    std::string exe;
+    if (!read_exe(pid, exe)) return false; // process gone or no permission
 
     for (const auto& prefix : protected_exe_prefixes())
+        if (exe.rfind(prefix, 0) == 0) return true;
+
+    return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Private: same, against the browser (collateral-only) prefix set
+// ─────────────────────────────────────────────────────────────────────────────
+bool ProtectedRegistry::exe_is_browser(pid_t pid) const {
+    std::string exe;
+    if (!read_exe(pid, exe)) return false;
+
+    for (const auto& prefix : browser_exe_prefixes())
         if (exe.rfind(prefix, 0) == 0) return true;
 
     return false;
@@ -76,16 +121,36 @@ bool ProtectedRegistry::is_protected(pid_t pid, const std::string& comm) const {
 bool ProtectedRegistry::is_protected_any(const std::vector<pid_t>& pids) const {
     for (pid_t pid : pids) {
         // Read comm from /proc for the name check — avoids requiring caller to pass it
-        std::string comm;
-        std::ifstream stat_f("/proc/" + std::to_string(pid) + "/stat");
-        std::string token;
-        if (stat_f >> token) { // field 1: pid
-            if (stat_f >> token) { // field 2: (comm)
-                if (token.size() >= 2 && token.front() == '(' && token.back() == ')')
-                    comm = token.substr(1, token.size() - 2);
-            }
-        }
-        if (is_protected(pid, comm)) return true;
+        if (is_protected(pid, read_comm(pid))) return true;
+    }
+    return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// is_collateral_protected — secondary tier for browsers.
+//
+// Applies the SAME name+exe cross-check as is_protected(); the difference is
+// purely which callers consult it. A comm match with a mismatched exe is
+// treated as a spoof attempt and denied, for consistency with the hard tier.
+// ─────────────────────────────────────────────────────────────────────────────
+bool ProtectedRegistry::is_collateral_protected(pid_t pid,
+                                                const std::string& comm) const {
+    if (browser_names().count(comm)) {
+        if (exe_is_browser(pid)) return true;
+        std::cerr << "[Collateral] comm='" << comm << "' pid=" << pid
+                  << " matched browser name but exe is not a browser — DENIED\n";
+        return false;
+    }
+    // exe-only match catches the renderer children, whose comm varies by
+    // browser version but whose exe still resolves to the browser binary.
+    return exe_is_browser(pid);
+}
+
+bool ProtectedRegistry::is_collateral_protected_any(
+    const std::vector<pid_t>& pids) const {
+    for (pid_t pid : pids) {
+        if (is_protected(pid, read_comm(pid))) return true;
+        if (is_collateral_protected(pid, read_comm(pid))) return true;
     }
     return false;
 }

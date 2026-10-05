@@ -10,6 +10,10 @@
 
 set -euo pipefail
 
+# Ensure XDG_RUNTIME_DIR is set — PassEnvironment picks it up from the user
+# session when available; fall back to /run/user/<uid> if not inherited.
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+
 SELECTIONS_FILE="/etc/archtitan-postinstall/selections"
 LOG_FILE="$HOME/.local/share/archtitan/postinstall.log"
 DONE_FILE="/etc/archtitan-postinstall/.completed"
@@ -218,4 +222,7 @@ echo " Log: $LOG_FILE"
 echo "================================================"
 
 sudo touch "$DONE_FILE"
-sudo systemctl disable archtitan-postinstall.service || true
+# Disable the correct instantiated unit — template is archtitan-postinstall@<user>.service
+# Disabling the bare name (no @) is a no-op and would leave the service active on next login.
+sudo systemctl disable "archtitan-postinstall@$(id -un).service" || true
+exit 0

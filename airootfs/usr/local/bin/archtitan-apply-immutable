@@ -26,9 +26,9 @@ _warn() { echo "[${LOG_TAG}] WARN: $*" >&2; }
 GUARD_FILES=(
     "/usr/local/bin/archtitan-session-guard"
     "/usr/local/bin/archtitan-apply-immutable"
-    "/usr/local/bin/titan_hw_manager"
+    "/usr/local/bin/titan-hwm-daemon"
     "/etc/pacman.d/hooks/archtitan-session-guard.hook"
-    "/etc/systemd/system/titan_hw_manager.service"
+    "/etc/systemd/system/titan-hwm.service"
     "/etc/systemd/system/archtitan-immutable-guard.service"
 )
 

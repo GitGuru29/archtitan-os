@@ -54,7 +54,7 @@ Direct mapping against the seven core objectives stated in Section 4 of the offi
 
 | # | Proposal Objective | Promised Scope | Implementation in Codebase | Status | % Done |
 | :-: | :--- | :--- | :--- | :---: | :-: |
-| **Obj 1** | **Titan Hardware Manager (THM)** | C++ privileged daemon, `cgroups v2`, PSI memory pressure escalation, 3-tier resource slicing | `titan_hw_manager.cpp`, `titan-active.slice`, `titan-background.slice`, `titan-frozen.slice`, CLI & Waybar hooks | 🟢 **Complete** | **100%** |
+| **Obj 1** | **Titan Hardware Manager (THM)** | C++ privileged daemon, `cgroups v2`, PSI memory pressure escalation, 3-tier resource slicing | `titan-hwm-v3/`, `archtitan-active.slice`, `archtitan-background.slice`, `archtitan-frozen.slice`, CLI & Waybar hooks | 🟢 **Complete** | **100%** |
 | **Obj 2** | **Multi-Signal Workload Classifier** | Process-neutral classification using window metadata, project structure, and background state | Integrated into THM & Hyprland IPC session guard (`archtitan-session-guard`, `titan-exec-hook`) | 🟡 **Core Done, Expansion Pending** | **75%** |
 | **Obj 3** | **Auto GPU Switcher** | Dynamic iGPU/dGPU switching without user intervention based on power & workload | `subsystems/auto-gpu-switcher/` directory skeleton & architecture defined | 🟡 **In Development** | **20%** |
 | **Obj 4** | **TitanShare (Linux–Android)** | P2P local file transfer via mDNS/UNIX socket & remote monitoring Android app | `subsystems/titan-share/` layout & storage architecture specs ready in Knowledge Base | 🟡 **In Development** | **25%** |
@@ -143,7 +143,7 @@ graph TD
 ```
 
 ### 1. ⚙️ Titan Hardware Manager (`titan-hwm`)
-* **Source**: `titan-hwm-source/titan_hw_manager.cpp`
+* **Source**: `titan-hwm-v3/` (CMake project; the v1/v2 monolith in `titan-hwm-source/` was removed as it was superseded and never installed into the ISO)
 * **Features**: Privileged C++ systemd daemon that manages `cgroups v2` slices (`titan-active`, `titan-background`, `titan-frozen`). Monitors `/proc/pressure/{memory,cpu,io}` to dynamically throttle heavy background tasks (e.g. kernel compilation, rendering) whenever foreground interactive tasks need CPU/GPU priority.
 
 ### 2. 🛡️ Titan Sandbox (`titan-sandboxd`)

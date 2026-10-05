@@ -1,0 +1,215 @@
+# ArchTitan OS — "Rise, Titan." First-Boot Interactive Ceremony
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+screen_width = Window.GetWidth();
+screen_height = Window.GetHeight();
+center_x = screen_width / 2;
+center_y = screen_height / 2;
+
+# Load sprite assets
+dot_image = Image("assets/dot.png");
+dot_stretched_image = Image("assets/dot_stretched.png");
+btn_explore_image = Image("assets/btn_explore.png");
+
+glyph_names[0] = "R";
+glyph_names[1] = "i";
+glyph_names[2] = "s";
+glyph_names[3] = "e";
+glyph_names[4] = "comma";
+glyph_names[5] = "T";
+glyph_names[6] = "i";
+glyph_names[7] = "t";
+glyph_names[8] = "a";
+glyph_names[9] = "n";
+glyph_names[10] = "period";
+
+for (i = 0; i < 11; i++) {
+    glyph_images[i] = Image("assets/glyph_" + glyph_names[i] + ".png");
+}
+
+# Target positions for "Rise, Titan." layout (centered on screen)
+text_origin_x = center_x - 300;
+text_origin_y = center_y + 20;
+
+target_x[0]  = text_origin_x + 0;    # R
+target_x[1]  = text_origin_x + 65;   # i
+target_x[2]  = text_origin_x + 105;  # s
+target_x[3]  = text_origin_x + 155;  # e
+target_x[4]  = text_origin_x + 205;  # ,
+target_x[5]  = text_origin_x + 270;  # T
+target_x[6]  = text_origin_x + 335;  # i
+target_x[7]  = text_origin_x + 375;  # t
+target_x[8]  = text_origin_x + 420;  # a
+target_x[9]  = text_origin_x + 480;  # n
+target_x[10] = text_origin_x + 540;  # .
+
+target_y[0]  = text_origin_y;
+target_y[1]  = text_origin_y;
+target_y[2]  = text_origin_y;
+target_y[3]  = text_origin_y;
+target_y[4]  = text_origin_y + 40; # ,
+target_y[5]  = text_origin_y;
+target_y[6]  = text_origin_y;
+target_y[7]  = text_origin_y;
+target_y[8]  = text_origin_y;
+target_y[9]  = text_origin_y;
+target_y[10] = text_origin_y + 30; # .
+
+# Create 10 orbital dot sprites
+for (i = 0; i < 10; i++) {
+    dot_sprites[i] = Sprite(dot_image);
+    dot_sprites[i].SetOpacity(0.0);
+    
+    glyph_sprites[i] = Sprite(glyph_images[i]);
+    glyph_sprites[i].SetOpacity(0.0);
+}
+# 11th sprite for period detachment
+period_sprite = Sprite(glyph_images[10]);
+period_sprite.SetOpacity(0.0);
+
+# Interactive "EXPLORE NOW ->" Button Sprite
+btn_x = center_x - 180;
+btn_y = center_y + 180;
+btn_w = 360;
+btn_h = 72;
+
+btn_sprite = Sprite(btn_explore_image);
+btn_sprite.SetX(btn_x);
+btn_sprite.SetY(btn_y);
+btn_sprite.SetOpacity(0.0);
+
+frame = 0;
+radius = 160.0;
+user_clicked = 0;
+fade_out_frame = 0;
+
+fun refresh_callback() {
+    frame++;
+    
+    # Phase A (0 - 50 frames / 0 - 1.0s): Fade in 10 orbital dots
+    if (frame <= 50) {
+        opacity = frame / 50.0;
+        for (i = 0; i < 10; i++) {
+            angle = (i * 2.0 * 3.14159 / 10.0);
+            x = center_x + radius * Math.Cos(angle) - 64;
+            y = center_y + radius * Math.Sin(angle) - 64;
+            dot_sprites[i].SetX(x);
+            dot_sprites[i].SetY(y);
+            dot_sprites[i].SetOpacity(opacity);
+        }
+    }
+    # Phase B & C (50 - 342 frames / 1.0s - 6.85s): Ease in-out orbital rotation (2 full revs)
+    else if (frame <= 342) {
+        progress = (frame - 50) / 292.0;
+        eased_angle = progress * progress * (3.0 - 2.0 * progress) * (4.0 * 3.14159);
+        
+        for (i = 0; i < 10; i++) {
+            angle = (i * 2.0 * 3.14159 / 10.0) + eased_angle;
+            x = center_x + radius * Math.Cos(angle) - 64;
+            y = center_y + radius * Math.Sin(angle) - 64;
+            dot_sprites[i].SetX(x);
+            dot_sprites[i].SetY(y);
+            dot_sprites[i].SetOpacity(1.0);
+        }
+    }
+    # Phase D (342 - 542 frames / 6.85s - 10.85s): Staggered drops & glyph resolution
+    else if (frame <= 542) {
+        drop_progress = (frame - 342) / 200.0;
+        
+        for (i = 0; i < 10; i++) {
+            start_t = i * 0.085;
+            dur_t = 0.22;
+            
+            if (drop_progress >= start_t) {
+                local_t = (drop_progress - start_t) / dur_t;
+                if (local_t > 1.0) local_t = 1.0;
+                
+                angle = (i * 2.0 * 3.14159 / 10.0) + (4.0 * 3.14159);
+                start_x = center_x + radius * Math.Cos(angle) - 64;
+                start_y = center_y + radius * Math.Sin(angle) - 64;
+                
+                eased_t = 1.0 - (1.0 - local_t) * (1.0 - local_t);
+                curr_x = start_x + (target_x[i] - start_x) * eased_t;
+                curr_y = start_y + (target_y[i] - start_y) * eased_t;
+                
+                if (local_t < 0.7) {
+                    dot_sprites[i].SetX(curr_x);
+                    dot_sprites[i].SetY(curr_y);
+                    dot_sprites[i].SetOpacity(1.0 - (local_t / 0.7));
+                } else {
+                    dot_sprites[i].SetOpacity(0.0);
+                    glyph_opacity = (local_t - 0.7) / 0.3;
+                    glyph_sprites[i].SetX(target_x[i]);
+                    glyph_sprites[i].SetY(target_y[i]);
+                    glyph_sprites[i].SetOpacity(glyph_opacity);
+                }
+            }
+        }
+        
+        # Period detachment on dot 10 completion
+        if (frame >= 500) {
+            p_t = (frame - 500) / 42.0;
+            if (p_t > 1.0) p_t = 1.0;
+            period_sprite.SetX(target_x[10]);
+            period_sprite.SetY(target_y[9] + (target_y[10] - target_y[9]) * p_t);
+            period_sprite.SetOpacity(p_t);
+        }
+    }
+    # Phase E (542+ frames): Display "EXPLORE NOW ->" button and wait for user click/input
+    else {
+        for (i = 0; i < 10; i++) {
+            glyph_sprites[i].SetOpacity(1.0);
+        }
+        period_sprite.SetOpacity(1.0);
+        
+        if (user_clicked == 0) {
+            # Fade in Explore Now button
+            btn_opacity = (frame - 542) / 30.0;
+            if (btn_opacity > 1.0) btn_opacity = 1.0;
+            btn_sprite.SetOpacity(btn_opacity);
+        } else {
+            # User clicked! Execute smooth fade out into SDDM
+            fade_out_frame++;
+            alpha = 1.0 - (fade_out_frame / 40.0);
+            if (alpha < 0.0) alpha = 0.0;
+            
+            for (i = 0; i < 10; i++) {
+                glyph_sprites[i].SetOpacity(alpha);
+            }
+            period_sprite.SetOpacity(alpha);
+            btn_sprite.SetOpacity(alpha);
+            
+            if (fade_out_frame >= 40) {
+                Plymouth.Quit();
+            }
+        }
+    }
+}
+
+fun click_or_key_handler() {
+    if (frame >= 542 && user_clicked == 0) {
+        user_clicked = 1;
+        fade_out_frame = 0;
+    }
+}
+
+fun mouse_callback(x, y, flags) {
+    # On mouse click (press/release)
+    if (flags == 1 || flags == 2) {
+        if (x >= btn_x && x <= (btn_x + btn_w) && y >= btn_y && y <= (btn_y + btn_h)) {
+            click_or_key_handler();
+        } else {
+            # Any click on screen also triggers transition
+            click_or_key_handler();
+        }
+    }
+}
+
+fun key_press_callback(text, key) {
+    # Pressing Enter, Space, or any key triggers transition
+    click_or_key_handler();
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);
+Plymouth.SetMouseInputFunction(mouse_callback);
+Plymouth.SetKeyboardInputFunction(key_press_callback);

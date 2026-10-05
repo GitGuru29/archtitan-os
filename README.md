@@ -1,4 +1,4 @@
-# 🚀 ArchTitan OS
+#  ArchTitan OS
 
 [![Arch Linux](https://img.shields.io/badge/Base-Arch%20Linux-1793D1?logo=arch-linux&logoColor=white)](https://archlinux.org/)
 [![Compositor](https://img.shields.io/badge/Compositor-Hyprland%20(Wayland)-00C8FF?logo=wayland&logoColor=white)](https://hyprland.org/)
@@ -77,22 +77,22 @@ graph TD
 
 ArchTitan provides a suite of native C++ and Qt6 applications built specifically for the OS:
 
-### 1. ⚙️ Titan Hardware Manager (`titan-hwm`)
+### 1.  Titan Hardware Manager (`titan-hwm`)
 * **Lead:** `@GitGuru29` | **Location:** `titan-hwm-v3/` & `subsystems/titan-hwm/`
 * High-performance C++20 autonomous resource orchestrator running as `titan-hwm.service` with `archtitan.slice` cgroup v2 delegation (`OOMScoreAdjust=-1000`).
 * Dynamically routes workloads across `archtitan-active.slice`, `archtitan-background.slice`, `archtitan-idle.slice`, and `archtitan-reclaimable.slice` based on multi-signal fusion classification (process trees, Hyprland window/workspace focus, CWD project signatures, and cmdline drift).
-* Features 2-second workspace leave hysteresis, browser-safe cgroup freezing, first-class VM & database service immunity, and automated orphan thaw sweep on startup.
+* Features 10-hour stress-tested resilience: atomic `pidfd`-based reclaim signaling, `posix_spawn()` execution, 2-second workspace leave hysteresis, browser-safe cgroup freezing, first-class VM & database service immunity, and automated orphan thaw sweep.
 
-### 2. 🎛️ ArchTitan Settings (`archtitan-settings`)
+### 2.  ArchTitan Settings (`archtitan-settings`)
 * **Lead:** `@GitGuru29` | **Location:** `archtitan-settings/`
 * Unified C++/Qt system control center featuring:
   - **Appearance:** Theme toggle, Catppuccin Mocha presets, panel opacity, icon sets.
   - **Display:** Brightness, Night Light (`wlsunset`), resolution, and scaling.
   - **Audio:** Output/input volume, live PipeWire audio profile controls.
-  - **Power & THM:** Universal stateful power profile cycling (**Casual** ➔ **Web Dev** ➔ **Android Dev** ➔ **System Dev** via `Super + P` / `Fn + P`).
+  - **Power Management:** Universal stateful power profile cycling (**Power Saver** ➔ **Balanced** ➔ **Performance** via `Super + P` / `Fn + P`).
   - **Network & Security:** NetworkManager Wi-Fi scanner, Titan Sandbox status, screen autolock, and firewall inspection.
 
-### 3. 🌐 Titan Browser (`titanbrowser`)
+### 3.  Titan Browser (`titanbrowser`)
 * **Lead:** `@GitGuru29` | **Location:** `titan-browser-source/`
 * Fast, lightweight first-party web browser built on **Qt6 WebEngine** with native Wayland rendering:
   - Glassmorphic UI matching the system-wide Catppuccin Mocha aesthetic.
@@ -100,36 +100,43 @@ ArchTitan provides a suite of native C++ and Qt6 applications built specifically
   - Built-in network-level & DOM ad-blocker optimized for streaming without player stalls.
   - Sandboxed launch via `titan-exec-hook` under `/etc/titan-sandbox/policies/browser.toml`.
 
-### 4. 🛡️ Titan Sandbox (`titan-sandboxd`)
+### 4.  Titan Sandbox (`titan-sandboxd`)
 * **Lead:** `@GitGuru29` | **Location:** `sandbox/` & `subsystems/titan-sandbox/`
 * Fine-grained application isolation engine using Linux user/mount/PID/network namespaces, seccomp-bpf syscall filtering, and capability drops configured via declarative TOML policy files.
 
-### 5. 🏝️ Titan Media HUD (`titan-media-hud`)
+### 5.  Titan Media HUD (`titan-media-hud`)
 * **Lead:** `@GitGuru29` | **Location:** `subsystems/titan-media-hud/`
 * Modern "Dynamic Island" style QML overlay and Waybar center module integration:
   - Interactive center capsule in Waybar with click-to-expand trigger.
   - Features MPRIS media playback controls, GPU telemetry (`titan-hud-gpu`), system context (`titan-hud-context`), and custom power menu (`titan-powermenu`).
 
-### 6. 📊 TitanFetch (`titanfetch`)
+### 6.  TitanFetch (`titanfetch`)
 * **Lead:** `@GitGuru29` | **Location:** `titanfetch-src/` & `subsystems/titan-fetch/`
 * High-performance C++/Qt6 system information utility:
   - Terminal CLI mode (`titanfetch`) with sub-millisecond execution.
   - Interactive **Glassmorphic Technical HUD** (`titanfetch --gui`) featuring real-time per-core CPU load, live RAM/Swap gauges, active THM profile indicator, and quick system actions.
 
-### 7. 🔄 BTRFS Automatic Snapshot Hook
+### 7.  BTRFS Automatic Snapshot Hook
 * **Lead:** `@GitGuru29` | **Location:** `airootfs/etc/pacman.d/hooks/` & `airootfs/usr/local/bin/archtitan-btrfs-snapshot`
 * Automated pre-transaction safety hook creating timestamped read-only BTRFS root subvolume snapshots (`/.snapshots/@pre-pacman-YYYYMMDD-HHMMSS`) before `pacman` updates, with automatic 10-snapshot retention rotation and bootable rollback menu entries in GRUB via `grub-btrfs`.
 
-### 8. 🚧 Additional Subsystems (In Development)
+### 8. 📱 TITAN Share (`titanshare-daemon`)
+* **Lead:** Teammate | **Location:** `subsystems/titan-share/`
+* Cross-platform peer-to-peer file sharing subsystem comprising a C++ mDNS Linux daemon and Jetpack Compose Android client:
+  - Dynamic path resolution: Root execution (`/var/lib/titanshare`), User (`~/.local/share/titanshare`), Fallback (`/tmp/titanshare`).
+  - Path traversal sanitization for received files and dedicated send staging folder (`send_to_android/`).
+  - Hardened systemd sandboxing (`ProtectSystem=strict`, `StateDirectory=titanshare`) with IPC pairing PIN output at `/run/titanshare/titanshare-pin.json`.
+  - Registered in THM v3.1 `ProtectedRegistry` to prevent freeze or OOM reclaim during active file transfers.
+
+### 9. 🚧 Additional Subsystems (In Development)
 * **Auto GPU Switcher** (`subsystems/auto-gpu-switcher/`): Intelligent iGPU/dGPU dynamic switching.
 * **TITAN AI** (`subsystems/titan-ai/`): Context-aware developer assistant.
 * **TITAN Task Manager** (`subsystems/titan-task-manager/`): Advanced scheduling and resource tracking.
-* **TITAN Share** (`subsystems/titan-share/`): Peer-to-peer local network discovery and file exchange.
 * **TITAN Mirror** (`subsystems/titan-mirror/`): Wayland-native screen mirroring for mobile devices.
 
 ---
 
-## ⌨️ Desktop Environment & Keybindings
+##  Desktop Environment & Keybindings
 
 ArchTitan uses an optimized Hyprland desktop with smooth bezier curves, subtle drop shadows, and responsive window grouping.
 
@@ -137,7 +144,7 @@ ArchTitan uses an optimized Hyprland desktop with smooth bezier curves, subtle d
 mindmap
   root((ArchTitan Desktop))
     Compositor
-      Hyprland (v0.53+ Block Syntax)
+      Hyprland (v0.55+ Lua Configuration)
       Aquamarine VM Backend Support
       Overshot & Snappy Animations
     HUD & Bars
@@ -155,16 +162,17 @@ mindmap
       TitanFetch Glassmorphic HUD
 ```
 
-### 🔑 Essential Keybindings
+###  Essential Keybindings
 
 | Shortcut | Action | Description |
 | :--- | :--- | :--- |
 | <kbd>Super</kbd> / <kbd>Super</kbd> + <kbd>Space</kbd> | App Launcher | Launches Rofi application menu |
+| <kbd>Super</kbd> + <kbd>\\</kbd> | Wallpaper Picker | Opens grid-based wallpaper selector |
 | <kbd>Super</kbd> + <kbd>Return</kbd> | Terminal | Opens Kitty terminal with Fish shell |
 | <kbd>Super</kbd> + <kbd>W</kbd> | Titan Browser | Launches first-party TitanBrowser |
 | <kbd>Super</kbd> + <kbd>,</kbd> | ArchTitan Settings | Opens unified System Settings panel |
 | <kbd>Super</kbd> + <kbd>E</kbd> | File Manager | Opens Ranger terminal file manager |
-| <kbd>Super</kbd> + <kbd>P</kbd> / <kbd>Fn</kbd> + <kbd>P</kbd> | Power Profile Toggle | Cycles THM workload profiles |
+| <kbd>Super</kbd> + <kbd>P</kbd> / <kbd>Fn</kbd> + <kbd>P</kbd> | Power Profile Toggle | Cycles system power profiles |
 | <kbd>Super</kbd> + <kbd>V</kbd> | Clipboard History | Opens clipboard history picker |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Screenshot | Area snip copied to clipboard (`grim` + `slurp`) |
 | <kbd>Super</kbd> + <kbd>Q</kbd> | Close Window | Closes active window |
@@ -174,7 +182,7 @@ mindmap
 
 ---
 
-## 🛠️ Building the Live ISO
+##  Building the Live ISO
 
 ArchTitan is built using the official Arch Linux `archiso` suite.
 
@@ -223,7 +231,7 @@ The generated `.iso` will be placed in the `out/` directory.
 
 ---
 
-## 💻 Installation & Testing
+##  Installation & Testing
 
 ### 1. Bare Metal Installation
 1. Flash the generated ISO to a USB flash drive using `dd`, BalenaEtcher, or Rufus:
@@ -256,7 +264,7 @@ When testing inside VirtualBox, ensure the following VM settings are enabled to 
 
 ---
 
-## 👥 Team Structure & Subsystem Ownership
+##  Team Structure & Subsystem Ownership
 
 ArchTitan is developed as a modular group project with 4 members. The repository is organized into core OS components at the root and dedicated subsystem packages in `subsystems/`.
 
@@ -323,7 +331,7 @@ Examples:
 
 ---
 
-## 📚 Documentation & Resources
+##  Documentation & Resources
 
 Comprehensive guides and technical documentation are available on the [ArchTitan OS Wiki](https://github.com/GitGuru29/archtitan-os/wiki):
 
@@ -337,12 +345,13 @@ Comprehensive guides and technical documentation are available on the [ArchTitan
 | **Titan Browser** | Qt6 WebEngine browser and sandboxing guide | [Titan Browser Guide](https://github.com/GitGuru29/archtitan-os/wiki/Titan-Browser) |
 | **ArchTitan Settings** | System control center and THM profile manager | [Settings Manual](https://github.com/GitGuru29/archtitan-os/wiki/ArchTitan-Settings) |
 | **Titan Media HUD** | Dynamic Island overlay and power menu | [Media HUD Guide](https://github.com/GitGuru29/archtitan-os/wiki/Titan-Media-HUD) |
+| **Titan Share** | P2P file sharing daemon, Android client & storage layout | [Titan Share Guide](https://github.com/GitGuru29/archtitan-os/wiki/Titan-Share) |
 | **Desktop Environment** | Hyprland config, Waybar widgets, and themes | [Desktop Configuration](https://github.com/GitGuru29/archtitan-os/wiki/Desktop-Environment) |
 | **Developer Guide** | Subsystem development and contributor standards | [Developer Guide](https://github.com/GitGuru29/archtitan-os/wiki/Developer-Guide) |
 
 ---
 
-## 📜 License
+##  License
 
 This project is licensed under the **[Apache License 2.0](LICENSE)**. Arch Linux and upstream package software remain subject to their respective licenses.
 

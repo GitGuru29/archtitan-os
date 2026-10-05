@@ -18,32 +18,47 @@ Titan Hardware Manager (THM) is the hardware abstraction and resource management
 - Waybar integration (`titan-hwm-waybar`)
 - Session guard (`archtitan-session-guard`)
 
+## Canonical Source
+
+THM is implemented in [`/titan-hwm-v3`](../../titan-hwm-v3/) at the repo root.
+The v1/v2 monolith that used to live in `/titan-hwm-source` was **removed** —
+it was never installed into the ISO and v3 superseded every behaviour in it.
+Recover the old source from git history if ever needed:
+`git show 9c7184e:titan-hwm-source/titan_hw_manager.cpp`
+
 ## Folder Structure
 
 ```
-titan-hwm/
-├── src/        ← Source code (link to /titan-hwm-source at repo root)
-├── tests/      ← Unit and integration tests
-├── docs/       ← Subsystem-specific documentation
-├── configs/    ← Default config files shipped into the OS
+titan-hwm/                    ← this directory: docs/config stubs only
+├── src/                      ← no longer used, see above
+├── tests/                    ← no longer used; tests live in titan-hwm-v3/tests
+├── docs/                     ← Subsystem-specific documentation
+├── configs/                  ← Default config files shipped into the OS
 └── README.md
 ```
 
 ## Build
 
 ```bash
-cd src/
-g++ -O2 -o titan_hw_manager titan_hw_manager.cpp
-g++ -O2 -o titan_hwm_cli titan_hwm_cli.cpp
+cd titan-hwm-v3
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+```
+
+## Test
+
+```bash
+cd titan-hwm-v3/build && ctest --output-on-failure
 ```
 
 ## Install
 
 ```bash
-sudo ./src/install.sh
+sudo cmake --install titan-hwm-v3/build   # or copy via profiledef.sh
 ```
 
 ## Related
 
-- Source: [`/titan-hwm-source`](../../titan-hwm-source/)
+- Source: [`/titan-hwm-v3`](../../titan-hwm-v3/)
+- Architecture: [`/titan-hwm-v3/docs`](../../titan-hwm-v3/docs/)
 - Wiki: [`/wiki/Titan-Hardware-Manager.md`](../../wiki/Titan-Hardware-Manager.md)

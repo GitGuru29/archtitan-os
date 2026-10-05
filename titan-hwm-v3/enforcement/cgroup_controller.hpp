@@ -43,6 +43,11 @@ public:
     // Safe to call multiple times (idempotent).
     bool setup_slices();
 
+    // Delegate the controllers THM needs (cpu, memory, pids) into the slice's
+    // subtree_control so the sub-slices actually get cpu.weight / memory.high.
+    // Best-effort; called from setup_slices() before the sub-slices are made.
+    static void enable_controllers();
+
     // Move a list of PIDs into a named slice (cgroup.procs write)
     bool move_to_slice(const std::vector<pid_t>& pids,
                        const std::string& slice_name);

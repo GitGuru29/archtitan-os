@@ -28,6 +28,8 @@
         "network",
         "custom/separator",
         "battery",
+        "custom/separator",
+        "custom/notification",
         "tray"
     ],
 
@@ -119,6 +121,12 @@
         "format-not-found": "",
         "interval"        : 10,
         "tooltip-format"  : "{timeTo} · {capacity}%\nPower: {power:.1f}W"
+    },
+
+    "custom/notification": {
+        "tooltip": false,
+        "format": " 󱅫 ",
+        "on-click": "titan-quicksettings --toggle"
     },
 
     "tray": {

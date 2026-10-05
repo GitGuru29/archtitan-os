@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# ArchTitan OS - Quick Settings Helper & Toggle Backend
+# Interfaces SwayNC buttons-grid toggles with system daemons & Hyprland IPC
+# ==============================================================================
+
+set -euo pipefail
+
+ACTION="${1:-}"
+
+case "$ACTION" in
+    # --- Caffeine / Idle Inhibitor ---
+    caffeine)
+        if pgrep -x hypridle >/dev/null; then
+            pkill -STOP hypridle || true
+            touch /run/user/"$(id -u)"/titan-caffeine-active 2>/dev/null || true
+            notify-send -u low -i preferences-system "Caffeine" "Screen sleep and idle inhibited"
+        else
+            pkill -CONT hypridle 2>/dev/null || true
+            rm -f /run/user/"$(id -u)"/titan-caffeine-active 2>/dev/null || true
+            notify-send -u low -i preferences-system "Caffeine" "Normal idle timeout resumed"
+        fi
+        ;;
+    caffeine-status)
+        if [ -f /run/user/"$(id -u)"/titan-caffeine-active ]; then
+            echo "true"
+        else
+            echo "false"
+        fi
+        ;;
+
+    # --- Night Light (Hyprsunset) ---
+    nightlight)
+        if pgrep -x hyprsunset >/dev/null; then
+            pkill -x hyprsunset || true
+            notify-send -u low -i weather-clear-night "Night Light" "Blue light filter disabled"
+        else
+            hyprsunset -t 4200 >/dev/null 2>&1 &
+            notify-send -u low -i weather-clear-night "Night Light" "Warm blue light filter active (4200K)"
+        fi
+        ;;
+    nightlight-status)
+        if pgrep -x hyprsunset >/dev/null; then
+            echo "true"
+        else
+            echo "false"
+        fi
+        ;;
+
+    # --- Game / Performance Mode ---
+    gamemode)
+        if hyprctl getoption animations:enabled 2>/dev/null | grep -q "int: 1"; then
+            hyprctl keyword animations:enabled 0 >/dev/null
+            hyprctl keyword decoration:blur:enabled 0 >/dev/null
+            hyprctl keyword decoration:shadow:enabled 0 >/dev/null
+            touch /run/user/"$(id -u)"/titan-gamemode-active 2>/dev/null || true
+            notify-send -u normal -i input-gaming "Game Mode" "Animations, blur, and shadows disabled for maximum performance"
+        else
+            hyprctl keyword animations:enabled 1 >/dev/null
+            hyprctl keyword decoration:blur:enabled 0 >/dev/null
+            hyprctl keyword decoration:shadow:enabled 1 >/dev/null
+            rm -f /run/user/"$(id -u)"/titan-gamemode-active 2>/dev/null || true
+            notify-send -u normal -i input-gaming "Game Mode" "Desktop effects restored"
+        fi
+        ;;
+    gamemode-status)
+        if [ -f /run/user/"$(id -u)"/titan-gamemode-active ]; then
+            echo "true"
+        else
+            echo "false"
+        fi
+        ;;
+
+    # --- Color Picker (Hyprpicker) ---
+    colorpicker)
+        swaync-client -cp 2>/dev/null || true
+        if command -v hyprpicker >/dev/null 2>&1; then
+            COLOR=$(hyprpicker -a -f hex 2>/dev/null || true)
+            if [ -n "$COLOR" ]; then
+                notify-send -u low -i color-picker "Color Picker" "Hex color $COLOR copied to clipboard"
+            fi
+        fi
+        ;;
+
+    # --- Screen Snip (Grim + Slurp) ---
+    screensnip)
+        swaync-client -cp 2>/dev/null || true
+        sleep 0.2
+        if command -v grim >/dev/null 2>&1 && command -v slurp >/dev/null 2>&1; then
+            REGION=$(slurp 2>/dev/null || true)
+            if [ -n "$REGION" ]; then
+                grim -g "$REGION" - | wl-copy --type image/png
+                notify-send -u low -i camera-photo "Screenshot" "Selected area copied to clipboard"
+            fi
+        fi
+        ;;
+
+    # --- Wi-Fi SSID / Status ---
+    wifi-ssid)
+        if command -v nmcli >/dev/null 2>&1; then
+            SSID=$(nmcli -t -f active,ssid dev wifi 2>/dev/null | grep '^yes:' | cut -d: -f2 || true)
+            if [ -n "$SSID" ]; then
+                echo "$SSID"
+            else
+                echo "Not connected"
+            fi
+        else
+            echo "Offline"
+        fi
+        ;;
+
+    # --- System Uptime ---
+    uptime)
+        UP=$(uptime -p 2>/dev/null | sed -e 's/up //g' -e 's/ hours\?/h/g' -e 's/ minutes\?/m/g' -e 's/ days\?/d/g' -e 's/,//g' || true)
+        echo "Up ${UP:-0m}"
+        ;;
+
+    # --- Reload System & SwayNC ---
+    reload)
+        hyprctl reload 2>/dev/null || true
+        swaync-client -R 2>/dev/null || true
+        swaync-client -rs 2>/dev/null || true
+        notify-send -u low -i view-refresh "ArchTitan" "Hyprland and Quick Settings reloaded"
+        ;;
+
+    # --- Default ---
+    *)
+        echo "Usage: $0 {caffeine|caffeine-status|nightlight|nightlight-status|gamemode|gamemode-status|colorpicker|screensnip|wifi-ssid|uptime|reload}"
+        exit 1
+        ;;
+esac

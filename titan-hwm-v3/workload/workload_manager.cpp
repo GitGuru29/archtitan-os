@@ -31,6 +31,14 @@ Workload* WorkloadManager::get(uint32_t workload_id) {
     return (it != registry_.end()) ? &it->second : nullptr;
 }
 
+bool WorkloadManager::get_copy(uint32_t workload_id, Workload& out) const {
+    std::lock_guard<std::mutex> lk(mtx_);
+    auto it = registry_.find(workload_id);
+    if (it == registry_.end()) return false;
+    out = it->second;
+    return true;
+}
+
 const std::vector<uint32_t>& WorkloadManager::all_ids() const {
     return id_list_;
 }
@@ -49,6 +57,18 @@ void WorkloadManager::prune_dead() {
         id_list_.erase(std::remove(id_list_.begin(), id_list_.end(), id),
                        id_list_.end());
     }
+}
+
+void WorkloadManager::prune_dead_pids(
+        uint32_t workload_id,
+        const std::unordered_set<pid_t>& live) {
+    std::lock_guard<std::mutex> lk(mtx_);
+    auto it = registry_.find(workload_id);
+    if (it == registry_.end()) return;
+    std::vector<pid_t>& pids = it->second.pids;
+    pids.erase(std::remove_if(pids.begin(), pids.end(),
+                              [&live](pid_t p) { return !live.count(p); }),
+               pids.end());
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

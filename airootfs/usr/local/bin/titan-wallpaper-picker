@@ -76,6 +76,8 @@ if [[ -z "$WALLPAPER_PATH" ]]; then
     done
 fi
 
+WALLPAPER_PATH="${CANDIDATES[$CHOSEN_INDEX]}"
+
 if [[ -z "$WALLPAPER_PATH" || ! -f "$WALLPAPER_PATH" ]]; then
     notify-send -u normal -i dialog-error \
         "Wallpaper Picker" "Could not resolve path for: $CHOSEN" 2>/dev/null || true

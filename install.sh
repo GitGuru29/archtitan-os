@@ -11,7 +11,7 @@ cmake --build build -j$(nproc)
 cd ..
 
 echo "[*] Stopping existing service if running..."
-sudo systemctl stop titan-hwm.service 2>/dev/null || sudo systemctl stop titan_hw_manager.service 2>/dev/null || true
+sudo systemctl stop titan-hwm.service 2>/dev/null || true
 
 echo "[*] Installing binaries to /usr/local/bin/..."
 sudo cp titan-hwm-v3/build/titan-hwm-daemon /usr/local/bin/titan-hwm-daemon
@@ -22,8 +22,8 @@ sudo chmod +x /usr/local/bin/titan-hwm-daemon \
               /usr/local/bin/titan-hwm-waybar
 
 echo "[*] Installing systemd slice and service..."
-sudo cp titan-hwm-v3/archtitan.slice /etc/systemd/system/archtitan.slice
-sudo cp titan-hwm-v3/titan-hwm.service /etc/systemd/system/titan-hwm.service
+sudo cp airootfs/etc/systemd/system/archtitan.slice /etc/systemd/system/archtitan.slice
+sudo cp airootfs/etc/systemd/system/titan-hwm.service /etc/systemd/system/titan-hwm.service
 
 echo "[*] Reloading systemd and enabling service..."
 sudo systemctl daemon-reload

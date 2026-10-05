@@ -9,6 +9,8 @@
 
 #include <LayerShellQt/window.h>
 
+#include <malloc.h>
+
 #include "mpriscontroller.h"
 #include "mediaislandcontroller.h"
 #include "audioprofilecontroller.h"
@@ -43,7 +45,10 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Wayland + transparency
+    // Low-memory footprint configuration (~10-15 MB RSS)
+    qputenv("QSG_RENDER_LOOP", "basic");
+    qputenv("QT_QUICK_BACKEND", "software");
+    qputenv("QML_DISABLE_DISK_CACHE", "1");
     qputenv("QT_QPA_PLATFORM", "wayland;xcb");
     qputenv("QT_WAYLAND_DISABLE_WINDOWDECORATION", "1");
 
@@ -111,6 +116,7 @@ int main(int argc, char *argv[])
     }, Qt::QueuedConnection);
 
     engine.load(url);
+    malloc_trim(0);
 
     // Start IPC server for SUPER+M toggle
     IpcServer ipcServer(&islandCtrl);

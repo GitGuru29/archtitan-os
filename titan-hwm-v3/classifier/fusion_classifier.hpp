@@ -22,6 +22,9 @@
 #include <unordered_set>
 #include <optional>
 #include <map>
+#include <deque>
+#include <mutex>
+#include <cstddef>
 #include <sys/types.h>
 
 namespace thm {
@@ -117,6 +120,18 @@ private:
 
     // Read argv[0] from /proc/<pid>/cmdline
     static std::string read_cmdline(pid_t pid);
+
+    static constexpr std::size_t kMaxWarnedCwds = 256;
+
+    // Bounded FIFO dedup set for S3 "unreachable cwd" warnings. Bounded because
+    // it only suppresses duplicate log lines; evicting the oldest entry costs at
+    // most one repeated warning. Mutex-guarded because from_cwd is static and
+    // therefore callable from any thread.
+    static std::unordered_set<std::string> s_warned_cwds_;
+    static std::deque<std::string>        s_warned_cwd_order_;
+    static std::mutex                     s_warned_cwds_mutex_;
+
+    static bool remember_warned_cwd(const std::string& cwd);
 };
 
 } // namespace thm

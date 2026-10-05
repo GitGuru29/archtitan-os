@@ -65,16 +65,20 @@ PolicyDecision PolicyEngine::evaluate(
 
     // ── Step 3c (HC-05/06): Browser with latency_sensitive — keep network alive
     // Browsers with active WebRTC/WebSocket sessions must not receive SIGSTOP.
-    // Policy returns max THROTTLE; enforcement will skip SIGSTOP for browser roots.
     if (wl.is_browser_root && wl.latency_sensitive) {
         switch (pressure) {
         case PressureLevel::NORMAL:
         case PressureLevel::MODERATE:
             return PolicyDecision::KEEP_BACKGROUND;
         case PressureLevel::HIGH:
+            // Throttling is sufficient here and keeps the network path untouched:
+            // THROTTLE applies a cgroup CPU/memory cap and sends no signal, so
+            // there is nothing for the browser to lose.
+            return PolicyDecision::THROTTLE;
         case PressureLevel::CRITICAL:
-            // Return FREEZE so cgroup throttle fires, but enforcement_plane
-            // will skip SIGSTOP for is_browser_root workloads (HC-05 fix).
+            // FREEZE is required at the most severe level, but EnforcementPlane
+            // exempts browser roots from SIGSTOP and freezes via cgroup only
+            // (HC-05), so connections still survive.
             return PolicyDecision::FREEZE;
         }
     }
