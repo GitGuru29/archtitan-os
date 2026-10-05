@@ -42,27 +42,27 @@ hl.env("AQ_NO_MODIFIERS", "1")
 -------------------
 
 hl.on("hyprland.start", function()
-    -- NOTE: use hl.spawn() not hl.exec_cmd() for background daemons.
-    -- hl.exec_cmd() is synchronous/blocking — it waits for the process to exit.
-    -- hl.spawn() forks the process to background immediately (fire-and-forget).
+    -- NOTE: hl.exec_cmd() is already asynchronous (fire-and-forget).
+    -- There is no hl.spawn() in Hyprland's Lua API -- calling it throws
+    -- "attempt to call a nil value" and aborts this whole handler.
 
-    hl.spawn({ "bash", "-c", "sleep 2 && waybar" })
-    hl.spawn({ "bash", "-c", "sleep 2 && swaync" })
-    hl.spawn({ "bash", "-c", "sleep 3 && titan-media-hud" })
-    hl.spawn({ "bash", "-c", "titan-wallpaper-restore" })
-    hl.spawn({ "bash", "-c", "sleep 3 && titan-quicksettings --daemon" })
-    hl.spawn({ "/usr/lib/polkit-kde-authentication-agent-1" })
-    hl.spawn({ "xdg-user-dirs-update" })
+    hl.exec_cmd("bash -c 'sleep 2 && waybar'")
+    hl.exec_cmd("bash -c 'sleep 2 && swaync'")
+    hl.exec_cmd("bash -c 'sleep 3 && titan-media-hud'")
+    hl.exec_cmd("titan-wallpaper-restore")
+    hl.exec_cmd("bash -c 'sleep 3 && titan-quicksettings --daemon'")
+    hl.exec_cmd("/usr/lib/polkit-kde-authentication-agent-1")
+    hl.exec_cmd("xdg-user-dirs-update")
 
     -- Auto-launch installer as floating window (only on live ISO)
     -- /run/archiso only exists on mkarchiso live media -- reliable detection
     -- Users can minimize it and explore the desktop, then reopen with Super+I
-    hl.spawn({ "bash", "-c", "sleep 6; if [ -d /run/archiso ]; then launch-installer; fi" })
+    hl.exec_cmd("bash -c 'sleep 6; if [ -d /run/archiso ]; then launch-installer; fi'")
 
     -- Disable screen timeout / DPMS blanking on live ISO
     -- No hypridle daemon is launched -- no idle daemon = no blanking
     -- Also explicitly kill any DPMS via wlopm on startup
-    hl.spawn({ "bash", "-c", "sleep 2; which wlopm >/dev/null 2>&1 && wlopm --on DP-1 --on HDMI-A-1 --on Virtual-1 || true" })
+    hl.exec_cmd("bash -c 'sleep 2; which wlopm >/dev/null 2>&1 && wlopm --on DP-1 --on HDMI-A-1 --on Virtual-1 || true'")
 end)
 
 ---------------------------
