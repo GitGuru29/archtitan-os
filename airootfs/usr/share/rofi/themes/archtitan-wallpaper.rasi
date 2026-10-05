@@ -1,133 +1,163 @@
-/* ArchTitan Wallpaper Picker — Catppuccin Mocha palette */
+/* ═══════════════════════════════════════════════════════════
+ * ArchTitan Wallpaper Picker — Modern Grid Thumbnail Layout
+ * Catppuccin Mocha · glassmorphism card · 4-col thumbnail grid
+ * ═══════════════════════════════════════════════════════════ */
+
 * {
-    /* Mocha base palette */
-    crust:        #11111b;
-    mantle:       #181825;
-    base:         #1e1e2ecc;       /* translucent surface */
-    surface0:     #313244cc;
-    surface1:     #45475a;
-    overlay0:     #6c7086;
-    text:         #cdd6f4;
-    subtext0:     #a6adc8;
-    lavender:     #b4befe;
-    blue:         #89b4fa;
-    mauve:        #cba6f7;
-    peach:        #fab387;
+    crust:    #11111b;
+    mantle:   #181825;
+    base:     #1e1e2e;
+    surface0: #313244;
+    surface1: #45475a;
+    overlay0: #6c7086;
+    overlay1: #7f849c;
+    text:     #cdd6f4;
+    subtext0: #a6adc8;
+    subtext1: #bac2de;
+    lavender: #b4befe;
+    blue:     #89b4fa;
+    mauve:    #cba6f7;
+    peach:    #fab387;
+    green:    #a6e3a1;
 
     background-color: transparent;
     text-color:       @text;
-    font:             "JetBrainsMono Nerd Font 13";
+    font:             "JetBrainsMono Nerd Font 12";
 }
 
+/* ── Window ─────────────────────────────────────────────── */
 window {
-    width:            820px;
-    border-radius:    18px;
-    border:           2px solid;
-    border-color:     @surface1;
-    background-color: @base;
-    padding:          20px;
+    width:            960px;
+    border-radius:    20px;
+    border:           1px solid rgba(180,190,254,0.18);
+    background-color: rgba(17,17,27,0.92);
+    padding:          24px;
     location:         center;
     anchor:           center;
+    box-shadow:       0 24px 64px rgba(0,0,0,0.75);
 }
 
 mainbox {
     background-color: transparent;
-    spacing:          14px;
-    children:         [ inputbar, message, listview ];
+    spacing:          16px;
+    children:         [ header-box, inputbar, listview ];
 }
 
-/* ── Header / search bar ───────────────────────────────── */
-inputbar {
-    background-color: @surface0;
-    border-radius:    12px;
-    padding:          10px 16px;
+/* ── Header label row ───────────────────────────────────── */
+header-box {
+    background-color: transparent;
+    orientation:      horizontal;
     spacing:          10px;
-    children:         [ prompt, entry ];
+    children:         [ prompt ];
 }
 
 prompt {
     background-color: transparent;
-    text-color:       @blue;
-    font:             "JetBrainsMono Nerd Font Bold 13";
+    text-color:       @lavender;
+    font:             "JetBrainsMono Nerd Font Bold 14";
     vertical-align:   0.5;
+    padding:          0 0 0 2px;
+}
+
+/* ── Search bar ─────────────────────────────────────────── */
+inputbar {
+    background-color: rgba(49,50,68,0.6);
+    border-radius:    12px;
+    border:           1px solid rgba(180,190,254,0.12);
+    padding:          10px 16px;
+    spacing:          10px;
+    children:         [ entry ];
 }
 
 entry {
-    background-color: transparent;
-    text-color:       @text;
-    placeholder:      "Search wallpapers…";
+    background-color:  transparent;
+    text-color:        @text;
+    placeholder:       "Search wallpapers…";
     placeholder-color: @overlay0;
-    vertical-align:   0.5;
+    vertical-align:    0.5;
+    cursor:            text;
 }
 
-/* ── Optional message row ──────────────────────────────── */
-message {
-    background-color: transparent;
-}
-textbox {
-    background-color: transparent;
-    text-color:       @subtext0;
-    font:             "JetBrainsMono Nerd Font 11";
-    horizontal-align: 0.5;
-}
+/* hide the redundant case-indicator / num-rows pills */
+case-indicator,
+num-rows,
+num-filtered-rows { background-color: transparent; text-color: transparent; }
 
-/* ── Wallpaper grid ────────────────────────────────────── */
+/* ── Thumbnail grid ─────────────────────────────────────── */
 listview {
     background-color: transparent;
     layout:           vertical;
     scrollbar:        false;
-    lines:            5;
-    columns:          1;
-    spacing:          6px;
-    fixed-height:     true;
+    lines:            2;
+    columns:          4;
+    spacing:          12px;
+    fixed-height:     false;
+    dynamic:          true;
 }
 
+/* ── Each wallpaper card ────────────────────────────────── */
 element {
-    background-color: transparent;
-    border-radius:    10px;
-    padding:          8px 12px;
-    spacing:          12px;
-    orientation:      horizontal;
+    background-color: rgba(49,50,68,0.45);
+    border-radius:    14px;
+    border:           1px solid rgba(255,255,255,0.05);
+    padding:          10px;
+    spacing:          0px;
+    orientation:      vertical;
     cursor:           pointer;
     children:         [ element-icon, element-text ];
 }
 
 element-icon {
-    size:             56px;
-    border-radius:    8px;
+    size:             160px;
+    border-radius:    10px;
     background-color: @surface0;
     cursor:           inherit;
+    /* scale-filter: bilinear; */
 }
 
 element-text {
     background-color: transparent;
     text-color:       @subtext0;
+    horizontal-align: 0.5;
     vertical-align:   0.5;
-    font:             "JetBrainsMono Nerd Font 12";
+    padding:          8px 4px 2px 4px;
+    font:             "JetBrainsMono Nerd Font 10";
     cursor:           inherit;
+    /* truncate long names */
+    max-lines:        1;
 }
 
+/* ── States ─────────────────────────────────────────────── */
 element normal.normal {
-    background-color: transparent;
+    background-color: rgba(49,50,68,0.45);
+    border-color:     rgba(255,255,255,0.05);
+}
+
+element alternate.normal {
+    background-color: rgba(49,50,68,0.45);
+    border-color:     rgba(255,255,255,0.05);
 }
 
 element selected.normal {
-    background-color: @surface0;
-    border:           1px solid;
+    background-color: rgba(137,180,250,0.14);
     border-color:     @blue;
+    border:           1px solid;
 }
 
 element selected.normal element-text {
     text-color: @lavender;
+    font:       "JetBrainsMono Nerd Font Bold 10";
 }
 
-element alternate.normal {
-    background-color: transparent;
+element normal.normal:hover,
+element alternate.normal:hover {
+    background-color: rgba(255,255,255,0.06);
+    border-color:     rgba(180,190,254,0.2);
 }
 
-/* ── Scrollbar (hidden but defined cleanly) ────────────── */
+/* ── Scrollbar (fallback if enabled) ───────────────────── */
 scrollbar {
-    background-color: @surface1;
+    background-color: @surface0;
     handle-color:     @overlay0;
     handle-width:     4px;
     border-radius:    4px;

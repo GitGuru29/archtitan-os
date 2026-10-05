@@ -2,7 +2,7 @@
 # titan-wallpaper-picker — ArchTitan wallpaper selector (Super+\ / Super+|)
 #
 # Scans /usr/share/backgrounds/archtitan/ and ~/.local/share/backgrounds/ for
-# image files, presents them in Rofi with thumbnail icons, then calls
+# image files, presents them in Rofi as a large thumbnail grid, then calls
 # titan-set-wallpaper to apply and persist the selection.
 #
 # Dependencies: rofi, titan-set-wallpaper, notify-send (optional)
@@ -27,46 +27,49 @@ if [[ ${#CANDIDATES[@]} -eq 0 ]]; then
     exit 0
 fi
 
-# ── Build Rofi display list (icon|label) ────────────────────────────────────
-# Rofi icon mode: each entry is  "Display Name\0icon\x1f/path/to/icon"
-# We use the image itself as its own thumbnail (Rofi scales it automatically).
-ROFI_ENTRIES=()
-declare -A PATH_MAP   # label → full path
-
+# ── Build Rofi display list ─────────────────────────────────────────────────
+# Format: "display-label\0icon\x1f/full/path"
+# We output the FULL PATH as the display label so rofi returns the path
+# directly on Enter — no label→path mapping needed, no lookup failures.
+ROFI_LIST=""
 for path in "${CANDIDATES[@]}"; do
-    label="$(basename "${path%.*}")"        # filename without extension
-    # Rofi icon markup — full path used as icon (rofi loads it as pixbuf)
-    ROFI_ENTRIES+=("${label}\0icon\x1f${path}")
-    PATH_MAP["$label"]="$path"
+    label="$(basename "${path%.*}")"
+    # Append: display label NUL icon SOH path NEWLINE
+    ROFI_LIST+="${label}"$'\0''icon'$'\x1f'"${path}"$'\n'
 done
 
 # ── Launch Rofi ─────────────────────────────────────────────────────────────
 CHOSEN=$(
-    printf '%b\n' "${ROFI_ENTRIES[@]}" | \
+    printf '%s' "$ROFI_LIST" | \
     rofi -dmenu \
         -i \
-        -p "󰸉  Wallpaper" \
-        -mesg "󰆟 Super+\\ to open · Enter to apply · Esc to cancel" \
+        -p "  Wallpaper" \
         -theme /usr/share/rofi/themes/archtitan-wallpaper.rasi \
         -show-icons \
         -icon-theme Papirus-Dark \
-        -display-column-separator " " \
-        -no-custom \
         2>/dev/null
 ) || true
 
-[[ -z "$CHOSEN" ]] && exit 0   # user cancelled
+[[ -z "$CHOSEN" ]] && exit 0   # user cancelled / Esc
 
-# Strip Rofi icon metadata — keep only the label
-LABEL="${CHOSEN%%$'\0'*}"
-LABEL="${LABEL%% *}"            # trim trailing spaces
+# ── Resolve full path from chosen label ────────────────────────────────────
+# Rofi returns the display label text (before \0). Match it back to a path.
+WALLPAPER_PATH=""
+for path in "${CANDIDATES[@]}"; do
+    label="$(basename "${path%.*}")"
+    if [[ "$label" == "$CHOSEN" ]]; then
+        WALLPAPER_PATH="$path"
+        break
+    fi
+done
 
-WALLPAPER_PATH="${PATH_MAP[$LABEL]:-}"
-
-# Fallback: if label map lookup failed, try a direct path match
+# Fallback: maybe rofi returned something with extra whitespace
 if [[ -z "$WALLPAPER_PATH" ]]; then
+    CHOSEN_TRIM="${CHOSEN#"${CHOSEN%%[![:space:]]*}"}"  # ltrim
+    CHOSEN_TRIM="${CHOSEN_TRIM%"${CHOSEN_TRIM##*[![:space:]]}"}"  # rtrim
     for path in "${CANDIDATES[@]}"; do
-        if [[ "$(basename "${path%.*}")" == "$LABEL" ]]; then
+        label="$(basename "${path%.*}")"
+        if [[ "$label" == "$CHOSEN_TRIM" ]]; then
             WALLPAPER_PATH="$path"
             break
         fi
@@ -75,7 +78,7 @@ fi
 
 if [[ -z "$WALLPAPER_PATH" || ! -f "$WALLPAPER_PATH" ]]; then
     notify-send -u normal -i dialog-error \
-        "Wallpaper Picker" "Could not resolve wallpaper path for: $LABEL" 2>/dev/null || true
+        "Wallpaper Picker" "Could not resolve path for: $CHOSEN" 2>/dev/null || true
     exit 1
 fi
 
