@@ -53,6 +53,10 @@ disown
 mkdir -p "$PERSIST_DIR"
 printf '%s\n%s\n' "$WALLPAPER_PATH" "$SCALE_MODE" > "$PERSIST_FILE"
 
+# ── Retint the Waybar to suit the new wallpaper ─────────────────────────────
+# Best-effort: a theming failure must never fail the wallpaper change.
+titan-waybar-theme "$WALLPAPER_PATH" >/dev/null 2>&1 || true
+
 # ── Notify ──────────────────────────────────────────────────────────────────
 NAME="$(basename "${WALLPAPER_PATH%.*}")"
 notify-send -u low -i preferences-desktop-wallpaper \

@@ -1,0 +1,405 @@
+#!/usr/bin/env python3
+"""titan-waybar-theme — adaptive Waybar theming driven by wallpaper luminance.
+
+The bar used to be a fixed near-black panel (rgba(13, 14, 21, 0.94)). On a
+near-black wallpaper that is the *same colour as the wallpaper*, so the bar
+silently disappeared into the background. This tool samples the current
+wallpaper, derives a palette that is guaranteed to contrast with it, patches the
+`@titan-adapt` marked declarations in ~/.config/waybar/style.css, and asks
+Waybar to reload its stylesheet in place (SIGUSR2 — no restart, no flicker).
+
+Design notes:
+  * Only declarations carrying a `@titan-adapt:<token>` marker comment are ever
+    rewritten, so hand-written CSS around them is preserved.
+  * The bar keeps the dark charcoal ArchTitan identity in every case; on dark
+    wallpapers it is *lifted* (lighter surface, higher opacity, stronger border)
+    rather than flipped to a light theme.
+  * Text colours stay on the Catppuccin palette; they already contrast well
+    against any bar surface produced here. Only the surface, border, shadow,
+    tooltip and accent tokens are adaptive — the accent is derived from the
+    wallpaper's own hue so the bar feels tied to the desktop.
+
+Called from titan-set-wallpaper and titan-wallpaper-restore. It is a theming
+convenience, so any failure is reported and then swallowed by the caller: it
+must never prevent a wallpaper from being applied.
+"""
+
+from __future__ import annotations
+
+import colorsys
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+CONFIG_DIR = os.environ.get(
+    "XDG_CONFIG_HOME", os.path.join(os.path.expanduser("~"), ".config")
+)
+STYLE_CSS = os.path.join(CONFIG_DIR, "waybar", "style.css")
+PERSIST_FILE = os.path.join(CONFIG_DIR, "archtitan", "wallpaper")
+DEFAULT_WALLPAPER = "/usr/share/backgrounds/archtitan/wallpaper.png"
+
+# Catppuccin Mocha text, carried on every bar surface this tool produces.
+INK = (205, 214, 244)
+
+# Lavender, used when a wallpaper is too desaturated to yield a stable hue.
+BRAND_HUE = 0.6667
+
+# Wallpaper-vs-bar separation we solve for. Deliberately below WCAG AA (4.5):
+# the bar is a thin strip over a live desktop, not body text on a page.
+TARGET_CONTRAST = 1.6
+
+# The bar surface, as a tint of the wallpaper's own hue.
+BAR_SAT = 0.1
+BAR_DARK_L = 0.065  # the identity surface, unchanged when it already works
+BAR_MIN_L = 0.03  # deepened, for wallpapers lighter than the bar
+BAR_MAX_L = 0.34  # lifted, for wallpapers darker than the bar
+
+MARKED = re.compile(
+    r"^(?P<head>\s*[-a-zA-Z]+\s*:\s*)(?P<val>[^;]*?)(?P<tail>\s*;\s*/\*\s*@titan-adapt:(?P<tok>[a-z0-9-]+)\s*\*/\s*)$",
+    re.MULTILINE,
+)
+
+
+def log(msg: str) -> None:
+    print(f"titan-waybar-theme: {msg}", file=sys.stderr)
+
+
+def _sample_gdkpixbuf(path: str) -> tuple[float, float, float] | None:
+    """Average the image down to 24x24 via GdkPixbuf (already a Waybar dep)."""
+    import gi
+
+    gi.require_version("GdkPixbuf", "2.0")
+    from gi.repository import GdkPixbuf
+
+    pb = GdkPixbuf.Pixbuf.new_from_file(path)
+    small = pb.scale_simple(24, 24, GdkPixbuf.InterpType.BILINEAR)
+    data = small.get_pixels()
+    stride = small.get_rowstride()
+    channels = small.get_n_channels()
+    if channels < 3:
+        return None
+
+    acc = [0, 0, 0]
+    count = 0
+    for y in range(small.get_height()):
+        row = y * stride
+        for x in range(small.get_width()):
+            off = row + x * channels
+            acc[0] += data[off]
+            acc[1] += data[off + 1]
+            acc[2] += data[off + 2]
+            count += 1
+    return tuple(c / count for c in acc)
+
+
+def _sample_ffmpeg(path: str) -> tuple[float, float, float] | None:
+    """Fallback: let ffmpeg area-average to 24x24 and read raw RGB."""
+    exe = shutil.which("ffmpeg")
+    if not exe:
+        return None
+    proc = subprocess.run(
+        [
+            exe,
+            "-v",
+            "error",
+            "-i",
+            path,
+            "-vf",
+            "scale=24:24:flags=area",
+            "-f",
+            "rawvideo",
+            "-pix_fmt",
+            "rgb24",
+            "-",
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        timeout=30,
+    )
+    raw = proc.stdout
+    if proc.returncode != 0 or len(raw) < 1728:
+        return None
+    n = 576
+    return (
+        sum(raw[0::3]) / n,
+        sum(raw[1::3]) / n,
+        sum(raw[2::3]) / n,
+    )
+
+
+def sample_wallpaper(path: str) -> tuple[float, float, float]:
+    """Return the average RGB of `path`, falling back to the brand ink colour."""
+    for probe in (_sample_gdkpixbuf, _sample_ffmpeg):
+        try:
+            got = probe(path)
+        except Exception as exc:
+            log(f"{probe.__name__} failed on {os.path.basename(path)}: {exc}")
+            continue
+        if got is not None:
+            return got
+
+    log(f"no usable image decoder; falling back to neutral palette for {path}")
+    return (13.0, 14.0, 21.0)
+
+
+def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
+    return low if value < low else high if value > high else value
+
+
+def _rel_luminance(rgb) -> float:
+    """WCAG relative luminance."""
+
+    def lin(c: float) -> float:
+        c /= 255.0
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+
+    r, g, b = tuple(lin(v) for v in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast_ratio(fg, bg) -> float:
+    b, a = _rel_luminance(fg), _rel_luminance(bg)
+    lo, hi = min(a, b), max(a, b)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def _hsl(h: float, s: float, lightness: float) -> tuple[int, int, int]:
+    r, g, b = colorsys.hls_to_rgb(h, lightness, s)
+    return (round(r * 255), round(g * 255), round(b * 255))
+
+
+def _over(fg_rgb, alpha: float, bg_rgb) -> tuple[float, float, float]:
+    """Source-over composite of `fg_rgb` at `alpha` onto `bg_rgb`."""
+    return tuple(alpha * fg_rgb[i] + (1.0 - alpha) * bg_rgb[i] for i in range(3))
+
+
+def _solve_lightness(
+    hue: float, sat: float, bg_rgb, alpha: float, target: float
+) -> float:
+    """Lightness of the bar that first reaches `target` contrast against `bg_rgb`.
+
+    Contrast is evaluated on the *composited* result, not on the raw bar colour:
+    the bar is translucent, so compositing drags it towards the wallpaper and
+    the raw colour always overstates the separation actually achieved.
+
+    If the normal dark bar already clears the target it is returned untouched.
+    Otherwise the bar is moved in whichever direction increases separation —
+    lifted when the wallpaper is darker, deepened when it is lighter — and
+    bisected for the least change that suffices. Relative luminance is monotonic
+    in lightness, so the search is well behaved.
+    """
+
+    def separation(lightness: float) -> float:
+        return contrast_ratio(
+            _over(_hsl(hue, sat, lightness), alpha, bg_rgb), bg_rgb
+        )
+
+    # The identity surface already clears the target behind most wallpapers.
+    if separation(BAR_DARK_L) >= target:
+        return BAR_DARK_L
+
+    lifted = _rel_luminance(_over(_hsl(hue, sat, BAR_DARK_L), alpha, bg_rgb))
+    if lifted >= _rel_luminance(bg_rgb):
+        low, high = BAR_DARK_L, BAR_MAX_L  # wallpaper is darker: lift the bar
+    else:
+        low, high = BAR_MIN_L, BAR_DARK_L  # wallpaper is lighter: deepen it
+
+    if separation(high) < target:
+        # Even the far end of the range falls short. Take it anyway and let
+        # build_palette report the shortfall rather than pretend we hit target.
+        return BAR_MAX_L if lifted >= _rel_luminance(bg_rgb) else BAR_MIN_L
+
+    # Bisect for the least change that still clears the target.
+    for _ in range(24):
+        mid = (low + high) / 2
+        if separation(mid) < target:
+            low = mid
+        else:
+            high = mid
+    return high
+
+
+def _rgba(rgb, alpha: float) -> str:
+    return f"rgba({rgb[0]}, {rgb[1]}, {rgb[2]}, {alpha:.2f})"
+
+
+def _hex(rgb) -> str:
+    return "#{:02X}{:02X}{:02X}".format(*rgb)
+
+
+def build_palette(avg_rgb) -> dict[str, str]:
+    r, g, b = tuple(max(0.0, min(255.0, c)) for c in avg_rgb)
+    hue, _, sat = colorsys.rgb_to_hls(r / 255.0, g / 255.0, b / 255.0)
+    luma = _rel_luminance((r, g, b))
+
+    # A near-greyscale wallpaper has no stable hue to borrow; keep the brand.
+    if sat < 0.1:
+        hue = BRAND_HUE
+        accent_s = 0.55
+    else:
+        accent_s = _clamp(0.3 + sat * 0.75, 0.35, 0.8)
+
+    t = _clamp(luma / 0.14)
+    bar_alpha = 0.95 - t * 0.09
+
+    bar_l = _solve_lightness(hue, BAR_SAT, (r, g, b), bar_alpha, TARGET_CONTRAST)
+    bar = _hsl(hue, BAR_SAT, bar_l)
+    accent = _hsl(hue, accent_s, 0.76)
+
+    palette = {
+        "bar-bg": _rgba(bar, bar_alpha),
+        "bar-border": f"rgba(255, 255, 255, {0.28 - 0.16 * t:.2f})",
+        "bar-shadow": f"rgba(0, 0, 0, {0.78 - 0.22 * t:.2f})",
+        "accent": _hex(accent),
+        "accent-soft": _rgba(accent, 0.16),
+        "accent-line": _rgba(accent, 0.38),
+        "tip-bg": _rgba(bar, min(0.99, 0.97 - 0.09 * t)),
+        "tip-border": f"rgba(255, 255, 255, {0.31 - 0.16 * t:.2f})",
+    }
+
+    ink_ratio = contrast_ratio(INK, bar)
+    if ink_ratio < 4.5:
+        log(f"warning: ink on bar is only {ink_ratio:.2f}:1 (WCAG AA needs 4.5)")
+
+    separation = contrast_ratio(_over(bar, bar_alpha, (r, g, b)), (r, g, b))
+
+    ceiling = (luma + 0.05) / 0.05
+    if separation < TARGET_CONTRAST - 0.02:
+        if separation >= ceiling * 0.9:
+            log(
+                f"note: {TARGET_CONTRAST:.2f}:1 is unreachable behind this wallpaper "
+                f"(a dark bar tops out at {ceiling:.2f}:1); achieved "
+                f"{separation:.2f}:1, "
+                f"{separation / ceiling * 100:.0f}% of the ceiling, relying on the "
+                f"{palette['bar-border']} border and shadow to delineate"
+            )
+        else:
+            log(
+                f"warning: bar/wallpaper separation is {separation:.2f}:1, below both "
+                f"the {TARGET_CONTRAST:.2f}:1 target and 90% of the {ceiling:.2f}:1 "
+                f"ceiling for a dark bar"
+            )
+
+    log(
+        f"wallpaper luma={luma:.4f} hue={hue * 360:.0f}deg sat={sat:.2f} -> "
+        f"bar={palette['bar-bg']} sep={separation:.2f}:1 ink={ink_ratio:.1f}:1"
+    )
+
+    return palette
+
+
+COLOUR = re.compile(r"rgba?\([^)]*\)|#[0-9a-fA-F]{3,8}\b")
+
+
+def patch_css(css_path: str, palette: dict[str, str]) -> bool:
+    """Rewrite marked declarations in place. Returns True if the file changed.
+
+    Only the *colour* inside a marked declaration is replaced, never the whole
+    value. Tokens are reused across properties that need different surrounding
+    syntax -- `accent-line` drives both `border:` and `border-color:`, and
+    `bar-border`/`bar-shadow` appear on shorthands -- so swapping the value
+    wholesale would emit `border: rgba(...)` or `box-shadow: rgba(...)`, which
+    are invalid and get dropped silently by GTK, leaving the bar unstyled.
+    Rewriting just the colour function keeps the width, style and blur intact.
+    """
+    with open(css_path, "r", encoding="utf-8") as handle:
+        original = handle.read()
+
+    seen: set[str] = set()
+
+    def substitute(match: re.Match) -> str:
+        token = match.group("tok")
+        if token not in palette:
+            return match.group(0)
+        seen.add(token)
+        value = match.group("val")
+        replaced, count = COLOUR.subn(lambda _: palette[token], value, count=1)
+        if not count:
+            log(
+                f"warning: {token} at {match.group('head').strip()} has no colour to "
+                f"adapt in {value.strip()!r}; replacing the whole value"
+            )
+            replaced = palette[token]
+        return f"{match.group('head')}{replaced}{match.group('tail')}"
+
+    patched = MARKED.sub(substitute, original)
+
+    if not seen:
+        log(f"no @titan-adapt markers found in {css_path}; leaving it alone")
+        return False
+
+    unknown = sorted(set(palette) - seen)
+    if unknown:
+        log(f"warning: unused adaptive tokens: {', '.join(unknown)}")
+
+    if patched == original:
+        return False
+
+    directory = os.path.dirname(css_path)
+    handle = tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", dir=directory, prefix=".style.css.", delete=False
+    )
+    try:
+        with handle:
+            handle.write(patched)
+        os.chmod(handle.name, 0o644)
+        os.replace(handle.name, css_path)
+    except BaseException:
+        # Never leave a half-written temp file next to the user's stylesheet.
+        try:
+            os.unlink(handle.name)
+        except OSError:
+            pass
+        raise
+
+    return True
+
+
+def reload_waybar() -> None:
+    """Ask Waybar to re-read its stylesheet. Its default SIGUSR2 action is
+    `reload`, which re-applies style.css without restarting the bar.
+    """
+    if not shutil.which("pkill"):
+        return
+    subprocess.run(["pkill", "-SIGUSR2", "-x", "waybar"], check=False)
+
+
+def main(argv: list[str]) -> int:
+    if argv:
+        wallpaper = argv[0]
+    elif os.path.isfile(PERSIST_FILE):
+        with open(PERSIST_FILE, "r", encoding="utf-8") as handle:
+            wallpaper = handle.readline().strip()
+    else:
+        wallpaper = DEFAULT_WALLPAPER
+
+    if not wallpaper or not os.path.isfile(wallpaper):
+        log(f"wallpaper not found ({wallpaper!r}); using {DEFAULT_WALLPAPER}")
+        wallpaper = DEFAULT_WALLPAPER
+    if not os.path.isfile(wallpaper):
+        log("default wallpaper missing too; nothing to do")
+        return 0
+
+    if not os.path.isfile(STYLE_CSS):
+        log(f"{STYLE_CSS} not found; nothing to do")
+        return 0
+
+    palette = build_palette(sample_wallpaper(wallpaper))
+    changed = patch_css(STYLE_CSS, palette)
+
+    log(f"{os.path.basename(STYLE_CSS)} {'updated' if changed else 'already current'}")
+    if changed:
+        reload_waybar()
+
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except Exception as exc:
+        log(f"error: {exc}")
+        sys.exit(0)

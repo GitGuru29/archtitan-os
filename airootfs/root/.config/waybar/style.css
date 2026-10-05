@@ -17,11 +17,13 @@
 
 /* ── Main Persistent HUD Bar ─────────────────────────────── */
 window#waybar {
-    background: rgba(17, 17, 27, 0.88); /* Catppuccin Crust with 88% opacity */
-    border: 1px solid rgba(137, 180, 250, 0.14); /* Subtle 1px sapphire border */
+    /* Catppuccin Crust base */
+    background: rgba(17, 17, 27, 0.88); /* @titan-adapt:bar-bg */
+    /* Subtle 1px sapphire border */
+    border: 1px solid rgba(137, 180, 250, 0.14); /* @titan-adapt:bar-border */
     border-radius: 6px;
     color: #CDD6F4;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); /* @titan-adapt:bar-shadow */
 }
 
 window#waybar.hidden {
@@ -38,7 +40,7 @@ window#waybar.hidden {
 /* ═══════════ LEFT SECTION — IDENTITY ═════════════════════ */
 
 #custom-logo {
-    color: #89B4FA;
+    color: #89B4FA; /* @titan-adapt:accent */
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 1.2px;
@@ -71,8 +73,8 @@ window#waybar.hidden {
 /* Active workspace — clean geometric accent */
 #workspaces button.active {
     color: #89B4FA;
-    background: rgba(137, 180, 250, 0.12);
-    border-bottom: 2px solid #89B4FA;
+    background: rgba(137, 180, 250, 0.12); /* @titan-adapt:accent-soft */
+    border-bottom: 2px solid #89B4FA; /* @titan-adapt:accent-line */
     border-radius: 3px 3px 0 0;
     text-shadow: 0 0 6px rgba(137, 180, 250, 0.4);
 }
@@ -247,8 +249,8 @@ window#waybar.hidden {
 
 /* ── Tooltips ─────────────────────────────────────────────── */
 tooltip {
-    background: rgba(17, 17, 27, 0.94);
-    border: 1px solid rgba(137, 180, 250, 0.25);
+    background: rgba(17, 17, 27, 0.94); /* @titan-adapt:tip-bg */
+    border: 1px solid rgba(137, 180, 250, 0.25); /* @titan-adapt:tip-border */
     border-radius: 6px;
     color: #CDD6F4;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);

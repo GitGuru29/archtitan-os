@@ -17,11 +17,11 @@
 
 /* ── Main Linear Bar (Continuous Horizontal) ─────────────────── */
 window#waybar {
-    background   : rgba(13, 14, 21, 0.94);
-    border       : 1px solid rgba(255, 255, 255, 0.07);
+    background   : rgba(13, 14, 21, 0.94); /* @titan-adapt:bar-bg */
+    border       : 1px solid rgba(255, 255, 255, 0.07); /* @titan-adapt:bar-border */
     border-radius: 10px;
     color        : #cdd6f4;
-    box-shadow   : 0 4px 20px rgba(0, 0, 0, 0.65);
+    box-shadow   : 0 4px 20px rgba(0, 0, 0, 0.65); /* @titan-adapt:bar-shadow */
 }
 
 window#waybar.hidden {
@@ -61,8 +61,8 @@ window#waybar.hidden {
 /* Active workspace — restrained purple pill */
 #workspaces button.active {
     color        : #cdd6f4;
-    background   : rgba(180, 190, 254, 0.14);
-    border       : 1px solid rgba(180, 190, 254, 0.25);
+    background   : rgba(180, 190, 254, 0.14); /* @titan-adapt:accent-soft */
+    border       : 1px solid rgba(180, 190, 254, 0.25); /* @titan-adapt:accent-line */
     border-radius: 6px;
     font-weight  : 700;
 }
@@ -219,7 +219,7 @@ window#waybar.hidden {
 
 /* ── Notification Bell (SwayNC) ───────────────────────────── */
 #custom-notification {
-    color: #89B4FA;
+    color: #89B4FA; /* @titan-adapt:accent */
     font-size: 13px;
     padding: 0 8px;
     border-radius: 4px;
@@ -245,8 +245,8 @@ window#waybar.hidden {
 
 /* ── Tooltips ─────────────────────────────────────────────────── */
 tooltip {
-    background   : rgba(13, 14, 21, 0.96);
-    border       : 1px solid rgba(255, 255, 255, 0.08);
+    background   : rgba(13, 14, 21, 0.96); /* @titan-adapt:tip-bg */
+    border       : 1px solid rgba(255, 255, 255, 0.08); /* @titan-adapt:tip-border */
     border-radius: 8px;
     color        : #cdd6f4;
     box-shadow   : 0 4px 18px rgba(0, 0, 0, 0.6);

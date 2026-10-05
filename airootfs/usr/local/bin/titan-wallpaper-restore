@@ -35,3 +35,7 @@ fi
 # ── Launch swaybg ────────────────────────────────────────────────────────────
 swaybg -i "$WALLPAPER_PATH" -m "$SCALE_MODE" &
 disown
+
+# ── Retint the Waybar to suit the restored wallpaper ─────────────────────────
+# Best-effort: a theming failure must never fail the wallpaper restore.
+titan-waybar-theme "$WALLPAPER_PATH" >/dev/null 2>&1 || true

@@ -50,6 +50,7 @@ file_permissions=(
   ["/usr/local/bin/titan-wallpaper-picker"]="0:0:755"
   ["/usr/local/bin/titan-set-wallpaper"]="0:0:755"
   ["/usr/local/bin/titan-wallpaper-restore"]="0:0:755"
+  ["/usr/local/bin/titan-waybar-theme"]="0:0:755"
   ["/usr/local/bin/titan-quicksettings"]="0:0:755"
   ["/usr/local/bin/titan-quicksettings-toggle"]="0:0:755"
   ["/usr/local/bin/dev-setup"]="0:0:755"
