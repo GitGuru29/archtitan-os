@@ -29,26 +29,29 @@
 window {
     width:            960px;
     border-radius:    20px;
-    border:           1px solid rgba(180,190,254,0.18);
-    background-color: rgba(17,17,27,0.92);
+    border:           1px solid;
+    border-color:     #b4befe2e;
+    background-color: #11111beb;
     padding:          24px;
     location:         center;
     anchor:           center;
-    box-shadow:       0 24px 64px rgba(0,0,0,0.75);
 }
 
 mainbox {
     background-color: transparent;
     spacing:          16px;
-    children:         [ header-box, inputbar, listview ];
+    children:         [ inputbar, listview ];
 }
 
-/* ── Header label row ───────────────────────────────────── */
-header-box {
-    background-color: transparent;
-    orientation:      horizontal;
+/* ── Search bar ─────────────────────────────────────────── */
+inputbar {
+    background-color: #31324499;
+    border-radius:    12px;
+    border:           1px solid;
+    border-color:     #b4befe1f;
+    padding:          10px 16px;
     spacing:          10px;
-    children:         [ prompt ];
+    children:         [ prompt, entry ];
 }
 
 prompt {
@@ -59,29 +62,18 @@ prompt {
     padding:          0 0 0 2px;
 }
 
-/* ── Search bar ─────────────────────────────────────────── */
-inputbar {
-    background-color: rgba(49,50,68,0.6);
-    border-radius:    12px;
-    border:           1px solid rgba(180,190,254,0.12);
-    padding:          10px 16px;
-    spacing:          10px;
-    children:         [ entry ];
-}
-
 entry {
     background-color:  transparent;
     text-color:        @text;
     placeholder:       "Search wallpapers…";
     placeholder-color: @overlay0;
     vertical-align:    0.5;
-    cursor:            text;
 }
 
-/* hide the redundant case-indicator / num-rows pills */
-case-indicator,
-num-rows,
-num-filtered-rows { background-color: transparent; text-color: transparent; }
+case-indicator {
+    background-color: transparent;
+    text-color:       transparent;
+}
 
 /* ── Thumbnail grid ─────────────────────────────────────── */
 listview {
@@ -97,9 +89,10 @@ listview {
 
 /* ── Each wallpaper card ────────────────────────────────── */
 element {
-    background-color: rgba(49,50,68,0.45);
+    background-color: #31324473;
     border-radius:    14px;
-    border:           1px solid rgba(255,255,255,0.05);
+    border:           1px solid;
+    border-color:     #ffffff0d;
     padding:          10px;
     spacing:          0px;
     orientation:      vertical;
@@ -112,7 +105,6 @@ element-icon {
     border-radius:    10px;
     background-color: @surface0;
     cursor:           inherit;
-    /* scale-filter: bilinear; */
 }
 
 element-text {
@@ -123,36 +115,28 @@ element-text {
     padding:          8px 4px 2px 4px;
     font:             "JetBrainsMono Nerd Font 10";
     cursor:           inherit;
-    /* truncate long names */
-    max-lines:        1;
 }
 
 /* ── States ─────────────────────────────────────────────── */
 element normal.normal {
-    background-color: rgba(49,50,68,0.45);
-    border-color:     rgba(255,255,255,0.05);
+    background-color: #31324473;
+    border-color:     #ffffff0d;
 }
 
 element alternate.normal {
-    background-color: rgba(49,50,68,0.45);
-    border-color:     rgba(255,255,255,0.05);
+    background-color: #31324473;
+    border-color:     #ffffff0d;
 }
 
 element selected.normal {
-    background-color: rgba(137,180,250,0.14);
-    border-color:     @blue;
+    background-color: #89b4fa24;
     border:           1px solid;
+    border-color:     @blue;
 }
 
 element selected.normal element-text {
     text-color: @lavender;
     font:       "JetBrainsMono Nerd Font Bold 10";
-}
-
-element normal.normal:hover,
-element alternate.normal:hover {
-    background-color: rgba(255,255,255,0.06);
-    border-color:     rgba(180,190,254,0.2);
 }
 
 /* ── Scrollbar (fallback if enabled) ───────────────────── */
