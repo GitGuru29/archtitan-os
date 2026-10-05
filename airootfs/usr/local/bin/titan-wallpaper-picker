@@ -2,7 +2,7 @@
 # titan-wallpaper-picker — ArchTitan wallpaper selector (Super+\ / Super+|)
 #
 # Scans /usr/share/backgrounds/archtitan/ and ~/.local/share/backgrounds/ for
-# image files, presents them in Rofi with thumbnail icons, then calls
+# image files, presents them in Rofi as a large thumbnail grid, then calls
 # titan-set-wallpaper to apply and persist the selection.
 #
 # Dependencies: rofi, titan-set-wallpaper, notify-send (optional)

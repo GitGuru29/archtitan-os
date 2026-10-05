@@ -6,7 +6,7 @@
 
 ## Key Features
 
-- **THM Profile Manager**: Manages active Titan Hardware Manager profiles (System Dev, Web Dev, Android Dev, Casual, Neutral) with real-time cgroup telemetry status.
+- **Power Profile Manager**: Manages active system power profiles (Power Saver, Balanced, Performance) and timeouts via D-Bus integration.
 - **Hyprland & Display Configuration**: Adjust monitor resolution, refresh rate, scaling, window gaps, borders, animations, and rounded corners without manually editing `hyprland.conf`.
 - **Waybar Control**: Customize status panel modules, positions, pill styling, and auto-hide behaviors.
 - **Theme & Aesthetic Customization**: Apply Catppuccin Mocha color presets, GTK/Qt dark themes, Papirus icon packages, and custom desktop wallpapers.

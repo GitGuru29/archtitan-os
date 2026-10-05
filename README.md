@@ -89,7 +89,7 @@ ArchTitan provides a suite of native C++ and Qt6 applications built specifically
   - **Appearance:** Theme toggle, Catppuccin Mocha presets, panel opacity, icon sets.
   - **Display:** Brightness, Night Light (`wlsunset`), resolution, and scaling.
   - **Audio:** Output/input volume, live PipeWire audio profile controls.
-  - **Power & THM:** Universal stateful power profile cycling (**Casual** ➔ **Web Dev** ➔ **Android Dev** ➔ **System Dev** via `Super + P` / `Fn + P`).
+  - **Power Management:** Universal stateful power profile cycling (**Power Saver** ➔ **Balanced** ➔ **Performance** via `Super + P` / `Fn + P`).
   - **Network & Security:** NetworkManager Wi-Fi scanner, Titan Sandbox status, screen autolock, and firewall inspection.
 
 ### 3.  Titan Browser (`titanbrowser`)
@@ -144,7 +144,7 @@ ArchTitan uses an optimized Hyprland desktop with smooth bezier curves, subtle d
 mindmap
   root((ArchTitan Desktop))
     Compositor
-      Hyprland (v0.53+ Block Syntax)
+      Hyprland (v0.55+ Lua Configuration)
       Aquamarine VM Backend Support
       Overshot & Snappy Animations
     HUD & Bars
@@ -167,11 +167,12 @@ mindmap
 | Shortcut | Action | Description |
 | :--- | :--- | :--- |
 | <kbd>Super</kbd> / <kbd>Super</kbd> + <kbd>Space</kbd> | App Launcher | Launches Rofi application menu |
+| <kbd>Super</kbd> + <kbd>\\</kbd> | Wallpaper Picker | Opens grid-based wallpaper selector |
 | <kbd>Super</kbd> + <kbd>Return</kbd> | Terminal | Opens Kitty terminal with Fish shell |
 | <kbd>Super</kbd> + <kbd>W</kbd> | Titan Browser | Launches first-party TitanBrowser |
 | <kbd>Super</kbd> + <kbd>,</kbd> | ArchTitan Settings | Opens unified System Settings panel |
 | <kbd>Super</kbd> + <kbd>E</kbd> | File Manager | Opens Ranger terminal file manager |
-| <kbd>Super</kbd> + <kbd>P</kbd> / <kbd>Fn</kbd> + <kbd>P</kbd> | Power Profile Toggle | Cycles THM workload profiles |
+| <kbd>Super</kbd> + <kbd>P</kbd> / <kbd>Fn</kbd> + <kbd>P</kbd> | Power Profile Toggle | Cycles system power profiles |
 | <kbd>Super</kbd> + <kbd>V</kbd> | Clipboard History | Opens clipboard history picker |
 | <kbd>Super</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> | Screenshot | Area snip copied to clipboard (`grim` + `slurp`) |
 | <kbd>Super</kbd> + <kbd>Q</kbd> | Close Window | Closes active window |
