@@ -120,7 +120,8 @@
         "format-full"     : "󰁹  100%",
         "format-not-found": "",
         "interval"        : 10,
-        "tooltip-format"  : "{timeTo} · {capacity}%\nPower: {power:.1f}W",
+        "tooltip-format"  : "{timeTo} · {capacity}%\nPower: {power:.1f}W"
+    },
 
     "custom/notification": {
         "tooltip": false,
