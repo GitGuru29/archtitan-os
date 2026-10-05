@@ -42,7 +42,12 @@ hl.env("AQ_NO_MODIFIERS", "1")
 -------------------
 
 hl.on("hyprland.start", function()
+    -- NOTE: hl.exec_cmd() is already asynchronous (fire-and-forget).
+    -- There is no hl.spawn() in Hyprland's Lua API -- calling it throws
+    -- "attempt to call a nil value" and aborts this whole handler.
+
     hl.exec_cmd("bash -c 'sleep 2 && waybar'")
+    hl.exec_cmd("bash -c 'sleep 2 && swaync'")
     hl.exec_cmd("bash -c 'sleep 3 && titan-media-hud'")
     hl.exec_cmd("titan-wallpaper-restore")
     hl.exec_cmd("bash -c 'sleep 3 && titan-quicksettings --daemon'")
@@ -117,10 +122,11 @@ hl.bind(mainMod .. " + SHIFT + right", hl.dsp.window.move({ direction = "right" 
 hl.bind(mainMod .. " + SHIFT + up",    hl.dsp.window.move({ direction = "up" }))
 hl.bind(mainMod .. " + SHIFT + down",  hl.dsp.window.move({ direction = "down" }))
 
--- Workspaces
+-- Workspaces (Super+1..9 to switch, Super+Shift+1..9 to move window)
 for i = 1, 9 do
-    hl.bind(mainMod .. " + " .. i, hl.dsp.focus({ workspace = i }))
-    hl.bind(mainMod .. " + SHIFT + " .. i, hl.dsp.window.move({ workspace = i }))
+    local ws = tostring(i)
+    hl.bind(mainMod .. " + " .. ws, hl.dsp.focus({ workspace = ws }))
+    hl.bind(mainMod .. " + SHIFT + " .. ws, hl.dsp.window.move({ workspace = ws }))
 end
 
 -- Focus Workspace Left/Right
