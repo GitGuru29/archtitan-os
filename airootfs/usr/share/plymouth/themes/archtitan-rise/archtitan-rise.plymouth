@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=ArchTitan Rise
+Description=ArchTitan OS Inaugural First-Boot Ceremony
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/archtitan-rise
+ScriptFile=/usr/share/plymouth/themes/archtitan-rise/archtitan-rise.script

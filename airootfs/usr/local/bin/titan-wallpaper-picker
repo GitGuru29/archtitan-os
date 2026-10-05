@@ -27,58 +27,42 @@ if [[ ${#CANDIDATES[@]} -eq 0 ]]; then
     exit 0
 fi
 
-# ── Build Rofi display list ─────────────────────────────────────────────────
-# Format: "display-label\0icon\x1f/full/path"
-# We output the FULL PATH as the display label so rofi returns the path
-# directly on Enter — no label→path mapping needed, no lookup failures.
-ROFI_LIST=""
+# ── Build Rofi input stream ─────────────────────────────────────────────────
+ROFI_INPUT=""
 for path in "${CANDIDATES[@]}"; do
     label="$(basename "${path%.*}")"
-    # Append: display label NUL icon SOH path NEWLINE
-    ROFI_LIST+="${label}"$'\0''icon'$'\x1f'"${path}"$'\n'
+    ROFI_INPUT+="${label}\0icon\x1f${path}\n"
 done
 
-# ── Launch Rofi ─────────────────────────────────────────────────────────────
-CHOSEN=$(
-    printf '%s' "$ROFI_LIST" | \
+# ── Launch Rofi with index output (-format i) ──────────────────────────────
+CHOSEN_INDEX=$(
+    printf '%b' "$ROFI_INPUT" | \
     rofi -dmenu \
         -i \
-        -p "  Wallpaper" \
+        -format i \
+        -p "󰸉  Wallpaper" \
+        -mesg "󰆟 Super+\\ to open · Enter to apply · Esc to cancel" \
         -theme /usr/share/rofi/themes/archtitan-wallpaper.rasi \
         -show-icons \
         -icon-theme Papirus-Dark \
+        -no-custom \
         2>/dev/null
 ) || true
 
-[[ -z "$CHOSEN" ]] && exit 0   # user cancelled / Esc
-
-# ── Resolve full path from chosen label ────────────────────────────────────
-# Rofi returns the display label text (before \0). Match it back to a path.
-WALLPAPER_PATH=""
-for path in "${CANDIDATES[@]}"; do
-    label="$(basename "${path%.*}")"
-    if [[ "$label" == "$CHOSEN" ]]; then
-        WALLPAPER_PATH="$path"
-        break
-    fi
-done
-
-# Fallback: maybe rofi returned something with extra whitespace
-if [[ -z "$WALLPAPER_PATH" ]]; then
-    CHOSEN_TRIM="${CHOSEN#"${CHOSEN%%[![:space:]]*}"}"  # ltrim
-    CHOSEN_TRIM="${CHOSEN_TRIM%"${CHOSEN_TRIM##*[![:space:]]}"}"  # rtrim
-    for path in "${CANDIDATES[@]}"; do
-        label="$(basename "${path%.*}")"
-        if [[ "$label" == "$CHOSEN_TRIM" ]]; then
-            WALLPAPER_PATH="$path"
-            break
-        fi
-    done
+# User cancelled or rofi failed
+if [[ -z "$CHOSEN_INDEX" || ! "$CHOSEN_INDEX" =~ ^[0-9]+$ ]]; then
+    exit 0
 fi
+
+if [[ "$CHOSEN_INDEX" -lt 0 || "$CHOSEN_INDEX" -ge "${#CANDIDATES[@]}" ]]; then
+    exit 1
+fi
+
+WALLPAPER_PATH="${CANDIDATES[$CHOSEN_INDEX]}"
 
 if [[ -z "$WALLPAPER_PATH" || ! -f "$WALLPAPER_PATH" ]]; then
     notify-send -u normal -i dialog-error \
-        "Wallpaper Picker" "Could not resolve path for: $CHOSEN" 2>/dev/null || true
+        "Wallpaper Picker" "File not found: $WALLPAPER_PATH" 2>/dev/null || true
     exit 1
 fi
 

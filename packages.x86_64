@@ -43,6 +43,8 @@ dmidecode
 
 # ── Networking & Bluetooth ────────────────────────────────────────────────────
 networkmanager
+network-manager-applet
+wpa_supplicant
 bluez
 bluez-utils
 iwd
@@ -116,6 +118,8 @@ qt5-wayland
 qt6-wayland
 qt6-webengine
 qt6-5compat
+# wlr-layer-shell for the Qt6/QML overlay apps (titan-media-hud, titan-quicksettings)
+layer-shell-qt
 
 # ── Developer Tools & Runtimes ────────────────────────────────────────────────
 git

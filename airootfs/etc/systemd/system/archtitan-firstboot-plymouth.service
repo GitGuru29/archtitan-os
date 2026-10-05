@@ -1,0 +1,13 @@
+[Unit]
+Description=ArchTitan OS First-Boot Plymouth Switcher
+DefaultDependencies=no
+Before=sysinit.target plymouth-start.service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/archtitan-firstboot-plymouth
+
+[Install]
+WantedBy=sysinit.target
