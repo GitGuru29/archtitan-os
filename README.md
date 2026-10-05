@@ -144,7 +144,7 @@ ArchTitan uses an optimized Hyprland desktop with smooth bezier curves, subtle d
 mindmap
   root((ArchTitan Desktop))
     Compositor
-      Hyprland (v0.53+ Block Syntax)
+      Hyprland (v0.55+ Lua Configuration)
       Aquamarine VM Backend Support
       Overshot & Snappy Animations
     HUD & Bars
@@ -167,6 +167,7 @@ mindmap
 | Shortcut | Action | Description |
 | :--- | :--- | :--- |
 | <kbd>Super</kbd> / <kbd>Super</kbd> + <kbd>Space</kbd> | App Launcher | Launches Rofi application menu |
+| <kbd>Super</kbd> + <kbd>\\</kbd> | Wallpaper Picker | Opens grid-based wallpaper selector |
 | <kbd>Super</kbd> + <kbd>Return</kbd> | Terminal | Opens Kitty terminal with Fish shell |
 | <kbd>Super</kbd> + <kbd>W</kbd> | Titan Browser | Launches first-party TitanBrowser |
 | <kbd>Super</kbd> + <kbd>,</kbd> | ArchTitan Settings | Opens unified System Settings panel |
