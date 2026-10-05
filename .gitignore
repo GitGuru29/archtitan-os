@@ -77,3 +77,7 @@ titan-hwm-v3/build/
 airootfs/usr/bin/titan-hwm-daemon
 titan-browser-source/compile_commands.json
 test-swaync.sh
+
+# ─── TitanFocus plan document (local only, not committed) ──────────────────
+docs/titanfocus-plan.typ
+docs/titanfocus-plan.pdf
