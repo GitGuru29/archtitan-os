@@ -28,13 +28,19 @@ if [[ ${#CANDIDATES[@]} -eq 0 ]]; then
 fi
 
 # ── Build Rofi display list ─────────────────────────────────────────────────
-# Format per entry: "label\0icon\x1f/absolute/path/to/image.png\n"
-# NOTE: Do NOT pass -icon-theme — that makes rofi resolve icon strings via the
-#       theme lookup chain and ignores absolute file paths. Without -icon-theme,
-#       rofi treats paths starting with / as direct image files and renders them
-#       as thumbnails.
-ROFI_LIST=""
+# Row format, as parsed by rofi's dmenu row-option parser:
+#     <label>\0icon\x1f<absolute-path>\n
+# The \0 ends the visible label; the key/value pairs after it become row
+# options, and "icon" is what makes rofi render the thumbnail (absolute paths
+# are loaded directly as images, so -icon-theme is not wanted here).
+#
+# These bytes MUST be emitted by printf rather than accumulated in a variable:
+# bash cannot store a NUL byte in a variable, so building the list with $'\0'
+# silently yields "<label>icon\x1f<path>", which rofi reads as one long label
+# with no icon at all — i.e. blank thumbnails and a label that never matches.
+# Streaming through printf keeps the NUL on the pipe.
 declare -A PATH_MAP   # label -> full path (for Enter resolution)
+LABELS=()
 
 for path in "${CANDIDATES[@]}"; do
     label="$(basename "${path%.*}")"
@@ -44,13 +50,19 @@ for path in "${CANDIDATES[@]}"; do
         label="${parent}/${label}"
     fi
     PATH_MAP["$label"]="$path"
-    # NUL separates label from metadata; \x1f separates key=icon from value=path
-    ROFI_LIST+="${label}"$'\0''icon'$'\x1f'"${path}"$'\n'
+    LABELS+=("$label")
 done
+
+emit_rows() {
+    local label
+    for label in "${LABELS[@]}"; do
+        printf '%s\0icon\x1f%s\n' "$label" "${PATH_MAP[$label]}"
+    done
+}
 
 # ── Launch Rofi ─────────────────────────────────────────────────────────────
 CHOSEN=$(
-    printf '%s' "$ROFI_LIST" | \
+    emit_rows | \
     rofi -dmenu \
         -i \
         -p "  Wallpaper" \
@@ -70,8 +82,6 @@ if [[ -z "$WALLPAPER_PATH" ]]; then
     CHOSEN_TRIM="${CHOSEN_TRIM%"${CHOSEN_TRIM##*[![:space:]]}"}"
     WALLPAPER_PATH="${PATH_MAP[$CHOSEN_TRIM]:-}"
 fi
-
-WALLPAPER_PATH="${CANDIDATES[$CHOSEN_INDEX]}"
 
 if [[ -z "$WALLPAPER_PATH" || ! -f "$WALLPAPER_PATH" ]]; then
     notify-send -u normal -i dialog-error \
