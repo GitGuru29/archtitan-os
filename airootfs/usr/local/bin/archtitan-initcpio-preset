@@ -10,6 +10,12 @@
 
 set -e
 
+# Remove the archiso live-ISO mkinitcpio drop-in. It must not carry over to
+# the installed system: mkinitcpio sources /etc/mkinitcpio.conf.d/*.conf after
+# /etc/mkinitcpio.conf, so archiso.conf would override the installed HOOKS
+# with the live-ISO hook list and bake the wrong initramfs.
+rm -f /etc/mkinitcpio.conf.d/archiso.conf
+
 # Detect the installed kernel version from /usr/lib/modules/
 KVER=$(ls /usr/lib/modules/ 2>/dev/null | grep -v extramodules | sort -V | tail -1)
 

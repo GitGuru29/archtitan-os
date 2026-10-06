@@ -1,0 +1,31 @@
+#!/bin/bash
+# archtitan-wait-rise
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Called as ExecStartPre in plymouth-quit.service (via drop-in).
+# On first boot: blocks until plymouthd exits naturally (the Rise, Titan.
+# animation called Plymouth.Quit() itself) OR the 90-second safety timeout
+# is reached, then lets plymouth-quit proceed.
+# On subsequent boots: exits immediately (no-op).
+
+MARKER="/var/lib/archtitan/firstboot_done"
+TIMEOUT=90
+
+# Not first boot — nothing to wait for
+if [ -f "${MARKER}" ]; then
+    exit 0
+fi
+
+# First boot — wait for plymouthd to exit on its own (animation + user click,
+# or the auto-progress timer in the Plymouth script fires)
+elapsed=0
+while [ "${elapsed}" -lt "${TIMEOUT}" ]; do
+    if ! pgrep -x plymouthd > /dev/null 2>&1; then
+        # Plymouth has already exited naturally — let plymouth-quit be a no-op
+        exit 0
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+done
+
+# Safety fallback — timed out, let plymouth-quit force-quit Plymouth
+exit 0
