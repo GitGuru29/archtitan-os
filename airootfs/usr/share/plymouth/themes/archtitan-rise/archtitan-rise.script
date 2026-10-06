@@ -1,215 +1,342 @@
-# ArchTitan OS — "Rise, Titan." First-Boot Interactive Ceremony
+# ArchTitan OS — "Rise, Titan." First-Boot Ceremony
+# Prototype-accurate sequence:
+#   logo intro -> dots rise into a line -> the line curls into a circle ->
+#   slow eased 720° orbit -> settle -> each dot falls to its slot and morphs
+#   into its colored character -> hold -> fade out (auto, or any key/click).
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 screen_width = Window.GetWidth();
 screen_height = Window.GetHeight();
-center_x = screen_width / 2;
-center_y = screen_height / 2;
+center_x = screen_width / 2.0;
+center_y = screen_height / 2.0;
 
-# Load sprite assets
-dot_image = Image("assets/dot.png");
-dot_stretched_image = Image("assets/dot_stretched.png");
-btn_explore_image = Image("assets/btn_explore.png");
+# ── Background: radial blue/violet glows over near-black ──
+bg_sprite = Sprite(Image("assets/bg.png").Scale(screen_width, screen_height));
+bg_sprite.SetX(0);
+bg_sprite.SetY(0);
+bg_sprite.SetZ(0);
 
-glyph_names[0] = "R";
-glyph_names[1] = "i";
-glyph_names[2] = "s";
-glyph_names[3] = "e";
-glyph_names[4] = "comma";
-glyph_names[5] = "T";
-glyph_names[6] = "i";
-glyph_names[7] = "t";
-glyph_names[8] = "a";
-glyph_names[9] = "n";
-glyph_names[10] = "period";
+# ── Horizon line that accompanies the first emergence ──
+horizon_img = Image("assets/horizon.png");
+horizon_w = 340.0;
+if (screen_width * 0.42 < horizon_w) horizon_w = screen_width * 0.42;
+horizon_sprite = Sprite(horizon_img.Scale(horizon_w, 3));
+horizon_sprite.SetX(center_x - horizon_w / 2.0);
+horizon_sprite.SetY(center_y - 1.5);
+horizon_sprite.SetZ(3);
+horizon_sprite.SetOpacity(0.0);
 
-for (i = 0; i < 11; i++) {
-    glyph_images[i] = Image("assets/glyph_" + glyph_names[i] + ".png");
-}
+# ── Typography (prototype: clamp(48, 6vw, 86)) ──
+font = screen_width * 0.06;
+if (font < 48) font = 48;
+if (font > 86) font = 86;
 
-# Target positions for "Rise, Titan." layout (centered on screen)
-text_origin_x = center_x - 300;
-text_origin_y = center_y + 20;
+gap = 0.04 * font;
+space_gap = 0.34 * font;   # word space after the comma
 
-target_x[0]  = text_origin_x + 0;    # R
-target_x[1]  = text_origin_x + 65;   # i
-target_x[2]  = text_origin_x + 105;  # s
-target_x[3]  = text_origin_x + 155;  # e
-target_x[4]  = text_origin_x + 205;  # ,
-target_x[5]  = text_origin_x + 270;  # T
-target_x[6]  = text_origin_x + 335;  # i
-target_x[7]  = text_origin_x + 375;  # t
-target_x[8]  = text_origin_x + 420;  # a
-target_x[9]  = text_origin_x + 480;  # n
-target_x[10] = text_origin_x + 540;  # .
+# Per-character typographic weight: letters .58em, i .22em, comma .20em
+char_w[0] = 0.58; char_w[1] = 0.22; char_w[2] = 0.58; char_w[3] = 0.58;
+char_w[4] = 0.20; char_w[5] = 0.58; char_w[6] = 0.22; char_w[7] = 0.58;
+char_w[8] = 0.58; char_w[9] = 0.58;
 
-target_y[0]  = text_origin_y;
-target_y[1]  = text_origin_y;
-target_y[2]  = text_origin_y;
-target_y[3]  = text_origin_y;
-target_y[4]  = text_origin_y + 40; # ,
-target_y[5]  = text_origin_y;
-target_y[6]  = text_origin_y;
-target_y[7]  = text_origin_y;
-target_y[8]  = text_origin_y;
-target_y[9]  = text_origin_y;
-target_y[10] = text_origin_y + 30; # .
+# Measured ink widths of the source glyphs (visible letterforms, px)
+ink_w[0] = 206; ink_w[1] = 60; ink_w[2] = 150; ink_w[3] = 182; ink_w[4] = 70;
+ink_w[5] = 195; ink_w[6] = 60; ink_w[7] = 138; ink_w[8] = 177; ink_w[9] = 183;
 
-# Create 10 orbital dot sprites
+# Source canvas widths (letters/i are 400 wide, comma 180 wide)
+canvas_w[0] = 400; canvas_w[1] = 400; canvas_w[2] = 400; canvas_w[3] = 400; canvas_w[4] = 180;
+canvas_w[5] = 400; canvas_w[6] = 400; canvas_w[7] = 400; canvas_w[8] = 400; canvas_w[9] = 400;
+
+# Pre-coloured per-slot glyphs (palette baked in, plymouth cannot tint at runtime)
+glyph_files[0] = "assets/glyph_c0.png";
+glyph_files[1] = "assets/glyph_c1.png";
+glyph_files[2] = "assets/glyph_c2.png";
+glyph_files[3] = "assets/glyph_c3.png";
+glyph_files[4] = "assets/glyph_c4.png";
+glyph_files[5] = "assets/glyph_c5.png";
+glyph_files[6] = "assets/glyph_c6.png";
+glyph_files[7] = "assets/glyph_c7.png";
+glyph_files[8] = "assets/glyph_c8.png";
+glyph_files[9] = "assets/glyph_c9.png";
+
+# Phrase width, then centred slot centres
+total = 0.0;
 for (i = 0; i < 10; i++) {
-    dot_sprites[i] = Sprite(dot_image);
-    dot_sprites[i].SetOpacity(0.0);
-    
-    glyph_sprites[i] = Sprite(glyph_images[i]);
-    glyph_sprites[i].SetOpacity(0.0);
+    total = total + char_w[i] * font;
+    if (i < 9) {
+        if (i == 3) total = total + space_gap;
+        else total = total + gap;
+    }
 }
-# 11th sprite for period detachment
-period_sprite = Sprite(glyph_images[10]);
-period_sprite.SetOpacity(0.0);
 
-# Interactive "EXPLORE NOW ->" Button Sprite
-btn_x = center_x - 180;
-btn_y = center_y + 180;
-btn_w = 360;
-btn_h = 72;
+cursor = center_x - total / 2.0;
+for (i = 0; i < 10; i++) {
+    slot_w = char_w[i] * font;
+    slot_x[i] = cursor + slot_w / 2.0;
+    cursor = cursor + slot_w;
+    if (i < 9) {
+        if (i == 3) cursor = cursor + space_gap;
+        else cursor = cursor + gap;
+    }
+}
+slot_y = center_y + Math.Min(150.0, screen_height * 0.145);
 
-btn_sprite = Sprite(btn_explore_image);
-btn_sprite.SetX(btn_x);
-btn_sprite.SetY(btn_y);
-btn_sprite.SetOpacity(0.0);
+# The 10 coloured characters, anchored on their slots.
+# All glyphs share a baseline at 75% of the canvas height, so the whole
+# phrase sits on one typographic baseline (ink is already centred sideways).
+for (i = 0; i < 10; i++) {
+    scale_i = (char_w[i] * font) / ink_w[i];
+    glyph_w = canvas_w[i] * scale_i;
+    glyph_h[i] = 512 * scale_i;
+    char_y[i] = slot_y - glyph_h[i] * 0.75;
+    chars[i] = Sprite(Image(glyph_files[i]).Scale(glyph_w, glyph_h[i]));
+    chars[i].SetX(slot_x[i]);
+    chars[i].SetY(char_y[i]);
+    chars[i].SetZ(2);
+    chars[i].SetOpacity(0.0);
+}
 
+# ── Dots and formation geometry ──
+dot_d = Math.Max(10.0, Math.Min(screen_width, screen_height) * 0.014);
+dot_img = Image("assets/dot.png").Scale(dot_d, dot_d);
+
+line_gap = 34.0;
+if (screen_width * 0.03 < line_gap) line_gap = screen_width * 0.03;
+
+radius = Math.Min(screen_width, screen_height) * 0.095;
+circle_cy = center_y - 20.0;
+
+for (i = 0; i < 10; i++) {
+    dots[i] = Sprite(dot_img);
+    dots[i].SetZ(1);
+    dots[i].SetOpacity(0.0);
+    base_a[i] = -1.5707963267948966 + i * 0.6283185307179586;   # -90° + i*36°
+}
+
+# ── ArchTitan logo intro (shown first, then the ceremony) ──
+logo_image = Image("assets/logo.png");
+logo_ratio = logo_image.GetWidth() / logo_image.GetHeight();
+if (screen_width / screen_height > logo_ratio) {
+    logo_scale = (screen_height / logo_image.GetHeight()) * 0.35;
+} else {
+    logo_scale = (screen_width / logo_image.GetWidth()) * 0.35;
+}
+logo_w = logo_image.GetWidth() * logo_scale;
+logo_h = logo_image.GetHeight() * logo_scale;
+logo_sprite = Sprite(logo_image.Scale(logo_w, logo_h));
+logo_sprite.SetX(center_x - logo_w / 2.0);
+logo_sprite.SetY(center_y - logo_h / 2.0);
+logo_sprite.SetZ(10);
+logo_sprite.SetOpacity(0.0);
+
+# ── Timeline (frames, ~50fps) ──
 frame = 0;
-radius = 160.0;
 user_clicked = 0;
 fade_out_frame = 0;
 
+logo_total = 110;
+logo_fade_in = 35;
+logo_fade_out_start = 85;
+
+line_t = 48;      # dots rise into the line
+circle_t = 58;    # line curls into the circle
+orbit_t = 250;    # two eased full rotations
+settle_t = 12;    # held circle before the drops
+base = line_t + circle_t + orbit_t + settle_t;
+step = 21;        # stagger between successive drops
+drop_t = 36;      # per-dot fall + morph
+drop_end = base + 9 * step + drop_t;
+hold_t = 280;     # pause on the finished phrase
+auto_end = drop_end + hold_t;
+four_pi = 12.566370614359172;
+pi = 3.141592653589793;
+
+# ── Helpers (pure: parameters only, no globals touched) ──
+fun clamp01(t) {
+    if (t < 0.0) t = 0.0;
+    if (t > 1.0) t = 1.0;
+    return t;
+}
+fun ease_out(t) {
+    t = clamp01(t);
+    u = 1.0 - t;
+    return 1.0 - u * u * u;
+}
+fun ease_inout(t) {
+    t = clamp01(t);
+    if (t < 0.5) return 4.0 * t * t * t;
+    u = -2.0 * t + 2.0;
+    return 1.0 - (u * u * u) / 2.0;
+}
+fun lerp(a, b, t) {
+    return a + (b - a) * t;
+}
+
 fun refresh_callback() {
     frame++;
-    
-    # Phase A (0 - 50 frames / 0 - 1.0s): Fade in 10 orbital dots
-    if (frame <= 50) {
-        opacity = frame / 50.0;
-        for (i = 0; i < 10; i++) {
-            angle = (i * 2.0 * 3.14159 / 10.0);
-            x = center_x + radius * Math.Cos(angle) - 64;
-            y = center_y + radius * Math.Sin(angle) - 64;
-            dot_sprites[i].SetX(x);
-            dot_sprites[i].SetY(y);
-            dot_sprites[i].SetOpacity(opacity);
-        }
-    }
-    # Phase B & C (50 - 342 frames / 1.0s - 6.85s): Ease in-out orbital rotation (2 full revs)
-    else if (frame <= 342) {
-        progress = (frame - 50) / 292.0;
-        eased_angle = progress * progress * (3.0 - 2.0 * progress) * (4.0 * 3.14159);
-        
-        for (i = 0; i < 10; i++) {
-            angle = (i * 2.0 * 3.14159 / 10.0) + eased_angle;
-            x = center_x + radius * Math.Cos(angle) - 64;
-            y = center_y + radius * Math.Sin(angle) - 64;
-            dot_sprites[i].SetX(x);
-            dot_sprites[i].SetY(y);
-            dot_sprites[i].SetOpacity(1.0);
-        }
-    }
-    # Phase D (342 - 542 frames / 6.85s - 10.85s): Staggered drops & glyph resolution
-    else if (frame <= 542) {
-        drop_progress = (frame - 342) / 200.0;
-        
-        for (i = 0; i < 10; i++) {
-            start_t = i * 0.085;
-            dur_t = 0.22;
-            
-            if (drop_progress >= start_t) {
-                local_t = (drop_progress - start_t) / dur_t;
-                if (local_t > 1.0) local_t = 1.0;
-                
-                angle = (i * 2.0 * 3.14159 / 10.0) + (4.0 * 3.14159);
-                start_x = center_x + radius * Math.Cos(angle) - 64;
-                start_y = center_y + radius * Math.Sin(angle) - 64;
-                
-                eased_t = 1.0 - (1.0 - local_t) * (1.0 - local_t);
-                curr_x = start_x + (target_x[i] - start_x) * eased_t;
-                curr_y = start_y + (target_y[i] - start_y) * eased_t;
-                
-                if (local_t < 0.7) {
-                    dot_sprites[i].SetX(curr_x);
-                    dot_sprites[i].SetY(curr_y);
-                    dot_sprites[i].SetOpacity(1.0 - (local_t / 0.7));
-                } else {
-                    dot_sprites[i].SetOpacity(0.0);
-                    glyph_opacity = (local_t - 0.7) / 0.3;
-                    glyph_sprites[i].SetX(target_x[i]);
-                    glyph_sprites[i].SetY(target_y[i]);
-                    glyph_sprites[i].SetOpacity(glyph_opacity);
-                }
-            }
-        }
-        
-        # Period detachment on dot 10 completion
-        if (frame >= 500) {
-            p_t = (frame - 500) / 42.0;
-            if (p_t > 1.0) p_t = 1.0;
-            period_sprite.SetX(target_x[10]);
-            period_sprite.SetY(target_y[9] + (target_y[10] - target_y[9]) * p_t);
-            period_sprite.SetOpacity(p_t);
-        }
-    }
-    # Phase E (542+ frames): Display "EXPLORE NOW ->" button and wait for user click/input
-    else {
-        for (i = 0; i < 10; i++) {
-            glyph_sprites[i].SetOpacity(1.0);
-        }
-        period_sprite.SetOpacity(1.0);
-        
-        if (user_clicked == 0) {
-            # Fade in Explore Now button
-            btn_opacity = (frame - 542) / 30.0;
-            if (btn_opacity > 1.0) btn_opacity = 1.0;
-            btn_sprite.SetOpacity(btn_opacity);
+    i = 0;
+    q = 0.0;
+
+    # Phase 0: ArchTitan logo intro
+    if (frame <= logo_total) {
+        if (frame <= logo_fade_in) {
+            logo_opacity = frame / logo_fade_in;
+        } else if (frame >= logo_fade_out_start) {
+            fade_progress = (frame - logo_fade_out_start) / (logo_total - logo_fade_out_start);
+            logo_opacity = 1.0 - fade_progress;
         } else {
-            # User clicked! Execute smooth fade out into SDDM
-            fade_out_frame++;
-            alpha = 1.0 - (fade_out_frame / 40.0);
-            if (alpha < 0.0) alpha = 0.0;
-            
-            for (i = 0; i < 10; i++) {
-                glyph_sprites[i].SetOpacity(alpha);
+            logo_opacity = 1.0;
+        }
+        if (logo_opacity > 1.0) logo_opacity = 1.0;
+        if (logo_opacity < 0.0) logo_opacity = 0.0;
+        logo_sprite.SetOpacity(logo_opacity);
+        return;
+    }
+
+    t = frame - logo_total;
+
+    # Skip: fade everything out and hand over to SDDM
+    if (user_clicked == 1) {
+        fade_out_frame++;
+        alpha = 1.0 - fade_out_frame / 40.0;
+        if (alpha < 0.0) alpha = 0.0;
+        for (i = 0; i < 10; i++) {
+            dots[i].SetOpacity(alpha);
+            chars[i].SetOpacity(alpha);
+        }
+        horizon_sprite.SetOpacity(alpha);
+        if (fade_out_frame >= 40) {
+            Plymouth.Quit();
+        }
+        return;
+    }
+
+    # Phase 1: dots rise, one after another, into a horizontal line
+    if (t < line_t) {
+        horizon_sprite.SetOpacity(Math.Min(1.0, (t / line_t) * 2.0));
+        for (i = 0; i < 10; i++) {
+            stagger = i * 2.0;
+            if (t > stagger) {
+                q = ease_out((t - stagger) / (line_t - stagger));
+            } else {
+                q = 0.0;
             }
-            period_sprite.SetOpacity(alpha);
-            btn_sprite.SetOpacity(alpha);
-            
-            if (fade_out_frame >= 40) {
-                Plymouth.Quit();
+            dots[i].SetX(center_x - line_gap * 4.5 + i * line_gap);
+            dots[i].SetY(lerp(center_y + 18.0, center_y, q));
+            dots[i].SetOpacity(q);
+        }
+        return;
+    }
+
+    # Phase 2: the line smoothly curls into the circle
+    if (t < line_t + circle_t) {
+        horizon_sprite.SetOpacity(1.0);
+        q = ease_inout((t - line_t) / circle_t);
+        for (i = 0; i < 10; i++) {
+            line_x = center_x - line_gap * 4.5 + i * line_gap;
+            circ_x = center_x + Math.Cos(base_a[i]) * radius;
+            circ_y = circle_cy + Math.Sin(base_a[i]) * radius;
+            dots[i].SetX(lerp(line_x, circ_x, q));
+            dots[i].SetY(lerp(center_y, circ_y, q));
+            dots[i].SetOpacity(1.0);
+        }
+        return;
+    }
+
+    # Phase 3: slow, eased 720° orbit
+    if (t < line_t + circle_t + orbit_t) {
+        horizon_sprite.SetOpacity(0.7);
+        q = ease_inout((t - line_t - circle_t) / orbit_t);
+        rot = q * 4.0 * pi;
+        for (i = 0; i < 10; i++) {
+            angle = base_a[i] + rot;
+            dots[i].SetX(center_x + Math.Cos(angle) * radius);
+            dots[i].SetY(circle_cy + Math.Sin(angle) * radius);
+            dots[i].SetOpacity(1.0);
+        }
+        return;
+    }
+
+    # Phase 4: dots settle on the stopped circle before transforming
+    if (t < base) {
+        horizon_sprite.SetOpacity(0.55);
+        for (i = 0; i < 10; i++) {
+            angle = base_a[i] + four_pi;
+            dots[i].SetX(center_x + Math.Cos(angle) * radius);
+            dots[i].SetY(circle_cy + Math.Sin(angle) * radius);
+            dots[i].SetOpacity(1.0);
+        }
+        return;
+    }
+
+    # Phase 5: one dot after another falls and morphs into its character
+    if (t < drop_end) {
+        horizon_sprite.SetOpacity(0.3);
+        for (i = 0; i < 10; i++) {
+            start_t = base + i * step;
+            circ_x = center_x + Math.Cos(base_a[i] + four_pi) * radius;
+            circ_y = circle_cy + Math.Sin(base_a[i] + four_pi) * radius;
+
+            if (t < start_t) {
+                dots[i].SetX(circ_x);
+                dots[i].SetY(circ_y);
+                dots[i].SetOpacity(1.0);
+                chars[i].SetOpacity(0.0);
+            } else {
+                lt = (t - start_t) / drop_t;
+                if (lt > 1.0) lt = 1.0;
+                q = ease_out(lt);
+                x = lerp(circ_x, slot_x[i], q);
+                y = lerp(circ_y, char_y[i], q);
+                if (lt > 0.0 && lt < 1.0) {
+                    y = y + Math.Sin(lt * pi) * 20.0;   # little bounce arc
+                }
+                dots[i].SetX(x);
+                dots[i].SetY(y);
+
+                dot_phase = (lt - 0.62) / 0.38;
+                if (dot_phase < 0.0) dot_phase = 0.0;
+                if (dot_phase > 1.0) dot_phase = 1.0;
+
+                dots[i].SetOpacity(1.0 - dot_phase * 0.95);
+                chars[i].SetX(slot_x[i]);
+                chars[i].SetY(char_y[i] - (1.0 - dot_phase) * 5.0);
+                chars[i].SetOpacity(dot_phase);
             }
         }
+        return;
+    }
+
+    # Phase 6: hold the finished phrase, then auto-advance
+    horizon_sprite.SetOpacity(0.0);
+    for (i = 0; i < 10; i++) {
+        dots[i].SetOpacity(0.0);
+        chars[i].SetX(slot_x[i]);
+        chars[i].SetY(char_y[i]);
+        chars[i].SetOpacity(1.0);
+    }
+    if (t >= auto_end) {
+        user_clicked = 1;
     }
 }
 
 fun click_or_key_handler() {
-    if (frame >= 542 && user_clicked == 0) {
+    if (frame > logo_total && user_clicked == 0) {
         user_clicked = 1;
         fade_out_frame = 0;
     }
 }
 
-fun mouse_callback(x, y, flags) {
-    # On mouse click (press/release)
-    if (flags == 1 || flags == 2) {
-        if (x >= btn_x && x <= (btn_x + btn_w) && y >= btn_y && y <= (btn_y + btn_h)) {
-            click_or_key_handler();
-        } else {
-            # Any click on screen also triggers transition
-            click_or_key_handler();
-        }
-    }
-}
-
 fun key_press_callback(text, key) {
-    # Pressing Enter, Space, or any key triggers transition
     click_or_key_handler();
 }
 
+fun quit_callback() {
+    # System signalled the splash should end: finish immediately
+    user_clicked = 1;
+    fade_out_frame = 45;
+}
+
 Plymouth.SetRefreshFunction(refresh_callback);
-Plymouth.SetMouseInputFunction(mouse_callback);
 Plymouth.SetKeyboardInputFunction(key_press_callback);
+Plymouth.SetQuitFunction(quit_callback);
