@@ -1,20 +1,13 @@
 [Unit]
-Description=ArchTitan Immutable Guard — Lock OS enforcement files (chattr +i)
-# Runs once at sysinit, BEFORE sddm or any user session starts.
-# Non-fatal: chattr may not be supported on live ISO squashfs/overlayfs.
-# DefaultDependencies=yes ensures it waits for sysinit/dbus to avoid dbus timeouts
-After=dbus.service
-Before=sddm.service titan-hwm.service
+Description=ArchTitan Immutable Guard
+Before=display-manager.target
+Before=sddm.service
+DefaultDependencies=no
 
 [Service]
 Type=oneshot
+ExecStart=/usr/lib/archtitan/archtitan-guard verify
 RemainAfterExit=yes
-# The - prefix means failure is ignored (safe on live ISO overlayfs)
-ExecStart=-/usr/local/bin/archtitan-apply-immutable
-# Any exit code is acceptable — live ISO squashfs may not support chattr
-SuccessExitStatus=0 1 2 255
-StandardOutput=journal
-StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
