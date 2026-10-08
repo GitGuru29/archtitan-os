@@ -1,0 +1,13 @@
+[Unit]
+Description=ArchTitan Immutable Guard
+Before=display-manager.target
+Before=sddm.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/archtitan/archtitan-guard verify
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

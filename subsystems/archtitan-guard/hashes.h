@@ -1,0 +1,6 @@
+#ifndef ARCHTITAN_GUARD_HASHES_H
+#define ARCHTITAN_GUARD_HASHES_H
+#define HASH_archtitan_guard "52226061844fa764549d988e9dad2dce47ac1caef29c3c3e2c4ccec992807c6e"
+#define HASH_archtitan_session_guard_hook "963fbdeff8c1670559b64572450bc85ebff1699c88baacbc524e3f946884d6e1"
+#define HASH_archtitan_immutable_guard_service "0f021247b67dee1b7708f26b374958bfac706ad0cf7c80e5b134ae92d4a36f40"
+#endif
