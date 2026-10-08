@@ -1,0 +1,12 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = *
+
+[Action]
+Description = ArchTitan Session Guard (enforced)
+When = PreTransaction
+Exec = /usr/lib/archtitan/archtitan-guard pretransaction
+AbortOnFail = true
