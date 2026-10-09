@@ -8,6 +8,7 @@
 #include <iostream>
 #include <filesystem>
 #include <system_error>
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 
@@ -124,10 +125,22 @@ bool CgroupController::setup_slices() {
 
     // Enable memory accounting in the slices we manage
     for (const char* name : {SLICE_ACTIVE, SLICE_BACKGROUND, SLICE_FROZEN}) {
-        write_file(slice_path(name) + "/memory.oom.group", "1");
+        ok &= write_file(slice_path(name) + "/memory.oom.group", "1");
     }
 
-    if (ok) std::cout << "[cgroup] archtitan.slice hierarchy ready.\n";
+    // Definitive writability probe. The sub-slice directories existing is NOT
+    // sufficient: under an undelegated slice they exist (created by systemd, or
+    // by a previous privileged run) but every control-file write fails EACCES,
+    // so enforcement silently degrades to a no-op. Writing cgroup.freeze=0 is
+    // idempotent and succeeds only when we can actually drive the hierarchy.
+    ok &= write_file(slice_path(SLICE_FROZEN) + "/cgroup.freeze", "0");
+
+    if (ok) {
+        std::cout << "[cgroup] archtitan.slice hierarchy ready.\n";
+    } else {
+        std::cerr << "[cgroup] archtitan.slice hierarchy NOT writable by uid "
+                  << getuid() << " — enforcement would be a no-op here.\n";
+    }
     return ok;
 }
 
