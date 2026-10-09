@@ -1,16 +1,16 @@
 [Unit]
 Description=Titan Hardware Manager v3 (ArchTitan Workload Daemon)
 Documentation=https://github.com/GitGuru29/archtitan-os/wiki/Titan-Hardware-Manager
-After=graphical-session.target archtitan-immutable-guard.service
+After=graphical.target archtitan-immutable-guard.service
 Wants=archtitan-immutable-guard.service
-PartOf=graphical-session.target
+PartOf=graphical.target
 
 [Service]
 Type=simple
 # Run the daemon inside the slice it manages so cgroup delegation (Delegate=yes)
 # applies — without it, writes to archtitan.slice child cgroups can fail (EACCES).
 Slice=archtitan.slice
-ExecStart=/usr/local/bin/titan-hwm-daemon --dry-run
+ExecStart=/usr/local/bin/titan-hwm-daemon
 
 # ---------------------------------------------------------------
 # ANTI-TAMPER: Restart immediately if killed. StartLimitInterval=0
@@ -49,4 +49,4 @@ StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=graphical-session.target
+WantedBy=graphical.target
